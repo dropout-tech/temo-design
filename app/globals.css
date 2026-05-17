@@ -1,0 +1,210 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* TEMO Brand Colors */
+  --temo-dark: #2c2825;
+  --temo-warm: #f2eadd;
+  --temo-warm-gray: #b0aca1;
+  --temo-cool-gray: #707070;
+  --temo-gold: #cda96d;
+  --temo-light: #eadec8;
+  --temo-black: #1a1a1a;
+  --temo-white: #ffffff;
+  --temo-card-dark: #2a2623;
+  --temo-overlay: rgba(26, 26, 26, 0.7);
+
+  /* Design Tokens */
+  --background: var(--temo-black);
+  --foreground: var(--temo-white);
+  --card: var(--temo-card-dark);
+  --card-foreground: var(--temo-white);
+  --popover: var(--temo-card-dark);
+  --popover-foreground: var(--temo-white);
+  --primary: var(--temo-gold);
+  --primary-foreground: var(--temo-black);
+  --secondary: var(--temo-warm);
+  --secondary-foreground: var(--temo-dark);
+  --muted: var(--temo-warm-gray);
+  --muted-foreground: var(--temo-cool-gray);
+  --accent: var(--temo-gold);
+  --accent-foreground: var(--temo-black);
+  --destructive: #dc2626;
+  --destructive-foreground: var(--temo-white);
+  --border: rgba(176, 172, 161, 0.3);
+  --input: rgba(176, 172, 161, 0.3);
+  --ring: var(--temo-gold);
+  --radius: 0.625rem;
+}
+
+@theme inline {
+  --font-sans: 'Noto Sans TC', 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* TEMO Custom Colors */
+  --color-temo-dark: var(--temo-dark);
+  --color-temo-warm: var(--temo-warm);
+  --color-temo-warm-gray: var(--temo-warm-gray);
+  --color-temo-cool-gray: var(--temo-cool-gray);
+  --color-temo-gold: var(--temo-gold);
+  --color-temo-light: var(--temo-light);
+  --color-temo-black: var(--temo-black);
+  --color-temo-white: var(--temo-white);
+  --color-temo-card-dark: var(--temo-card-dark);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-temo-black text-temo-white;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-wide;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--temo-black);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--temo-warm-gray);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--temo-gold);
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection color */
+::selection {
+  background: var(--temo-gold);
+  color: var(--temo-black);
+}
+
+/* Custom animations */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes marqueeRev {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+
+@layer utilities {
+  .animate-fadeUp {
+    animation: fadeUp 0.8s ease-out forwards;
+  }
+  
+  .animate-slideInLeft {
+    animation: slideInLeft 0.8s ease-out forwards;
+  }
+  
+  .animate-slideInRight {
+    animation: slideInRight 0.8s ease-out forwards;
+  }
+  
+  .animate-scaleIn {
+    animation: scaleIn 0.6s ease-out forwards;
+  }
+}

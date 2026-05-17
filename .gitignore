@@ -1,0 +1,29 @@
+# v0 sandbox internal files
+__v0_runtime_loader.js
+__v0_devtools.tsx
+__v0_jsx-dev-runtime.ts
+.snowflake/
+.v0-trash/
+.vercel/
+next.user-config.*
+
+# Environment variables
+.env
+.env*.local
+
+# Payload uploads (runtime media)
+public/media/
+
+# Payload generated types
+payload-types.ts
+
+# Common ignores
+node_modules
+.next/
+.DS_Store
+.vercel
+tsconfig.tsbuildinfo
+
+# 設計原始素材（含大檔，不該進版控）
+提摩設計素材/
+coach-mode-prompt拷貝.md

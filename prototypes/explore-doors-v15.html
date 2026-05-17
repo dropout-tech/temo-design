@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Four Doors v15 — 對齊紋理的開門效果</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;700;900&family=Barlow:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+
+  body {
+    background: #8a8884;
+    font-family: 'Barlow', 'Noto Sans TC', sans-serif;
+    position: relative;
+  }
+
+  /* =========================================================
+     LAYER 0 — 牆（固定在 viewport，不會跟著任何元素移動）
+     門板用的漸層和這裡完全一樣，這樣兩邊才能無縫對齊。
+  ========================================================= */
+  .wall-bg {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 50% 60% at 10% 20%, #a8a6a0 0%, transparent 55%),
+      radial-gradient(ellipse 60% 70% at 85% 30%, #807e78 0%, transparent 50%),
+      radial-gradient(ellipse 45% 40% at 70% 80%, #757370 0%, transparent 55%),
+      radial-gradient(ellipse 35% 30% at 30% 70%, #94928d 0%, transparent 50%),
+      #8a8884;
+    background-size: 100vw 100vh;
+    background-position: 0 0;
+  }
+  .wall-stripe {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background:
+      repeating-linear-gradient(23deg, transparent, transparent 2px,
+        rgba(0,0,0,0.022) 2px, rgba(0,0,0,0.022) 3px),
+      repeating-linear-gradient(-67deg, transparent, transparent 3px,
+        rgba(255,255,255,0.015) 3px, rgba(255,255,255,0.015) 4px);
+  }
+
+  .stage { position: relative; z-index: 5; width: 100vw; height: 100vh; }
+
+  /* =========================================================
+     LAYER 2 — 大字（藏在門後面）
+  ========================================================= */
+  .big-row { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+  .big-line { position: absolute; left: 0; right: 0; line-height: 0.92; }
+  .big-line.solid { bottom: 22%; }
+  .big-line.light { bottom: 7%; }
+  .big-line span {
+    position: absolute;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 900;
+    font-size: clamp(52px, 6.8vw, 96px);
+    letter-spacing: -0.06em;
+    line-height: 1;
+    white-space: nowrap;
+    transform: translateX(-50%);
+    bottom: 0;
+  }
+  .big-line.solid span { color: rgba(15,15,12,0.92); }
+  .big-line.light span { color: rgba(245,242,235,0.5); }
+  .big-line.solid span:nth-child(1) { left: 11.5%; }
+  .big-line.solid span:nth-child(2) { left: 30.3%; }
+  .big-line.solid span:nth-child(3) { left: 49.1%; }
+  .big-line.solid span:nth-child(4) { left: 67.9%; }
+  .big-line.light span:nth-child(1) { left: 13%; }
+  .big-line.light span:nth-child(2) { left: 31.8%; }
+  .big-line.light span:nth-child(3) { left: 50.6%; }
+  .big-line.light span:nth-child(4) { left: 69.4%; }
+
+  /* =========================================================
+     LAYER 3 — 門板
+     ★ 重點 1：背景與 wall-bg 完全相同
+     ★ 重點 2：background-size 顯式指定 100vw 100vh
+     ★ 重點 3：hover 時 transform 和 background-position-x
+              反向變化，互相抵消，讓紋理在 viewport 看起來不動
+  ========================================================= */
+  .panels { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+
+  .panel {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 50% 60% at 10% 20%, #a8a6a0 0%, transparent 55%),
+      radial-gradient(ellipse 60% 70% at 85% 30%, #807e78 0%, transparent 50%),
+      radial-gradient(ellipse 45% 40% at 70% 80%, #757370 0%, transparent 55%),
+      radial-gradient(ellipse 35% 30% at 30% 70%, #94928d 0%, transparent 50%),
+      #8a8884;
+    background-size: 100vw 100vh;
+    background-position: 0 0;
+    transition:
+      transform 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+      background-position 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, background-position;
+  }
+
+  /* 每塊門板的形狀（與你原本一致） */
+  .panel-1L { clip-path: polygon(21.4% 0, 30.8% 0, -1.7% 100%, -11.1% 100%); }
+  .panel-1R { clip-path: polygon(30.8% 0, 40.2% 0, 7.7% 100%, -1.7% 100%); }
+  .panel-2L { clip-path: polygon(40.2% 0, 49.6% 0, 17.1% 100%, 7.7% 100%); }
+  .panel-2R { clip-path: polygon(49.6% 0, 59% 0, 26.5% 100%, 17.1% 100%); }
+  .panel-3L { clip-path: polygon(59% 0, 68.4% 0, 35.9% 100%, 26.5% 100%); }
+  .panel-3R { clip-path: polygon(68.4% 0, 77.8% 0, 45.3% 100%, 35.9% 100%); }
+  .panel-4L { clip-path: polygon(77.8% 0, 87.2% 0, 54.7% 100%, 45.3% 100%); }
+  .panel-4R { clip-path: polygon(87.2% 0, 96.6% 0, 64.1% 100%, 54.7% 100%); }
+
+  /* =========================================================
+     LAYER 4 — 編號（永遠在門上層，hover 時被強調）
+  ========================================================= */
+  .num-row { position: absolute; inset: 0; pointer-events: none; z-index: 7; }
+  .num-row .num {
+    position: absolute; top: 38%;
+    font-family: 'Barlow', sans-serif;
+    font-weight: 500;
+    font-size: clamp(34px, 4.2vw, 56px);
+    letter-spacing: 0.06em;
+    color: #f0ede6;
+    opacity: 0.95;
+    line-height: 1;
+    text-shadow: 0 0 8px rgba(0,0,0,0.15);
+    transition:
+      transform 0.55s cubic-bezier(0.16,1,0.3,1),
+      opacity 0.4s;
+  }
+  .num-row .num:nth-child(1) { left: 17.2%; }
+  .num-row .num:nth-child(2) { left: 36%; }
+  .num-row .num:nth-child(3) { left: 54.8%; }
+  .num-row .num:nth-child(4) { left: 73.6%; }
+
+  /* =========================================================
+     LAYER 5 — Hover 觸發區
+  ========================================================= */
+  .zones { position: absolute; inset: 0; z-index: 9; }
+  .zones svg { width: 100%; height: 100%; display: block; }
+  .zone { fill: transparent; cursor: pointer; pointer-events: all; }
+
+  /* =========================================================
+     LAYER 6 — 五條斜線
+  ========================================================= */
+  .lines { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+  .lines svg { width: 100%; height: 100%; display: block; }
+  .lines line {
+    stroke: rgba(245,242,235,0.7);
+    stroke-width: 1.2;
+    filter: drop-shadow(0 0 2px rgba(245,242,235,0.3));
+  }
+
+  /* =========================================================
+     LAYER 7 — 噪點（在所有東西最上面，固定）
+  ========================================================= */
+  .grain {
+    position: fixed; inset: 0; z-index: 50; pointer-events: none; opacity: 0.45;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+    mix-blend-mode: overlay;
+  }
+
+  /* =========================================================
+     ★ 開門動畫
+     左門 translateX(-100vw)，背景位置反向 +100vw → 紋理視覺不動
+     右門 translateX(+100vw)，背景位置反向 -100vw
+     右門延遲 60ms，製造輕微 stagger
+  ========================================================= */
+  .stage:has(.zone-1:hover) .panel-1L { transform: translateX(-100vw); background-position-x: 100vw; }
+  .stage:has(.zone-1:hover) .panel-1R { transform: translateX( 100vw); background-position-x: -100vw; transition-delay: 60ms; }
+  .stage:has(.zone-2:hover) .panel-2L { transform: translateX(-100vw); background-position-x: 100vw; }
+  .stage:has(.zone-2:hover) .panel-2R { transform: translateX( 100vw); background-position-x: -100vw; transition-delay: 60ms; }
+  .stage:has(.zone-3:hover) .panel-3L { transform: translateX(-100vw); background-position-x: 100vw; }
+  .stage:has(.zone-3:hover) .panel-3R { transform: translateX( 100vw); background-position-x: -100vw; transition-delay: 60ms; }
+  .stage:has(.zone-4:hover) .panel-4L { transform: translateX(-100vw); background-position-x: 100vw; }
+  .stage:has(.zone-4:hover) .panel-4R { transform: translateX( 100vw); background-position-x: -100vw; transition-delay: 60ms; }
+
+  /* 編號 hover 強調 */
+  .stage:has(.zone:hover) .num-row .num { opacity: 0.4; }
+  .stage:has(.zone-1:hover) .num-row .num:nth-child(1),
+  .stage:has(.zone-2:hover) .num-row .num:nth-child(2),
+  .stage:has(.zone-3:hover) .num-row .num:nth-child(3),
+  .stage:has(.zone-4:hover) .num-row .num:nth-child(4) {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+
+</style>
+</head>
+<body>
+
+  <div class="wall-bg"></div>
+  <div class="wall-stripe"></div>
+
+  <div class="stage">
+
+    <div class="big-row">
+      <div class="big-line solid">
+        <span>品牌</span><span>裝置</span><span>產品</span><span>工藝</span>
+      </div>
+      <div class="big-line light">
+        <span>平面</span><span>藝術</span><span>設計</span><span>設計</span>
+      </div>
+    </div>
+
+    <div class="panels">
+      <div class="panel panel-1L"></div><div class="panel panel-1R"></div>
+      <div class="panel panel-2L"></div><div class="panel panel-2R"></div>
+      <div class="panel panel-3L"></div><div class="panel panel-3R"></div>
+      <div class="panel panel-4L"></div><div class="panel panel-4R"></div>
+    </div>
+
+    <div class="num-row">
+      <div class="num">01</div><div class="num">02</div><div class="num">03</div><div class="num">04</div>
+    </div>
+
+    <div class="zones">
+      <svg preserveAspectRatio="none" viewBox="0 0 1170 660">
+        <polygon class="zone zone-1" points="250,0 470,0 90,660 -130,660"/>
+        <polygon class="zone zone-2" points="470,0 690,0 310,660 90,660"/>
+        <polygon class="zone zone-3" points="690,0 910,0 530,660 310,660"/>
+        <polygon class="zone zone-4" points="910,0 1130,0 750,660 530,660"/>
+      </svg>
+    </div>
+
+    <div class="lines">
+      <svg preserveAspectRatio="none" viewBox="0 0 1170 660">
+        <line x1="250"  y1="0" x2="-130" y2="660"/>
+        <line x1="470"  y1="0" x2="90"   y2="660"/>
+        <line x1="690"  y1="0" x2="310"  y2="660"/>
+        <line x1="910"  y1="0" x2="530"  y2="660"/>
+        <line x1="1130" y1="0" x2="750"  y2="660"/>
+      </svg>
+    </div>
+
+  </div>
+
+  <div class="grain"></div>
+
+</body>
+</html>

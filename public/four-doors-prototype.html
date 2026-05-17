@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Static Layout — Reference Reproduction (1834×1062)</title>
+<style>
+  /* ════════════════════════════════════════════════════════════════════
+     依照參考圖 1834×1062 px 還原版面（不做動畫、不做門板效果）
+     換算原則：
+       x% = (px / 1834) × 100
+       y% = (px / 1062) × 100
+       font-size vw = (px / 1834) × 100
+     座標原點：畫布左上角
+     圖層順序：bg(1) → chars(2) → lines(3) → nums(4) → left-text(5)
+  ════════════════════════════════════════════════════════════════════ */
+
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@700;900&family=Barlow:wght@500;600;700;900&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Barlow', 'Noto Sans TC', sans-serif;
+    color: #F2F2F2;
+    background: #707070;
+  }
+
+  .stage {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ─── Layer 1: 背景（灰色底，先當佔位）─────────────── */
+  .bg {
+    position: absolute; inset: 0;
+    z-index: 1;
+    background-color: #c8c8c8;
+    background-image: url('/cement-light.png');
+    background-size: cover;
+    background-position: center;
+  }
+
+  /* ─── Layer 2: 4 組獨立漢字（裁切到斜線區段內）────────
+     結構：.char-pair = 全頁面容器 + clip-path 切出梯形區段
+            └ .char-text = 真正的文字（在容器內絕對定位）
+     每組可獨立調：
+       · clip-path（決定字會出現在哪個斜線區段裡）
+       · .char-text 的 left/top（決定字的位置）
+       · color（顏色）
+     clip-path 座標 = 將 5 條斜線延伸到 y=0 / y=100% 後，相鄰兩條線之間的梯形
+       L1 延伸: y=0 → 56.44%   ; y=100% → 10.78%
+       L2 延伸: y=0 → 70.98%   ; y=100% → 25.37%
+       L3 延伸: y=0 → 85.52%   ; y=100% → 39.86%
+       L4 延伸: y=0 → 99.60%   ; y=100% → 53.94%
+       L5 延伸: y=0 → 114.40%  ; y=100% → 68.95%
+  */
+  .char-pair {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: auto;  /* 可以 hover 整個斜線區段 */
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                filter 0.4s ease,
+                clip-path 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .char-pair:hover {
+    transform: translateY(-10px);
+    filter: brightness(1.13) drop-shadow(0 14px 22px rgba(0, 0, 0, 0.4));
+    z-index: 6;  /* hover 時浮到最上層 */
+  }
+  /* 區塊背景：跟外面同樣的水泥紋，但會跟著 hover 一起浮起來 */
+  .char-panel-bg {
+    position: absolute;
+    inset: 0;
+    background-image: url('/cement-light.png');
+    background-size: cover;
+    background-position: center;
+  }
+  .char-text {
+    position: absolute;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 900;
+    font-size: 5.45vw;
+    line-height: 1;
+    letter-spacing: 0.13em;
+    white-space: nowrap;
+  }
+  .char-text .bot { margin-top: 0.37em; }
+
+  /* ↓↓↓ 每組：clip-path 切斜線區段 + 文字位置 + 顏色 ↓↓↓ */
+  /* 預設 clip-path：跟斜線剛好對齊（字會被切到） */
+  /* Hover clip-path：左右各往外 +7%，露出完整漢字 + 數字 */
+  .char-pair.p1 {
+    clip-path: polygon(56.44% 0, 70.98% 0, 25.37% 100%, 10.78% 100%);
+  }
+  .char-pair.p1:hover {
+    clip-path: polygon(50.44% 0, 76.98% 0, 31.37% 100%, 4.78% 100%);
+  }
+  .char-pair.p1 .char-text { left: 21.54%; top: 65.63%; color: #c6c6c6; }
+
+  .char-pair.p2 {
+    clip-path: polygon(70.98% 0, 85.52% 0, 39.86% 100%, 25.37% 100%);
+  }
+  .char-pair.p2:hover {
+    clip-path: polygon(64.98% 0, 91.52% 0, 45.86% 100%, 19.37% 100%);
+  }
+  .char-pair.p2 .char-text { left: 36.70%; top: 65.63%; color: #757575; }
+
+  .char-pair.p3 {
+    clip-path: polygon(85.52% 0, 99.60% 0, 53.94% 100%, 39.86% 100%);
+  }
+  .char-pair.p3:hover {
+    clip-path: polygon(79.52% 0, 105.60% 0, 59.94% 100%, 33.86% 100%);
+  }
+  .char-pair.p3 .char-text { left: 51.80%; top: 65.63%; color: #585858; }
+
+  .char-pair.p4 {
+    clip-path: polygon(99.60% 0, 114.40% 0, 68.95% 100%, 53.94% 100%);
+  }
+  .char-pair.p4:hover {
+    clip-path: polygon(93.60% 0, 120.40% 0, 74.95% 100%, 47.94% 100%);
+  }
+  .char-pair.p4 .char-text { left: 66.95%; top: 65.63%; color: #222222; }
+
+  /* ─── Layer 3: 5 條白色斜線 ───────────────────────
+     使用 SVG viewBox="0 0 1834 1062"，座標直接使用原始 px
+     stroke-width 用 vector-effect 維持實際 4px 線寬 */
+  .lines {
+    position: absolute; inset: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .lines svg {
+    width: 100%; height: 100%;
+    display: block;
+  }
+  .lines line {
+    stroke: #F2F2F2;
+    stroke-width: 4;
+    vector-effect: non-scaling-stroke;
+  }
+
+  /* ─── Layer 4: 右側 4 個白色數字 01–04 ─────────────
+     01: x=801, y=410   → 43.67%, 38.61%
+     02: x=1049, y=410  → 57.20%, 38.61%
+     03: x=1311, y=410  → 71.48%, 38.61%
+     04: x=1570, y=409  → 85.60%, 38.51%
+     字級：~60px → 3.27vw
+     字距：~7px → 0.12em */
+  .num {
+    position: absolute;
+    z-index: 4;
+    pointer-events: none;  /* 不擋下面區塊的 hover */
+    font-family: 'Barlow', sans-serif;
+    font-weight: 900;
+    font-size: 3.27vw;
+    line-height: 1;
+    letter-spacing: 0.12em;
+    color: #F2F2F2;
+  }
+  .num.n1 { left: 43.67%; top: 38.61%; }
+  .num.n2 { left: 57.20%; top: 38.61%; }
+  .num.n3 { left: 71.48%; top: 38.61%; }
+  .num.n4 { left: 85.60%; top: 38.51%; }
+
+  /* ─── Layer 5: 左側所有白色文字 ────────────────────
+     TODAY:  x=50, y=157  → 2.73%, 14.78%   字級 150px → 8.18vw
+     sub:    x=50, y=317  → 2.73%, 29.85%   字級 44px  → 2.40vw
+     zh:     x=50, y=417  → 2.73%, 39.27%   字級 40px  → 2.18vw
+     body:   x=49, y=518  → 2.67%, 48.78%   字級 16px  → 0.87vw  w=20.23% */
+  .left-text {
+    position: absolute;
+    z-index: 5;
+    color: #F2F2F2;
+  }
+
+  .today {
+    left: 2.73%;
+    top: 14.78%;
+    font-family: 'Barlow', sans-serif;
+    font-weight: 900;
+    font-size: 8.18vw;
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  .sub {
+    left: 2.73%;
+    top: 29.85%;
+    font-family: 'Barlow', sans-serif;
+    font-weight: 700;
+    font-size: 2.40vw;
+    line-height: 1;
+    letter-spacing: 0.09em;
+  }
+
+  .zh {
+    left: 2.73%;
+    top: 39.27%;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-weight: 700;
+    font-size: 2.18vw;
+    line-height: 1;
+    letter-spacing: 0.25em;
+  }
+
+  .body {
+    left: 2.67%;
+    top: 48.78%;
+    width: 20.23%;
+    font-family: 'Barlow', sans-serif;
+    font-weight: 600;
+    font-size: 0.87vw;
+    line-height: 1.13;
+    letter-spacing: 0.04em;
+  }
+  .body p + p { margin-top: 0.9em; }
+</style>
+</head>
+<body>
+
+  <div class="stage">
+
+    <!-- Layer 1: 背景 -->
+    <div class="bg"></div>
+
+    <!-- Layer 2: 4 組獨立漢字（每組外層 .char-pair = 全頁 + clip-path；內層 .char-text = 文字本體）-->
+    <div class="char-pair p1">
+      <div class="char-panel-bg"></div>
+      <div class="char-text">
+        <div class="top">品牌</div>
+        <div class="bot">平面</div>
+      </div>
+      <div class="num n1">01</div>
+    </div>
+    <div class="char-pair p2">
+      <div class="char-panel-bg"></div>
+      <div class="char-text">
+        <div class="top">裝置</div>
+        <div class="bot">藝術</div>
+      </div>
+      <div class="num n2">02</div>
+    </div>
+    <div class="char-pair p3">
+      <div class="char-panel-bg"></div>
+      <div class="char-text">
+        <div class="top">產品</div>
+        <div class="bot">設計</div>
+      </div>
+      <div class="num n3">03</div>
+    </div>
+    <div class="char-pair p4">
+      <div class="char-panel-bg"></div>
+      <div class="char-text">
+        <div class="top">工藝</div>
+        <div class="bot">設計</div>
+      </div>
+      <div class="num n4">04</div>
+    </div>
+
+    <!-- Layer 3: 5 條白色斜線（viewBox 直接使用原始 1834×1062 座標）-->
+    <div class="lines">
+      <svg preserveAspectRatio="none" viewBox="0 0 1834 1062">
+        <line x1="260"  y1="983"  x2="901"  y2="170"/>
+        <line x1="533"  y1="976"  x2="1175" y2="161"/>
+        <line x1="806"  y1="967"  x2="1447" y2="154"/>
+        <line x1="1065" y1="966"  x2="1706" y2="153"/>
+        <line x1="1292" y1="1027" x2="1832" y2="339"/>
+      </svg>
+    </div>
+
+    <!-- Layer 4: 數字已搬到對應的 .char-pair 內，讓它們跟著區塊一起 pop -->
+
+    <!-- Layer 5: 左側文字 -->
+    <div class="left-text today">TODAY</div>
+    <div class="left-text sub">SOMETHING MORE...</div>
+    <div class="left-text zh">今天我想來點...</div>
+    <div class="left-text body">
+      <p>At TEMO, we believe that design is not merely about appearance—it is a form of healing and a solution.</p>
+      <p>With a people-centered philosophy at our core, we see designers not simply as makers who craft a brand's exterior, but as "brand doctors" who diagnose through insight and prescribe through creativity.</p>
+    </div>
+
+  </div>
+
+</body>
+</html>
