@@ -17,6 +17,8 @@ type Package = {
   name: string
   nameEn: string
   basePrice: number
+  priceNote?: string
+  originalPrice?: number
   features: string[]
   recommended?: boolean
   addons?: Addon[]
@@ -31,120 +33,265 @@ type ServiceCategory = {
   packages: Package[]
 }
 
+// Shared addons available with any bundle (from 提摩官方加價購表)
+const bundleAddons: Addon[] = [
+  { id: "addon-poster", label: "文宣海報 / A3 菜單 (1 款)", price: 5500 },
+  { id: "addon-signage", label: "招牌設計 (1 款)", price: 5000 },
+  { id: "addon-package-basic", label: "超值包裝設計 (1 款)", price: 6800 },
+  { id: "addon-package-premium", label: "高質感包裝設計 (1 款)", price: 11000 },
+  { id: "addon-card-digital", label: "名片數位印刷 (250 張/人)", price: 1200 },
+  { id: "addon-card-complex", label: "名片複雜加工數位印刷", price: 3500 },
+  { id: "addon-card-letterpress", label: "凸版名片印刷 (200 張/人)", price: 13500 },
+]
+
+// Pricing sourced from https://temo.design/price (2026-05 snapshot).
+// 範圍價以下限做為計算基準；範圍以 priceNote 標示。
 const categories: ServiceCategory[] = [
   {
-    id: "brand",
-    title: "品牌設計",
-    titleEn: "BRAND & GRAPHIC",
-    description: "品牌識別、名片、包裝、文宣、店面設計",
+    id: "single",
+    title: "純享單品",
+    titleEn: "PURE DESIGN",
+    description: "單一品項設計，依需求挑選",
+    icon: "S",
+    packages: [
+      {
+        id: "single-logo",
+        name: "LOGO 商標設計",
+        nameEn: "LOGO",
+        basePrice: 50000,
+        features: [
+          "協助基本商標名稱檢索",
+          "共出 3 款 LOGO 設計 (標準色、標準字、圖形)",
+          "三擇一進入細修",
+          "一次大幅度修改 (可整個打掉重來，但只再出 2 款)",
+          "兩次細修，超過每次加收 1,600 元",
+          "完稿後會提供視覺手冊比例規範",
+        ],
+        recommended: true,
+      },
+      {
+        id: "single-card",
+        name: "名片設計 + 數位印刷",
+        nameEn: "BUSINESS CARD",
+        basePrice: 6800,
+        priceNote: "方案一 / 不含印刷 NT$4,800 起",
+        features: [
+          "協助印刷 (約 200–250 張)",
+          "簡單加工：上光、四邊倒圓角",
+          "共出 3 款名片設計，三擇一",
+          "兩次細修，超過每次加收 350 元",
+          "若需多人員，每人加收 400 元",
+        ],
+      },
+      {
+        id: "single-graphic",
+        name: "文宣 / 菜單設計",
+        nameEn: "GRAPHIC",
+        basePrice: 6800,
+        priceNote: "NT$6,800 ~ 9,800",
+        features: [
+          "不含印刷",
+          "共出 2 款文宣設計，二擇一",
+          "一次大幅度修改、一次細修",
+          "超過每次加收 800 元",
+          "可協助印刷，印刷報價另議",
+        ],
+      },
+      {
+        id: "single-visual",
+        name: "主視覺設計",
+        nameEn: "KEY VISUAL",
+        basePrice: 18980,
+        priceNote: "NT$18,980 ~ 35,000",
+        features: [
+          "共出 2 款主視覺，二擇一",
+          "一次大幅度修改、一次細修",
+          "超過每次加收 1,600 元",
+          "適用形象 KV、活動主視覺",
+        ],
+      },
+      {
+        id: "single-package",
+        name: "超值包裝設計",
+        nameEn: "PACKAGE",
+        basePrice: 8800,
+        priceNote: "NT$8,800 ~ 15,980 (高質感另計)",
+        features: [
+          "廠商須提供包裝刀模檔",
+          "共出 2 款包裝設計，二擇一",
+          "一次大幅度修改、一次細修",
+          "若需重新設計刀模，須加收結構開發費",
+        ],
+      },
+      {
+        id: "single-signage",
+        name: "招牌設計",
+        nameEn: "SHOP SIGN",
+        basePrice: 12800,
+        priceNote: "燈箱招牌 NT$5,500 起",
+        features: [
+          "不含招牌工程",
+          "共出 2 款設計，二擇一",
+          "可協助模擬 3D",
+          "可協助台灣全區招牌工程，工程報價另議",
+        ],
+      },
+      {
+        id: "single-consult",
+        name: "顧問諮詢",
+        nameEn: "CONSULTANT",
+        basePrice: 6000,
+        features: [
+          "每次諮詢服務 1 HR",
+          "可協助品牌方向、問題、品牌定位",
+          "及創意市場規劃方向探討",
+          "委辦顧問會議紀錄為 PDF 一份",
+        ],
+      },
+    ],
+  },
+  {
+    id: "bundle",
+    title: "品牌包套",
+    titleEn: "BRAND BUNDLE",
+    description: "適合創業初期、電商或中小企業的整套品牌方案",
     icon: "B",
     packages: [
       {
-        id: "brand-basic",
-        name: "基礎品牌",
-        nameEn: "BASIC",
-        basePrice: 30000,
-        features: ["LOGO 設計", "品牌色系規範", "基礎名片設計", "電子使用規範"],
+        id: "bundle-startup",
+        name: "初生之犢創業品牌方案",
+        nameEn: "STARTUP",
+        basePrice: 57000,
+        originalPrice: 72800,
+        priceNote: "現省 NT$15,800",
+        features: [
+          "LOGO、名片、社群背景、初期顧問諮詢",
+          "共出 3 款 LOGO 設計、3 款名片設計",
+          "共出 2 款社群背景設計 (FB / LINE / 官網 BANNER)",
+          "包含初期諮詢 3 次",
+          "適合剛創業、電商初創品牌",
+        ],
+        addons: bundleAddons,
       },
       {
-        id: "brand-standard",
-        name: "標準品牌",
-        nameEn: "STANDARD",
-        basePrice: 60000,
+        id: "bundle-mid",
+        name: "虎哩旺旺來品牌方案",
+        nameEn: "GROWING",
+        basePrice: 66800,
+        originalPrice: 93200,
+        priceNote: "現省 NT$26,400",
         recommended: true,
-        features: ["LOGO 設計", "完整品牌手冊", "名片 + 信封設計", "社群模板 ×5", "品牌識別規範"],
-        addons: [
-          { id: "brand-social", label: "社群模板加購 (×5 組)", price: 8000 },
-          { id: "brand-menu", label: "菜單 / 型錄設計", price: 12000 },
-          { id: "brand-signage", label: "店面招牌設計", price: 15000 },
+        features: [
+          "LOGO、名片、菜單、DM、廣告圖、社群背景",
+          "初期品牌顧問專業陪跑",
+          "1 年內品牌專屬諮詢 3 次 (每次 1 HR)",
+          "共出 3 款 LOGO、3 款名片、2 款社群背景、2 款 DM 菜單、2 款廣告圖",
+          "完稿後提供視覺手冊與規範",
         ],
+        addons: bundleAddons,
       },
       {
-        id: "brand-premium",
-        name: "頂級品牌",
-        nameEn: "PREMIUM",
-        basePrice: 120000,
-        features: ["完整品牌識別系統", "品牌故事撰寫", "包裝設計 ×3 款", "店面 VI 應用", "品牌手冊 (實體印刷)"],
-        addons: [
-          { id: "brand-photo", label: "品牌攝影 (半天)", price: 20000 },
-          { id: "brand-film", label: "品牌影片 (60 秒)", price: 35000 },
+        id: "bundle-vi",
+        name: "尊爵企業品牌 VI 系統",
+        nameEn: "ENTERPRISE VI",
+        basePrice: 129980,
+        originalPrice: 172200,
+        priceNote: "現省 NT$42,220",
+        features: [
+          "完整 VI 品牌識別系統",
+          "協助品牌名稱、Slogan、Hashtag 規劃",
+          "LOGO ×3 / 名片 ×3 / 工牌 ×3 / 工藝制服 ×2",
+          "社群背景 ×2 / DM / 圖騰 / 輔助圖形 ×4",
+          "1 年內專屬顧問諮詢 7 次 (每次 1 HR)",
+          "完稿後提供完整視覺品牌手冊",
         ],
+        addons: bundleAddons,
       },
     ],
   },
   {
-    id: "product",
-    title: "產品設計",
-    titleEn: "PRODUCT DESIGN",
-    description: "產品外觀、包裝結構、工業設計",
-    icon: "P",
-    packages: [
-      {
-        id: "product-basic",
-        name: "單品包裝",
-        nameEn: "SINGLE",
-        basePrice: 25000,
-        features: ["單品包裝設計", "刀模圖提供", "2 版修改次數", "印前確認"],
-      },
-      {
-        id: "product-standard",
-        name: "系列包裝",
-        nameEn: "SERIES",
-        basePrice: 55000,
-        recommended: true,
-        features: ["系列包裝 ×3 款", "刀模圖提供", "材質選擇建議", "無限修改次數"],
-        addons: [
-          { id: "product-mock", label: "3D 包裝樣品模擬", price: 8000 },
-          { id: "product-photo", label: "產品攝影 (半天)", price: 18000 },
-        ],
-      },
-      {
-        id: "product-premium",
-        name: "全線產品",
-        nameEn: "FULL LINE",
-        basePrice: 100000,
-        features: ["全系列包裝設計", "品牌故事延伸", "材質打樣協助", "廠商溝通協助"],
-        addons: [
-          { id: "product-3d", label: "3D 產品建模", price: 25000 },
-          { id: "product-video", label: "產品介紹影片", price: 30000 },
-        ],
-      },
-    ],
-  },
-  {
-    id: "crafts",
-    title: "工藝設計",
-    titleEn: "CRAFTS DESIGN",
-    description: "KAIA 工藝品牌、限定商品、藝術裝置",
+    id: "social",
+    title: "社群圖文",
+    titleEn: "SOCIAL CONTENT",
+    description: "穩定產出社群貼文素材，月 / 季 / 年訂閱制",
     icon: "C",
     packages: [
       {
-        id: "crafts-collab",
-        name: "聯名合作",
-        nameEn: "COLLAB",
-        basePrice: 40000,
-        features: ["設計概念提案", "單件工藝設計", "材質溝通協助", "製作監修"],
-      },
-      {
-        id: "crafts-collection",
-        name: "限定系列",
-        nameEn: "COLLECTION",
-        basePrice: 80000,
-        recommended: true,
-        features: ["系列設計 ×3 件", "品牌故事創作", "攝影協助", "發布策略建議"],
-        addons: [
-          { id: "crafts-story", label: "品牌故事影片", price: 28000 },
-          { id: "crafts-popup", label: "快閃展覽規劃", price: 45000 },
+        id: "social-basic-month",
+        name: "基礎社群圖文・月付",
+        nameEn: "BASIC · MONTHLY",
+        basePrice: 6800,
+        features: [
+          "共出 4 篇單圖文，每篇 2 款二擇一",
+          "創意文案撰寫，每篇 1 則",
+          "每款圖設計與文案各一次大幅修改",
+          "兩次細修，超過每次加收 500 元",
+          "加一張內文加收 600 元",
         ],
       },
       {
-        id: "crafts-art",
-        name: "藝術裝置",
-        nameEn: "ART INSTALLATION",
-        basePrice: 150000,
-        features: ["概念規劃", "空間設計圖", "材料採購協助", "現場監工"],
-        addons: [
-          { id: "crafts-doc", label: "紀錄片製作", price: 50000 },
+        id: "social-basic-quarter",
+        name: "基礎社群圖文・季付",
+        nameEn: "BASIC · QUARTERLY",
+        basePrice: 20000,
+        originalPrice: 20400,
+        priceNote: "三個月一次付清",
+        recommended: true,
+        features: [
+          "共出 14 篇單圖文，每篇 2 款二擇一",
+          "每月固定產出 4–5 篇",
+          "創意文案撰寫，每篇 1 則",
+          "適合穩定經營社群的品牌",
+        ],
+      },
+      {
+        id: "social-basic-year",
+        name: "基礎社群圖文・年付",
+        nameEn: "BASIC · YEARLY",
+        basePrice: 68000,
+        originalPrice: 81600,
+        priceNote: "現省 NT$13,600",
+        features: [
+          "共出 52 篇單圖文，每篇 2 款二擇一",
+          "全年穩定品牌發聲",
+          "適合品牌長線經營",
+        ],
+      },
+      {
+        id: "social-multi-month",
+        name: "多圖社群圖文・月付",
+        nameEn: "MULTI · MONTHLY",
+        basePrice: 8800,
+        features: [
+          "共出 4 篇圖文，每篇 1–5 張",
+          "創意文案撰寫，每篇 1 則",
+          "適合敘事型品牌內容",
+        ],
+      },
+      {
+        id: "social-multi-quarter",
+        name: "多圖社群圖文・季付",
+        nameEn: "MULTI · QUARTERLY",
+        basePrice: 24000,
+        originalPrice: 30800,
+        priceNote: "現省 NT$6,800",
+        features: [
+          "共出 14 篇多圖圖文，每篇 1–5 張",
+          "每月固定產出多圖貼文",
+        ],
+      },
+      {
+        id: "social-multi-year",
+        name: "多圖社群圖文・年付",
+        nameEn: "MULTI · YEARLY",
+        basePrice: 88000,
+        originalPrice: 114400,
+        priceNote: "現省 NT$26,400",
+        recommended: true,
+        features: [
+          "共出 52 篇多圖圖文",
+          "全年穩定深度品牌敘事",
+          "適合品牌故事感經營",
         ],
       },
     ],
@@ -209,8 +356,20 @@ function PackageCard({
 
         {/* Price */}
         <div>
-          <span className="text-xl font-bold text-temo-gold">{formatPrice(pkg.basePrice)}</span>
-          <span className="text-xs text-temo-warm-gray ml-1">起</span>
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-xl font-bold text-temo-gold">{formatPrice(pkg.basePrice)}</span>
+            {pkg.originalPrice && (
+              <span className="text-xs text-temo-warm-gray/40 line-through">
+                {formatPrice(pkg.originalPrice)}
+              </span>
+            )}
+            <span className="text-xs text-temo-warm-gray">起</span>
+          </div>
+          {pkg.priceNote && (
+            <p className="mt-1 text-[10px] text-temo-warm-gray/60 leading-relaxed">
+              {pkg.priceNote}
+            </p>
+          )}
         </div>
 
         {/* Features */}
@@ -349,7 +508,7 @@ export function QuoteCalculator() {
             即時報價試算
           </h2>
           <p className="text-temo-warm-gray text-sm leading-relaxed max-w-lg">
-            選擇您需要的服務套餐，系統即時計算參考報價。最終報價依實際專案調整。
+            依提摩設計官方價目表，挑選您需要的服務即可估算參考總價。實際報價會依專案複雜度、印刷量、加工項目等微調。
           </p>
         </div>
 
@@ -481,6 +640,7 @@ export function QuoteCalculator() {
           </div>
         </div>
       </div>
+
     </section>
   )
 }

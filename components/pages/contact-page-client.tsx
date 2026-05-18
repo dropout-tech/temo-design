@@ -5,10 +5,11 @@ import { useInView } from "@/hooks/use-in-view"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { QuoteCalculator } from "@/components/quote/quote-calculator"
-import { Mail, Phone, MapPin, MessageSquare, Calculator } from "lucide-react"
+import { QuoteBriefForm } from "@/components/quote/quote-brief-form"
+import { Mail, Phone, MapPin, MessageSquare, Calculator, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-type Tab = "contact" | "quote"
+type Tab = "contact" | "quote" | "brief"
 
 export function ContactPageClient() {
   const [visible, setVisible] = useState(false)
@@ -24,10 +25,37 @@ export function ContactPageClient() {
     message: "",
   })
   const [submitted, setSubmitted] = useState(false)
+  const [prefilled, setPrefilled] = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80)
     return () => clearTimeout(t)
+  }, [])
+
+  // Prefill form from URL params (sent from QuoteBriefModal)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    const fields = ["name", "email", "company", "phone", "subject", "message"] as const
+    const next: Partial<Record<(typeof fields)[number], string>> = {}
+    let hasAny = false
+    for (const f of fields) {
+      const v = params.get(f)
+      if (v) {
+        next[f] = v
+        hasAny = true
+      }
+    }
+    if (hasAny) {
+      setFormData((prev) => ({ ...prev, ...next }))
+      setActiveTab("contact")
+      setPrefilled(true)
+      requestAnimationFrame(() => {
+        document
+          .getElementById("contact-form-anchor")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" })
+      })
+    }
   }, [])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -101,6 +129,18 @@ export function ContactPageClient() {
               >
                 <Calculator className="w-4 h-4" />
                 即時報價試算
+              </button>
+              <button
+                onClick={() => setActiveTab("brief")}
+                className={cn(
+                  "flex items-center gap-2.5 px-6 py-4 text-xs tracking-[0.25em] font-medium border-b-2 transition-all duration-300",
+                  activeTab === "brief"
+                    ? "border-temo-gold text-temo-gold"
+                    : "border-transparent text-temo-warm-gray hover:text-white"
+                )}
+              >
+                <FileText className="w-4 h-4" />
+                設計需求單
               </button>
             </div>
           </div>
@@ -225,6 +265,17 @@ export function ContactPageClient() {
                     transform: isInView ? "translateX(0)" : "translateX(24px)",
                   }}
                 >
+                  <div id="contact-form-anchor" className="scroll-mt-32" />
+                  {prefilled && !submitted && (
+                    <div className="mb-6 flex items-start gap-3 border border-temo-gold/30 bg-temo-gold/5 px-4 py-3 rounded-sm">
+                      <div className="mt-0.5 w-5 h-5 rounded-full bg-temo-gold/15 flex items-center justify-center shrink-0">
+                        <svg className="w-3 h-3 text-temo-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      </div>
+                      <p className="text-xs text-temo-warm-gray leading-relaxed">
+                        已自動帶入您剛剛填寫的設計需求 brief — 請最後確認資訊無誤後送出。
+                      </p>
+                    </div>
+                  )}
                   {!submitted ? (
                     <form onSubmit={handleSubmit} className="space-y-6">
                       <div className="grid md:grid-cols-2 gap-5">
@@ -322,6 +373,23 @@ export function ContactPageClient() {
           }}
         >
           <QuoteCalculator />
+        </div>
+
+        {/* ── Brief Tab ── */}
+        <div style={{ display: activeTab === "brief" ? "block" : "none" }}>
+          <section className="relative py-20 md:py-28 bg-[#161412]">
+            <div
+              className="absolute inset-0 pointer-events-none opacity-[0.03]"
+              style={{
+                backgroundImage:
+                  "linear-gradient(#b0aca1 1px, transparent 1px), linear-gradient(90deg, #b0aca1 1px, transparent 1px)",
+                backgroundSize: "60px 60px",
+              }}
+            />
+            <div className="relative z-10 mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
+              <QuoteBriefForm />
+            </div>
+          </section>
         </div>
 
       </main>
