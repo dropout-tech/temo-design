@@ -448,6 +448,7 @@ export function AboutPageClient() {
   const translateXRef = useRef(0)
 
   const currentList = categories[activeCategory]
+  const shouldMarquee = currentList.length >= 4
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80)
@@ -726,34 +727,54 @@ export function AboutPageClient() {
               <div className="h-px w-16 md:w-24 bg-white/20" />
             </div>
 
-            {/* Designer Cards — edge-hover-driven rotation, equal size */}
-            <div
-              ref={marqueeContainerRef}
-              onMouseMove={handleMarqueeMouseMove}
-              onMouseLeave={handleMarqueeMouseLeave}
-              className="relative w-full overflow-hidden py-4"
-              style={{
-                transition: "opacity 0.8s ease 0.2s",
-                opacity: visible ? 1 : 0,
-                maskImage:
-                  "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
-                WebkitMaskImage:
-                  "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
-              }}
-            >
+            {/* Designer Cards — marquee for many, centered for few */}
+            {shouldMarquee ? (
               <div
-                ref={marqueeTrackRef}
-                className="flex gap-6 md:gap-8 w-max will-change-transform"
+                ref={marqueeContainerRef}
+                onMouseMove={handleMarqueeMouseMove}
+                onMouseLeave={handleMarqueeMouseLeave}
+                className="relative w-full overflow-hidden py-4"
+                style={{
+                  transition: "opacity 0.8s ease 0.2s",
+                  opacity: visible ? 1 : 0,
+                  maskImage:
+                    "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+                  WebkitMaskImage:
+                    "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+                }}
               >
-                {[...currentList, ...currentList].map((person, i) => (
-                  <DesignerCard
-                    key={`${activeCategory}-${person.name}-${i}`}
-                    person={person}
-                    onClick={() => setSelectedPerson(person)}
-                  />
-                ))}
+                <div
+                  ref={marqueeTrackRef}
+                  className="flex gap-6 md:gap-8 w-max will-change-transform"
+                >
+                  {[...currentList, ...currentList].map((person, i) => (
+                    <DesignerCard
+                      key={`${activeCategory}-${person.name}-${i}`}
+                      person={person}
+                      onClick={() => setSelectedPerson(person)}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div
+                className="relative w-full py-4"
+                style={{
+                  transition: "opacity 0.8s ease 0.2s",
+                  opacity: visible ? 1 : 0,
+                }}
+              >
+                <div className="flex justify-center flex-wrap gap-6 md:gap-8">
+                  {currentList.map((person) => (
+                    <DesignerCard
+                      key={`${activeCategory}-${person.name}`}
+                      person={person}
+                      onClick={() => setSelectedPerson(person)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
