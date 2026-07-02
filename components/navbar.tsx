@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, type FormEvent } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { X, AlignJustify, Search, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -14,17 +14,24 @@ const navLinks = [
 const menuLinks = [
   { href: "/", label: "HOME", labelZh: "首頁" },
   { href: "/about", label: "ABOUT", labelZh: "關於我們" },
-  { href: "/portfolio", label: "WORKS", labelZh: "作品集" },
-  { href: "/explore", label: "EXPLORE", labelZh: "探索服務" },
+  { href: "/explore", label: "WORKS", labelZh: "作品探索" },
   { href: "/faq", label: "FAQ", labelZh: "常見問題" },
   { href: "/contact", label: "CONTACT", labelZh: "聯絡我們" },
 ]
 
-export function Navbar() {
+export function Navbar({ showSearch = false }: { showSearch?: boolean }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [q, setQ] = useState("")
+
+  const handleSearch = (e: FormEvent) => {
+    e.preventDefault()
+    const query = q.trim()
+    router.push(query ? `/portfolio?q=${encodeURIComponent(query)}` : "/portfolio")
+  }
 
   // Hide entirely on full-screen explore page
   if (pathname === "/explore") return null
@@ -69,29 +76,54 @@ export function Navbar() {
               />
             </Link>
 
-            {/* Center-ish Nav Links (slightly left of center to match design) */}
-            <nav className="hidden lg:flex items-center gap-12 xl:gap-16 absolute left-1/2 top-1/2 -translate-y-1/2 translate-x-[16%]">
-              {navLinks.map((item) => {
-                const active = pathname === item.href
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "group relative flex items-baseline gap-2 transition-colors duration-200",
-                      active ? "text-temo-gold" : "text-white/90 hover:text-white"
-                    )}
+            {/* 中間：分類落地頁顯示搜尋框，其餘頁面維持原本的 CONTACT / ABOUT 連結 */}
+            {showSearch ? (
+              <form
+                onSubmit={handleSearch}
+                className="hidden lg:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[38vw] max-w-[440px]"
+              >
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="SEARCH"
+                    aria-label="搜尋作品"
+                    className="w-full bg-white/[0.03] border border-white/25 rounded-full pl-6 pr-12 py-2.5 text-[11px] tracking-[0.3em] uppercase text-white placeholder:text-white/40 focus:border-white/60 focus:bg-white/[0.06] focus:outline-none transition-all"
+                  />
+                  <button
+                    type="submit"
+                    aria-label="搜尋"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors"
                   >
-                    <span className="text-[12px] tracking-[0.25em] font-medium">{item.label}</span>
-                    <span className="text-[11px] text-white/70 group-hover:text-white transition-colors">{item.labelZh}</span>
-                    <span className={cn(
-                      "absolute -bottom-1 left-0 h-px bg-temo-gold transition-all duration-300",
-                      active ? "w-full" : "w-0 group-hover:w-full"
-                    )} />
-                  </Link>
-                )
-              })}
-            </nav>
+                    <Search className="h-4 w-4" />
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <nav className="hidden lg:flex items-center gap-12 xl:gap-16 absolute left-1/2 top-1/2 -translate-y-1/2 translate-x-[16%]">
+                {navLinks.map((item) => {
+                  const active = pathname === item.href
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "group relative flex items-baseline gap-2 transition-colors duration-200",
+                        active ? "text-temo-gold" : "text-white/90 hover:text-white"
+                      )}
+                    >
+                      <span className="text-[12px] tracking-[0.25em] font-medium">{item.label}</span>
+                      <span className="text-[11px] text-white/70 group-hover:text-white transition-colors">{item.labelZh}</span>
+                      <span className={cn(
+                        "absolute -bottom-1 left-0 h-px bg-temo-gold transition-all duration-300",
+                        active ? "w-full" : "w-0 group-hover:w-full"
+                      )} />
+                    </Link>
+                  )
+                })}
+              </nav>
+            )}
 
             {/* Hamburger — top thick, middle medium, bottom thin */}
             <button

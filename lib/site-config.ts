@@ -9,7 +9,7 @@ export const siteConfig = {
   address: '台北市大安區敦化南路一段 123 號 8 樓',
   socialLinks: {
     instagram: 'https://www.instagram.com/_temo_design/',
-    facebook: 'https://www.facebook.com/temodesign',
+    facebook: 'https://www.facebook.com/temodesignss',
     behance: 'https://www.behance.net/temodesign',
   },
 }

@@ -7,7 +7,8 @@ interface LoadingScreenProps {
 }
 
 export function LoadingScreen({ onComplete }: LoadingScreenProps) {
-  const [progress, setProgress] = useState(0)
+  // progress value is no longer shown, but still drives the completion timing below
+  const [, setProgress] = useState(0)
   const [isExiting, setIsExiting] = useState(false)
   const [mounted, setMounted] = useState(false)
 
@@ -72,7 +73,7 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
         }}
       />
 
-      {/* Logo with gold shimmer — PNG mask + gold gradient; reveals from left then loops shimmer */}
+      {/* Logo with metallic shimmer — PNG mask + gray-silver gradient; reveals from left then loops shimmer */}
       <div
         style={{
           transition: "opacity 0.6s ease",
@@ -83,26 +84,6 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
         role="img"
       >
         <div className={`logo-shimmer-fill ${mounted ? "is-mounted" : ""}`} />
-      </div>
-
-      {/* Progress bar */}
-      <div
-        className="mt-12 w-56 md:w-72"
-        style={{
-          transition: "opacity 0.6s ease 0.5s",
-          opacity: mounted ? 1 : 0,
-        }}
-      >
-        <div className="h-px bg-temo-warm-gray/25 relative overflow-hidden">
-          <div
-            className="absolute left-0 top-0 h-full bg-temo-gold"
-            style={{ width: `${progress}%`, transition: "width 0.1s linear" }}
-          />
-        </div>
-        <div className="mt-3 flex justify-between items-center">
-          <span className="text-xs text-temo-warm-gray tracking-[0.3em]">LOADING</span>
-          <span className="text-xs text-temo-gold font-mono tabular-nums">{progress}%</span>
-        </div>
       </div>
 
       <style>{`
@@ -127,20 +108,20 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
               100deg,
               transparent 0%,
               transparent 35%,
-              rgba(255, 240, 200, 0.0) 40%,
-              rgba(255, 240, 200, 0.95) 50%,
-              rgba(255, 240, 200, 0.0) 60%,
+              rgba(255, 255, 255, 0.0) 40%,
+              rgba(255, 255, 255, 0.95) 50%,
+              rgba(255, 255, 255, 0.0) 60%,
               transparent 65%,
               transparent 100%
             ),
-            /* base gold gradient with subtle depth */
+            /* base gray-silver gradient with subtle depth */
             linear-gradient(
               90deg,
-              #b08a4f 0%,
-              #cda96d 25%,
-              #e2c389 50%,
-              #cda96d 75%,
-              #b08a4f 100%
+              #7d8085 0%,
+              #a9adb2 25%,
+              #d6d9dd 50%,
+              #a9adb2 75%,
+              #7d8085 100%
             );
           background-size: 220% 100%, 100% 100%;
           background-position: -120% 0, 0 0;
@@ -185,7 +166,7 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
             clip-path: inset(0 0 0 0);
             -webkit-clip-path: inset(0 0 0 0);
             background:
-              linear-gradient(90deg, #b08a4f 0%, #cda96d 50%, #b08a4f 100%);
+              linear-gradient(90deg, #7d8085 0%, #d6d9dd 50%, #7d8085 100%);
           }
         }
       `}</style>

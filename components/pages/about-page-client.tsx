@@ -479,35 +479,55 @@ export function AboutPageClient() {
     let rafId = 0
     const MAX_SPEED = 5 // px per frame
     const EDGE_RATIO = 0.3 // 30% from each edge is the trigger zone
+    let lastMask = ""
+
+    // Only fade an edge if there is still content to scroll toward in that
+    // direction — so the first/last card isn't permanently dimmed at the ends.
+    const applyMask = (atStart: boolean, atEnd: boolean) => {
+      const left = atStart ? "black 0%" : "transparent 0%, black 8%"
+      const right = atEnd ? "black 100%" : "black 92%, transparent 100%"
+      const mask = `linear-gradient(to right, ${left}, ${right})`
+      if (mask === lastMask) return
+      lastMask = mask
+      const container = marqueeContainerRef.current
+      if (container) {
+        container.style.setProperty("mask-image", mask)
+        container.style.setProperty("-webkit-mask-image", mask)
+      }
+    }
 
     const tick = () => {
       const container = marqueeContainerRef.current
       const track = marqueeTrackRef.current
       if (container && track) {
         const containerWidth = container.clientWidth
-        // Use the offsetLeft of the duplicated set's first item as the exact wrap distance
-        const secondSetFirst = track.children[currentList.length] as HTMLElement | undefined
-        const wrapWidth = secondSetFirst?.offsetLeft ?? track.scrollWidth / 2
+        // How far the track can travel before its right edge meets the container's.
+        const maxScroll = Math.max(0, track.scrollWidth - containerWidth)
 
         let speed = 0
         const mouseX = mouseXRef.current
-        if (mouseX !== null && wrapWidth > 0) {
+        if (mouseX !== null && maxScroll > 0) {
           const edgeZone = containerWidth * EDGE_RATIO
           if (mouseX < edgeZone) {
             const intensity = 1 - mouseX / edgeZone
-            speed = intensity * MAX_SPEED // positive = track moves right
+            speed = intensity * MAX_SPEED // positive = track moves right (toward the start)
           } else if (mouseX > containerWidth - edgeZone) {
             const intensity = (mouseX - (containerWidth - edgeZone)) / edgeZone
             speed = -intensity * MAX_SPEED
           }
         }
 
-        if (speed !== 0 && wrapWidth > 0) {
+        if (speed !== 0 && maxScroll > 0) {
           translateXRef.current += speed
-          if (translateXRef.current > 0) translateXRef.current -= wrapWidth
-          else if (translateXRef.current < -wrapWidth) translateXRef.current += wrapWidth
+          // Clamp at both ends instead of wrapping — stop when you hit the edge.
+          if (translateXRef.current > 0) translateXRef.current = 0
+          else if (translateXRef.current < -maxScroll) translateXRef.current = -maxScroll
           track.style.transform = `translate3d(${translateXRef.current}px, 0, 0)`
         }
+
+        const atStart = translateXRef.current >= -0.5
+        const atEnd = maxScroll <= 0 || translateXRef.current <= -maxScroll + 0.5
+        applyMask(atStart, atEnd)
       }
       rafId = requestAnimationFrame(tick)
     }
@@ -727,7 +747,7 @@ export function AboutPageClient() {
               <div className="h-px w-16 md:w-24 bg-white/20" />
             </div>
 
-            {/* Designer Cards — marquee for many, centered for few */}
+            {/* Designer Cards — scroll for many (stops at both ends), centered for few */}
             {shouldMarquee ? (
               <div
                 ref={marqueeContainerRef}
@@ -737,19 +757,20 @@ export function AboutPageClient() {
                 style={{
                   transition: "opacity 0.8s ease 0.2s",
                   opacity: visible ? 1 : 0,
+                  // Initial "at start" fade; applyMask() keeps it in sync while scrolling.
                   maskImage:
-                    "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+                    "linear-gradient(to right, black 0%, black 92%, transparent 100%)",
                   WebkitMaskImage:
-                    "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+                    "linear-gradient(to right, black 0%, black 92%, transparent 100%)",
                 }}
               >
                 <div
                   ref={marqueeTrackRef}
                   className="flex gap-6 md:gap-8 w-max will-change-transform"
                 >
-                  {[...currentList, ...currentList].map((person, i) => (
+                  {currentList.map((person) => (
                     <DesignerCard
-                      key={`${activeCategory}-${person.name}-${i}`}
+                      key={`${activeCategory}-${person.name}`}
                       person={person}
                       onClick={() => setSelectedPerson(person)}
                     />

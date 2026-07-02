@@ -20,7 +20,7 @@ const socialLinks = [
     icon: <Instagram className="h-4 w-4" />,
   },
   {
-    href: "https://www.facebook.com/temodesign",
+    href: "https://www.facebook.com/temodesignss",
     label: "Facebook",
     icon: <Facebook className="h-4 w-4" />,
   },

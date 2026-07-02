@@ -6,14 +6,14 @@ import { Instagram, Facebook, Mail, Phone, MapPin } from "lucide-react"
 const quickLinks = [
   { href: "/", label: "首頁" },
   { href: "/about", label: "關於我們" },
-  { href: "/portfolio", label: "作品集" },
+  { href: "/explore", label: "作品探索" },
   { href: "/faq", label: "常見問題" },
   { href: "/contact", label: "聯絡我們" },
 ]
 
 const socialLinks = [
   { href: "https://www.instagram.com/_temo_design/", icon: Instagram, label: "Instagram" },
-  { href: "https://www.facebook.com/temodesign", icon: Facebook, label: "Facebook" },
+  { href: "https://www.facebook.com/temodesignss", icon: Facebook, label: "Facebook" },
 ]
 
 export function Footer() {

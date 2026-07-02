@@ -7,6 +7,8 @@ import { ArrowUpRight, Award, ChevronLeft } from "lucide-react"
 import { useInView } from "@/hooks/use-in-view"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
+import { VideoEmbed } from "@/components/video-embed"
+import { isVideoUrl } from "@/lib/video"
 import { proxyImage } from "@/lib/portfolio-data"
 
 export type DetailDesigner = {
@@ -26,7 +28,7 @@ export type DetailRelated = {
   year: string
 }
 
-export type DetailSubTag = {
+export type DetailIndustry = {
   value: string
   label: string
 }
@@ -37,14 +39,15 @@ export type DetailProject = {
   subtitle: string
   categoryLabel: string
   categoryGroup?: string         // 用來在導覽列連回 /portfolio?group=xxx
-  subTagLabels: string[]
-  subTags?: DetailSubTag[]       // 帶 value 的版本，可用於連結
+  industryLabels: string[]
+  industries?: DetailIndustry[]  // 帶 value 的版本，可用於連結
   year: string
   clientName?: string
   clientSlug?: string
   clientBrief?: string
   description: string
   cover: string
+  videoUrl?: string
   services?: string[]
   deliverables?: string[]
   challenge?: string
@@ -142,25 +145,40 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
             </div>
           </div>
 
-          {/* Cover image — full bleed */}
-          <div
-            className="relative w-full aspect-[16/9] md:aspect-[21/9] overflow-hidden bg-temo-warm-gray/5"
-            style={{
-              transition: "opacity 1.1s ease 0.2s",
-              opacity: heroVisible ? 1 : 0,
-            }}
-          >
-            <Image
-              src={proxyImage(project.cover)}
-              alt={project.title}
-              fill
-              priority
-              className="object-cover"
-              sizes="100vw"
-              referrerPolicy="no-referrer"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-temo-black/40 via-transparent to-transparent" />
-          </div>
+          {/* Hero media — 有影片就放播放器，否則放滿版封面圖 */}
+          {isVideoUrl(project.videoUrl) ? (
+            <div
+              style={{
+                transition: "opacity 1.1s ease 0.2s",
+                opacity: heroVisible ? 1 : 0,
+              }}
+            >
+              <VideoEmbed
+                url={project.videoUrl!}
+                poster={project.cover}
+                title={project.title}
+              />
+            </div>
+          ) : (
+            <div
+              className="relative w-full aspect-[16/9] md:aspect-[21/9] overflow-hidden bg-temo-warm-gray/5"
+              style={{
+                transition: "opacity 1.1s ease 0.2s",
+                opacity: heroVisible ? 1 : 0,
+              }}
+            >
+              <Image
+                src={proxyImage(project.cover)}
+                alt={project.title}
+                fill
+                priority
+                className="object-cover"
+                sizes="100vw"
+                referrerPolicy="no-referrer"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-temo-black/40 via-transparent to-transparent" />
+            </div>
+          )}
         </section>
 
         {/* ─── Body：敘事 + 側欄 ───────────────────────────────────── */}
@@ -231,7 +249,17 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                   <div className="lg:sticky lg:top-28 space-y-8 lg:border-l lg:border-temo-warm-gray/15 lg:pl-10">
                     {project.clientName && (
                       <MetaItem label="客戶 Client">
-                        <p className="text-temo-white font-medium">{project.clientName}</p>
+                        {project.clientSlug ? (
+                          <Link
+                            href={`/portfolio?client=${project.clientSlug}`}
+                            className="group inline-flex items-center gap-1.5 text-temo-white font-medium hover:text-temo-gold transition-colors"
+                          >
+                            {project.clientName}
+                            <ArrowUpRight className="w-3.5 h-3.5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                          </Link>
+                        ) : (
+                          <p className="text-temo-white font-medium">{project.clientName}</p>
+                        )}
                         {project.clientBrief && (
                           <p className="text-temo-warm-gray/70 text-sm mt-1">{project.clientBrief}</p>
                         )}
@@ -272,23 +300,31 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
 
                     {project.designers.length > 0 && (
                       <MetaItem label="設計團隊 Team">
-                        <ul className="space-y-3">
+                        <ul className="space-y-1">
                           {project.designers.map((d) => (
-                            <li key={d.slug} className="flex items-center gap-3">
-                              <div className="relative w-10 h-10 rounded-full overflow-hidden border border-temo-warm-gray/20 flex-shrink-0">
-                                <Image
-                                  src={proxyImage(d.photo)}
-                                  alt={d.name}
-                                  fill
-                                  className="object-cover"
-                                  sizes="40px"
-                                  referrerPolicy="no-referrer"
-                                />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-temo-white text-sm tracking-wider">{d.name}</p>
-                                <p className="text-temo-warm-gray/60 text-xs truncate">{d.role}</p>
-                              </div>
+                            <li key={d.slug}>
+                              <Link
+                                href={`/team/${d.slug}`}
+                                className="group flex items-center gap-3 -mx-2 px-2 py-1.5 rounded-lg hover:bg-temo-warm-gray/5 transition-colors"
+                              >
+                                <div className="relative w-10 h-10 rounded-full overflow-hidden border border-temo-warm-gray/20 group-hover:border-temo-gold/50 flex-shrink-0 transition-colors">
+                                  <Image
+                                    src={proxyImage(d.photo)}
+                                    alt={d.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="40px"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-temo-white group-hover:text-temo-gold text-sm tracking-wider transition-colors">
+                                    {d.name}
+                                  </p>
+                                  <p className="text-temo-warm-gray/60 text-xs truncate">{d.role}</p>
+                                </div>
+                                <ArrowUpRight className="w-3.5 h-3.5 ml-auto text-temo-warm-gray/0 group-hover:text-temo-gold transition-colors" />
+                              </Link>
                             </li>
                           ))}
                         </ul>
@@ -453,7 +489,7 @@ function MetaItem({ label, children }: { label: string; children: React.ReactNod
 function RelatedNav({ project }: { project: DetailProject }) {
   const hasAny =
     project.categoryGroup ||
-    (project.subTags && project.subTags.length > 0) ||
+    (project.industries && project.industries.length > 0) ||
     project.clientSlug ||
     project.designers.length > 0
 
@@ -465,9 +501,9 @@ function RelatedNav({ project }: { project: DetailProject }) {
   return (
     <div className="border-b border-temo-warm-gray/10 bg-temo-black/40">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center gap-x-6 gap-y-3">
-        {/* 分類 */}
+        {/* 執行項目 */}
         {project.categoryGroup && (
-          <NavGroup label="分類">
+          <NavGroup label="執行項目">
             <Link
               href={`/portfolio?group=${project.categoryGroup}`}
               className={pillClass}
@@ -477,13 +513,13 @@ function RelatedNav({ project }: { project: DetailProject }) {
           </NavGroup>
         )}
 
-        {/* 細項標籤 */}
-        {project.subTags && project.subTags.length > 0 && (
-          <NavGroup label="標籤">
-            {project.subTags.map((t) => (
+        {/* 行業分類 */}
+        {project.industries && project.industries.length > 0 && (
+          <NavGroup label="行業">
+            {project.industries.map((t) => (
               <Link
                 key={t.value}
-                href={`/portfolio?group=${project.categoryGroup}&subTag=${t.value}`}
+                href={`/portfolio?industry=${t.value}`}
                 className={pillClass}
               >
                 {t.label}

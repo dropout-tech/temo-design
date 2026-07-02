@@ -24,10 +24,10 @@ const stats: {
   },
   {
     value: 20,
-    suffix: "+",
-    label: "跨界經驗約",
-    sublabel: "Industries Served",
-    description: "涵蓋各行業領域，從科技到餐飲，從時尚到工業，提供跨界整合的設計服務。",
+    suffix: "%↑",
+    label: "配合客戶後業績提升",
+    sublabel: "Revenue Growth",
+    description: "與我們合作後，客戶業績平均提升逾兩成，設計不只是美感，更是驅動商業成長的實質力量。",
     chart: "scatter",
   },
   {
@@ -41,7 +41,7 @@ const stats: {
   {
     value: 5,
     suffix: "+",
-    label: "設計經驗",
+    label: "客戶遍布國家",
     sublabel: "Countries Served",
     description: "設計力量跨越國界，為不同文化背景的品牌創造具全球視野的設計解決方案。",
     chart: "radar",

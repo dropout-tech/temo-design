@@ -11,7 +11,7 @@ import {
   INITIAL_FILTERS,
   type FilterState,
 } from "@/components/pages/portfolio-page-client"
-import { WORKS as DEMO_WORKS } from "@/lib/portfolio-data"
+import { WORKS as DEMO_WORKS, type Work } from "@/lib/portfolio-data"
 import type { CategoryLanding } from "@/lib/category-landing-data"
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
@@ -25,7 +25,10 @@ function LandingHero({ landing }: { landing: CategoryLanding }) {
   }, [])
 
   return (
-    <section className="relative pt-24 md:pt-32 pb-12 md:pb-16 overflow-hidden bg-[#0c0b09]">
+    <section className="relative pt-24 md:pt-32 pb-12 md:pb-16 overflow-hidden">
+      {/* 中性純灰遮罩（R=G=B，不帶暖色）：把岩石背景壓成中灰，黑色粗標題與灰字都清楚 */}
+      <div className="absolute inset-0 z-0 bg-gradient-to-b from-[#6e6e6e]/90 via-[#606060]/90 to-[#545454]/92" />
+
       <div
         className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"
         style={{
@@ -48,7 +51,7 @@ function LandingHero({ landing }: { landing: CategoryLanding }) {
         {/* 兩欄：左大標 / 右描述 + 按鈕 */}
         <div className="grid md:grid-cols-[1.1fr_1fr] gap-10 md:gap-16 items-start">
           {/* 左：大標 */}
-          <h1 className="text-6xl md:text-8xl lg:text-9xl font-black text-white leading-[0.95] tracking-tight">
+          <h1 className="text-6xl md:text-8xl lg:text-9xl font-black text-temo-black leading-[0.95] tracking-tight">
             {landing.titleEn.map((line, i) => {
               const isAmpersand = line.trim() === "&"
               return (
@@ -56,7 +59,7 @@ function LandingHero({ landing }: { landing: CategoryLanding }) {
                   key={i}
                   className={cn(
                     "block",
-                    isAmpersand && "text-4xl md:text-6xl font-light text-white/40 my-1 md:my-2"
+                    isAmpersand && "text-4xl md:text-6xl font-light text-white/30 my-1 md:my-2"
                   )}
                 >
                   {line}
@@ -67,17 +70,17 @@ function LandingHero({ landing }: { landing: CategoryLanding }) {
 
           {/* 右：中英描述 + CTA */}
           <div className="md:pt-16 lg:pt-24">
-            <p className="text-white/75 text-base md:text-lg leading-relaxed mb-5 whitespace-pre-line">
+            <p className="text-white/70 text-base md:text-lg leading-relaxed mb-5 whitespace-pre-line">
               {landing.taglineZh}
             </p>
-            <p className="text-[11px] md:text-xs tracking-[0.22em] text-white/35 uppercase leading-relaxed whitespace-pre-line">
+            <p className="text-[11px] md:text-xs tracking-[0.22em] text-white/40 uppercase leading-relaxed whitespace-pre-line">
               {landing.taglineEn}
             </p>
 
             {landing.cta && (
               <Link
                 href={landing.cta.href}
-                className="mt-8 inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-white/[0.06] hover:bg-temo-gold border border-white/15 hover:border-temo-gold text-white/85 hover:text-black text-sm font-medium tracking-wider transition-all"
+                className="mt-8 inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-temo-warm-gray hover:bg-temo-cool-gray border border-temo-warm-gray hover:border-temo-cool-gray text-temo-black hover:text-white text-sm font-medium tracking-wider transition-all"
               >
                 {landing.cta.label}
                 <ArrowUpRight className="w-4 h-4" />
@@ -85,24 +88,6 @@ function LandingHero({ landing }: { landing: CategoryLanding }) {
             )}
           </div>
         </div>
-
-        {/* 底部橢圓 pills */}
-        {landing.ovals && landing.ovals.length > 0 && (
-          <div className="mt-14 md:mt-20 flex items-center justify-between gap-4 md:gap-6 max-w-5xl mx-auto flex-wrap">
-            {landing.ovals.map((label) => (
-              <div
-                key={label}
-                className="flex items-center justify-center w-[80px] h-[140px] md:w-[120px] md:h-[210px] rounded-full border-2 border-white/20 bg-white/[0.02] text-white/65 text-xl md:text-3xl font-light tracking-[0.4em] hover:border-temo-gold/60 hover:text-white transition-colors"
-                style={{
-                  writingMode: "vertical-rl",
-                  textOrientation: "upright",
-                }}
-              >
-                {label}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </section>
   )
@@ -110,7 +95,7 @@ function LandingHero({ landing }: { landing: CategoryLanding }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export function CategoryLandingClient({ landing }: { landing: CategoryLanding }) {
+export function CategoryLandingClient({ landing, works }: { landing: CategoryLanding; works?: Work[] }) {
   const [filters, setFilters] = useState<FilterState>({
     ...INITIAL_FILTERS,
     group: landing.portfolioGroup,
@@ -118,10 +103,32 @@ export function CategoryLandingClient({ landing }: { landing: CategoryLanding })
 
   return (
     <>
-      <Navbar />
+      <Navbar showSearch />
+      {/* 整頁固定背景：改用首頁同一支影片，鋪滿視窗、隨捲動保持不動；Hero 與作品列表都疊在它上面 */}
+      {/* 想換回岩石靜圖：把這段 <video> 換回 <img src="/images/category-landing-bg.jpg" .../> 即可（檔案仍保留） */}
+      <div className="fixed inset-0 -z-10 pointer-events-none bg-temo-black">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="w-full h-full object-cover"
+        >
+          <source
+            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/freepik_-_kling_720p_16-9_24fps_57860-mPIC49MLEKEyvjV5OZbCDTi7rgIrbv.mp4"
+            type="video/mp4"
+          />
+        </video>
+      </div>
       <main className="pt-[68px]">
         <LandingHero landing={landing} />
-        <PortfolioGrid works={DEMO_WORKS} filters={filters} setFilters={setFilters} />
+        <PortfolioGrid
+          works={works && works.length > 0 ? works : DEMO_WORKS}
+          filters={filters}
+          setFilters={setFilters}
+          showFilters={!landing.hideFilters}
+          transparentBg
+        />
       </main>
       <Footer />
     </>

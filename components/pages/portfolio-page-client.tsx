@@ -11,14 +11,14 @@ import { ArrowUpRight, X, Search } from "lucide-react"
 import {
   WORKS as DEMO_WORKS,
   CATEGORY_GROUPS,
-  SUB_TAGS,
+  INDUSTRIES,
   DESIGNERS,
   CLIENTS,
   CLIENT_MAP,
   DESIGNER_MAP,
   getAllYears,
   getCategoryLabel,
-  getSubTagLabel,
+  getIndustryLabel,
   proxyImage,
   type Work,
   type CategoryGroupValue,
@@ -31,8 +31,8 @@ export type { Work }
 
 export type FilterState = {
   query: string
-  group: "all" | CategoryGroupValue
-  subTags: string[]
+  group: "all" | CategoryGroupValue  // 執行項目（單選）
+  industries: string[]               // 行業分類（複選，獨立維度）
   designer: string  // "all" or slug
   client: string    // "all" or slug
   year: string      // "all" or year
@@ -41,7 +41,7 @@ export type FilterState = {
 export const INITIAL_FILTERS: FilterState = {
   query: "",
   group: "all",
-  subTags: [],
+  industries: [],
   designer: "all",
   client: "all",
   year: "all",
@@ -55,7 +55,7 @@ function buildSearchHaystack(w: Work): string {
     w.description,
     w.year,
     getCategoryLabel(w.categoryGroup),
-    ...w.subTags.map((t) => getSubTagLabel(w.categoryGroup, t)),
+    ...w.industries.map((i) => getIndustryLabel(i)),
   ]
   const client = CLIENT_MAP[w.clientSlug]
   if (client) {
@@ -84,30 +84,30 @@ function FilterBar({
   filteredCount: number
 }) {
   const years = useMemo(() => getAllYears(), [])
-  const subTagsForGroup = filters.group !== "all" ? SUB_TAGS[filters.group] ?? [] : []
 
-  function toggleSubTag(tag: string) {
-    const next = filters.subTags.includes(tag)
-      ? filters.subTags.filter((t) => t !== tag)
-      : [...filters.subTags, tag]
-    setFilters({ ...filters, subTags: next })
+  function toggleIndustry(value: string) {
+    const next = filters.industries.includes(value)
+      ? filters.industries.filter((i) => i !== value)
+      : [...filters.industries, value]
+    setFilters({ ...filters, industries: next })
   }
 
+  // 行業分類是獨立維度，切換執行項目時不重設它
   function setGroup(group: "all" | CategoryGroupValue) {
-    setFilters({ ...filters, group, subTags: [] })
+    setFilters({ ...filters, group })
   }
 
   const hasActive =
     filters.query.trim() !== "" ||
     filters.group !== "all" ||
-    filters.subTags.length > 0 ||
+    filters.industries.length > 0 ||
     filters.designer !== "all" ||
     filters.client !== "all" ||
     filters.year !== "all"
 
   return (
     <div className="mb-12 space-y-6">
-      {/* Row 1: 粗分類 chips */}
+      {/* Row 1: 執行項目 chips（單選，固定顯示全部項目） */}
       <div>
         <p className="text-[10px] tracking-[0.3em] text-white/30 uppercase mb-3">執行項目</p>
         <div className="flex items-center gap-2 flex-wrap">
@@ -125,7 +125,6 @@ function FilterBar({
           </button>
           {CATEGORY_GROUPS.map((cat) => {
             const count = works.filter((w) => w.categoryGroup === cat.value).length
-            if (count === 0) return null
             return (
               <button
                 key={cat.value}
@@ -145,31 +144,29 @@ function FilterBar({
         </div>
       </div>
 
-      {/* Row 2: 細標籤（只在粗分類選定後顯示） */}
-      {filters.group !== "all" && subTagsForGroup.length > 0 && (
-        <div>
-          <p className="text-[10px] tracking-[0.3em] text-white/30 uppercase mb-3">執行細項（可複選）</p>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {subTagsForGroup.map((tag) => {
-              const active = filters.subTags.includes(tag.value)
-              return (
-                <button
-                  key={tag.value}
-                  onClick={() => toggleSubTag(tag.value)}
-                  className={cn(
-                    "px-3 py-1.5 text-[11px] tracking-wider transition-all duration-200 rounded-full border",
-                    active
-                      ? "bg-white text-black border-white font-medium"
-                      : "border-white/10 text-white/45 hover:text-white hover:border-white/30"
-                  )}
-                >
-                  {tag.label}
-                </button>
-              )
-            })}
-          </div>
+      {/* Row 2: 行業分類（獨立維度，固定顯示、可複選） */}
+      <div>
+        <p className="text-[10px] tracking-[0.3em] text-white/30 uppercase mb-3">行業分類（可複選）</p>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {INDUSTRIES.map((ind) => {
+            const active = filters.industries.includes(ind.value)
+            return (
+              <button
+                key={ind.value}
+                onClick={() => toggleIndustry(ind.value)}
+                className={cn(
+                  "px-3 py-1.5 text-[11px] tracking-wider transition-all duration-200 rounded-full border",
+                  active
+                    ? "bg-white text-black border-white font-medium"
+                    : "border-white/10 text-white/45 hover:text-white hover:border-white/30"
+                )}
+              >
+                {ind.label}
+              </button>
+            )
+          })}
         </div>
-      )}
+      </div>
 
       {/* Row 3: 下拉篩選 + 結果數 */}
       <div className="flex items-end gap-4 flex-wrap pt-2">
@@ -228,11 +225,11 @@ function FilterBar({
           {filters.group !== "all" && (
             <ActivePill label={getCategoryLabel(filters.group)} onRemove={() => setGroup("all")} />
           )}
-          {filters.subTags.map((t) => (
+          {filters.industries.map((i) => (
             <ActivePill
-              key={t}
-              label={getSubTagLabel(filters.group as CategoryGroupValue, t)}
-              onRemove={() => toggleSubTag(t)}
+              key={i}
+              label={getIndustryLabel(i)}
+              onRemove={() => toggleIndustry(i)}
             />
           ))}
           {filters.client !== "all" && (
@@ -412,10 +409,16 @@ export function PortfolioGrid({
   works,
   filters,
   setFilters,
+  showFilters = true,
+  transparentBg = false,
 }: {
   works: Work[]
   filters: FilterState
   setFilters: (f: FilterState) => void
+  // 是否顯示上方整組篩選列；分類落地頁（公共藝術／產品／工藝）可傳 false 隱藏
+  showFilters?: boolean
+  // 分類落地頁鋪滿背景圖時傳 true：去掉本區深色實底，改半透明深色遮罩，露出後面的背景圖
+  transparentBg?: boolean
 }) {
   const [hoveredId, setHoveredId] = useState<number | null>(null)
   const [visible, setVisible] = useState(false)
@@ -441,7 +444,8 @@ export function PortfolioGrid({
 
     return works.filter((w) => {
       if (filters.group !== "all" && w.categoryGroup !== filters.group) return false
-      if (filters.subTags.length > 0 && !filters.subTags.every((t) => w.subTags.includes(t))) return false
+      // 行業分類複選採「OR」：作品命中任一選取的產業即通過
+      if (filters.industries.length > 0 && !filters.industries.some((i) => (w.industries as string[]).includes(i))) return false
       if (filters.designer !== "all" && !w.designerSlugs.includes(filters.designer)) return false
       if (filters.client !== "all" && w.clientSlug !== filters.client) return false
       if (filters.year !== "all" && w.year !== filters.year) return false
@@ -454,32 +458,47 @@ export function PortfolioGrid({
   }, [works, filters, haystacks])
 
   return (
-    <section className="pt-10 md:pt-14 pb-24 md:pb-32 bg-[#0c0b09]">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div
-          style={{
-            transition: "opacity 0.6s ease",
-            opacity: visible ? 1 : 0,
-          }}
-        >
-          <FilterBar
-            filters={filters}
-            setFilters={setFilters}
-            works={works}
-            filteredCount={filtered.length}
-          />
-        </div>
+    <section
+      className={cn(
+        "relative pt-10 md:pt-14 pb-24 md:pb-32",
+        transparentBg ? "bg-transparent" : "bg-[#0c0b09]"
+      )}
+    >
+      {/* 分類頁鋪背景圖時：半透明深色遮罩，讓白字／卡片在岩石圖上仍清晰 */}
+      {transparentBg && <div className="absolute inset-0 bg-[#0c0b09]/80" />}
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {showFilters && (
+          <div
+            style={{
+              transition: "opacity 0.6s ease",
+              opacity: visible ? 1 : 0,
+            }}
+          >
+            <FilterBar
+              filters={filters}
+              setFilters={setFilters}
+              works={works}
+              filteredCount={filtered.length}
+            />
+          </div>
+        )}
 
-        {/* Empty state */}
+        {/* Empty state：有篩選列時提示「清除篩選」；沒有篩選列（分類落地頁）時只說作品準備中 */}
         {filtered.length === 0 && (
           <div className="py-24 text-center">
-            <p className="text-white/40 text-sm tracking-wider mb-3">沒有符合條件的作品</p>
-            <button
-              onClick={() => setFilters(INITIAL_FILTERS)}
-              className="text-temo-gold text-xs tracking-widest uppercase hover:underline"
-            >
-              清除篩選條件
-            </button>
+            {showFilters ? (
+              <>
+                <p className="text-white/40 text-sm tracking-wider mb-3">沒有符合條件的作品</p>
+                <button
+                  onClick={() => setFilters(INITIAL_FILTERS)}
+                  className="text-temo-gold text-xs tracking-widest uppercase hover:underline"
+                >
+                  清除篩選條件
+                </button>
+              </>
+            ) : (
+              <p className="text-white/40 text-sm tracking-wider">此分類的作品即將上線，敬請期待。</p>
+            )}
           </div>
         )}
 
@@ -651,12 +670,12 @@ function PortfolioHero({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export function PortfolioPageClient(_props: { works?: Work[] } = {}) {
-  // demo 階段固定使用本地 DEMO_WORKS；之後接 CMS 時改成讀 props.works
-  const effectiveWorks = DEMO_WORKS
+export function PortfolioPageClient({ works }: { works?: Work[] } = {}) {
+  // 有從 Supabase 傳入就用，否則 fallback 到本地 DEMO_WORKS
+  const effectiveWorks = works && works.length > 0 ? works : DEMO_WORKS
 
   // 支援由案例頁、explore 等地方透過 URL 參數帶入初始篩選
-  // 支援的參數：?group=xxx&subTag=xxx&client=xxx&designer=xxx&q=xxx
+  // 支援的參數：?group=xxx&industry=xxx&client=xxx&designer=xxx&q=xxx
   const searchParams = useSearchParams()
   const initialFilters = useMemo<FilterState>(() => {
     const next: FilterState = { ...INITIAL_FILTERS }
@@ -666,10 +685,9 @@ export function PortfolioPageClient(_props: { works?: Work[] } = {}) {
       next.group = groupParam as CategoryGroupValue
     }
 
-    const subTagParam = searchParams?.get("subTag")
-    if (subTagParam && next.group !== "all") {
-      const valid = (SUB_TAGS[next.group] ?? []).some((t) => t.value === subTagParam)
-      if (valid) next.subTags = [subTagParam]
+    const industryParam = searchParams?.get("industry")
+    if (industryParam && INDUSTRIES.some((i) => i.value === industryParam)) {
+      next.industries = [industryParam]
     }
 
     const clientParam = searchParams?.get("client")

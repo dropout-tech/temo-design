@@ -1,14 +1,14 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { PortfolioDetailClient, type DetailProject } from "@/components/pages/portfolio-detail-client"
-import { getAllPortfolioSlugs, getPortfolioBySlug } from "@/lib/payload"
+import { getWorkDetail, getPublishedWorkSlugs } from "@/lib/portfolio-supabase"
 import {
   CLIENT_MAP,
   DESIGNER_MAP,
   WORKS,
   getCategoryLabel,
+  getIndustryLabel,
   getRelatedWorks,
-  getSubTagLabel,
   getWorkBySlug,
 } from "@/lib/portfolio-data"
 
@@ -49,10 +49,10 @@ function buildFromLocal(slug: string): DetailProject | null {
     subtitle: work.subtitle,
     categoryLabel: getCategoryLabel(work.categoryGroup),
     categoryGroup: work.categoryGroup,
-    subTagLabels: work.subTags.map((t) => getSubTagLabel(work.categoryGroup, t)),
-    subTags: work.subTags.map((t) => ({
-      value: t,
-      label: getSubTagLabel(work.categoryGroup, t),
+    industryLabels: work.industries.map((i) => getIndustryLabel(i)),
+    industries: work.industries.map((i) => ({
+      value: i,
+      label: getIndustryLabel(i),
     })),
     year: work.year,
     clientName: client?.name,
@@ -60,6 +60,7 @@ function buildFromLocal(slug: string): DetailProject | null {
     clientBrief: client?.brief,
     description: work.description,
     cover: work.cover,
+    videoUrl: work.videoUrl,
     services: work.services,
     deliverables: work.deliverables,
     challenge: work.challenge,
@@ -74,39 +75,9 @@ function buildFromLocal(slug: string): DetailProject | null {
 }
 
 async function loadProject(slug: string): Promise<DetailProject | null> {
-  // 優先讀 CMS；CMS 沒設定或查無此 slug 時，fallback 到本地 WORKS。
-  const doc = await getPortfolioBySlug(slug)
-  if (doc) {
-    const fromLocal = buildFromLocal(slug)
-    return {
-      slug,
-      title: doc.title,
-      subtitle: doc.subtitle ?? fromLocal?.subtitle ?? "",
-      categoryLabel: doc.category,
-      categoryGroup: fromLocal?.categoryGroup,
-      subTagLabels: (doc.tags ?? []).map((t) => t.tag),
-      subTags: fromLocal?.subTags,
-      year: doc.year,
-      clientName: doc.client ?? fromLocal?.clientName,
-      clientSlug: fromLocal?.clientSlug,
-      clientBrief: fromLocal?.clientBrief,
-      description: doc.description,
-      cover:
-        typeof doc.cover === "object" && doc.cover?.url
-          ? doc.cover.url
-          : doc.coverUrl ?? fromLocal?.cover ?? "/placeholder.jpg",
-      services: fromLocal?.services,
-      deliverables: fromLocal?.deliverables,
-      challenge: fromLocal?.challenge,
-      approach: doc.content ?? fromLocal?.approach,
-      result: fromLocal?.result,
-      gallery: fromLocal?.gallery,
-      quote: fromLocal?.quote,
-      awards: fromLocal?.awards,
-      designers: fromLocal?.designers ?? [],
-      related: fromLocal?.related ?? [],
-    }
-  }
+  // 優先讀 Supabase；查無此 slug（或連線異常）時 fallback 到本地 WORKS。
+  const fromSupabase = await getWorkDetail(slug)
+  if (fromSupabase) return fromSupabase
   return buildFromLocal(slug)
 }
 
@@ -123,10 +94,8 @@ export async function generateMetadata(
 }
 
 export async function generateStaticParams() {
-  const cmsSlugs = await getAllPortfolioSlugs()
-  if (cmsSlugs && cmsSlugs.length > 0) {
-    return cmsSlugs.map((slug) => ({ slug }))
-  }
+  const slugs = await getPublishedWorkSlugs()
+  if (slugs.length > 0) return slugs.map((slug) => ({ slug }))
   return WORKS.map((w) => ({ slug: w.slug }))
 }
 

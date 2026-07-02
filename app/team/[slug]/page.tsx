@@ -1,15 +1,21 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { TeamMemberClient } from "@/components/pages/team-member-client"
-import { DESIGNER_MAP, DESIGNERS, getWorksByDesigner } from "@/lib/portfolio-data"
+import {
+  getDesignerBySlug,
+  getDesignerSlugs,
+  getWorksByDesignerSlug,
+} from "@/lib/portfolio-supabase"
 
 interface TeamMemberPageProps {
   params: Promise<{ slug: string }>
 }
 
+export const revalidate = 60
+
 export async function generateMetadata(props: TeamMemberPageProps): Promise<Metadata> {
   const { slug } = await props.params
-  const designer = DESIGNER_MAP[slug]
+  const designer = await getDesignerBySlug(slug)
   if (!designer) return { title: "設計師 | TEMO DESIGN" }
   return {
     title: `${designer.name} ${designer.nameZh ? `/ ${designer.nameZh}` : ""} | TEMO DESIGN`,
@@ -17,15 +23,16 @@ export async function generateMetadata(props: TeamMemberPageProps): Promise<Meta
   }
 }
 
-export function generateStaticParams() {
-  return DESIGNERS.map((d) => ({ slug: d.slug }))
+export async function generateStaticParams() {
+  const slugs = await getDesignerSlugs()
+  return slugs.map((slug) => ({ slug }))
 }
 
 export default async function TeamMemberPage(props: TeamMemberPageProps) {
   const { slug } = await props.params
-  const designer = DESIGNER_MAP[slug]
+  const designer = await getDesignerBySlug(slug)
   if (!designer) notFound()
 
-  const works = getWorksByDesigner(slug)
+  const works = await getWorksByDesignerSlug(slug)
   return <TeamMemberClient designer={designer} works={works} />
 }

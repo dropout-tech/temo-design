@@ -1,64 +1,44 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Portfolio demo data — UI 階段用，未來搬到 Payload CMS 時資料形狀直接對應：
-//   CATEGORY_GROUPS / SUB_TAGS → Portfolio collection 的 select / array
+//   CATEGORY_GROUPS / INDUSTRIES → Portfolio collection 的 select
 //   DESIGNERS → Designers collection
 //   CLIENTS   → Clients collection
-//   WORKS     → Portfolio collection 的 docs（categoryGroup / subTags /
+//   WORKS     → Portfolio collection 的 docs（categoryGroup / industries /
 //              clientSlug / designerSlugs 將改為 Payload relationship）
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ─── 粗分類（單選） ────────────────────────────────────────────────────────────
+// ─── 執行項目（單選） ──────────────────────────────────────────────────────────
+// 註：欄位／型別沿用舊名 categoryGroup / CategoryGroupValue，避免全站大改名；
+//     其值與標籤已換成「執行項目」這個維度（原本的「粗分類」）。
 export const CATEGORY_GROUPS = [
-  { value: "branding", label: "品牌識別" },
+  { value: "brand-planning", label: "品牌規劃設計" },
+  { value: "logo-trademark", label: "Logo & 商標設計" },
   { value: "packaging", label: "包裝設計" },
-  { value: "product", label: "產品設計" },
-  { value: "space-craft", label: "空間／工藝" },
-  { value: "digital", label: "數位設計" },
-  { value: "marketing", label: "行銷物料" },
-  { value: "public-art", label: "公共藝術" },
+  { value: "business-card", label: "名片設計" },
+  { value: "menu", label: "菜單設計" },
+  { value: "poster", label: "文宣 & 海報設計" },
+  { value: "storefront", label: "店面設計" },
+  { value: "web-visual", label: "網站視覺設計" },
+  { value: "graphic", label: "圖文設計" },
+  { value: "exhibition", label: "展覽設計" },
+  { value: "merchandise", label: "應用周邊" },
 ] as const
 
 export type CategoryGroupValue = (typeof CATEGORY_GROUPS)[number]["value"]
 
-// ─── 細標籤（複選），依粗分類分組 ───────────────────────────────────────────────
-export const SUB_TAGS: Record<CategoryGroupValue, { value: string; label: string }[]> = {
-  branding: [
-    { value: "logo", label: "Logo 設計" },
-    { value: "vi-system", label: "CIS 規範" },
-    { value: "brand-strategy", label: "品牌策略" },
-    { value: "naming", label: "命名" },
-  ],
-  packaging: [
-    { value: "package-structure", label: "包裝結構" },
-    { value: "bottle", label: "瓶身設計" },
-    { value: "gift-box", label: "禮盒設計" },
-    { value: "label", label: "標籤設計" },
-  ],
-  product: [
-    { value: "product-form", label: "產品造型" },
-    { value: "prototype", label: "量產打樣" },
-    { value: "material", label: "材質選用" },
-  ],
-  "space-craft": [
-    { value: "exhibition", label: "展覽空間" },
-    { value: "window-display", label: "櫥窗" },
-    { value: "craft", label: "工藝開發" },
-  ],
-  digital: [
-    { value: "web", label: "網站設計" },
-    { value: "ui", label: "UI 設計" },
-    { value: "social", label: "社群視覺" },
-  ],
-  marketing: [
-    { value: "kv", label: "KV 設計" },
-    { value: "dm", label: "DM" },
-    { value: "video", label: "影片" },
-  ],
-  "public-art": [
-    { value: "sculpture", label: "雕塑" },
-    { value: "installation", label: "裝置" },
-  ],
-}
+// ─── 行業分類（複選，獨立維度） ────────────────────────────────────────────────
+// 與「執行項目」互不從屬：不論選了哪個執行項目，行業分類都固定顯示、可同時複選。
+export const INDUSTRIES = [
+  { value: "food-beverage", label: "餐飲" },
+  { value: "beauty", label: "美業" },
+  { value: "raw-material", label: "原料 & 盤商" },
+  { value: "pet", label: "寵物" },
+  { value: "engineering", label: "工程" },
+  { value: "tech", label: "科技" },
+  { value: "medical", label: "醫療" },
+] as const
+
+export type IndustryValue = (typeof INDUSTRIES)[number]["value"]
 
 // ─── 設計師 ───────────────────────────────────────────────────────────────────
 export type Designer = {
@@ -85,7 +65,7 @@ export const DESIGNERS: Designer[] = [
       "職業舞者與理工背景出身，將理性邏輯與次文化底蘊融合至作品之中，以大量手寫字及影像合成作品，迅速在流行文化與表演藝術領域打響知名度。",
       "擅長將設計結合市場思維，找出客戶品牌定位及獨特價值，並以「商業與藝術價值並進」為設計核心。",
     ],
-    expertise: ["branding", "packaging"],
+    expertise: ["brand-planning", "packaging"],
   },
   {
     slug: "yvonne",
@@ -97,7 +77,7 @@ export const DESIGNERS: Designer[] = [
       "擅長品牌敘事與視覺策略，將品牌故事轉化為可被感受的視覺體驗。",
       "長期合作對象橫跨飲品、保養、餐飲等領域。",
     ],
-    expertise: ["branding", "digital"],
+    expertise: ["brand-planning", "web-visual"],
   },
   {
     slug: "kevin",
@@ -109,7 +89,7 @@ export const DESIGNERS: Designer[] = [
       "專注於空間與工藝的對話，相信設計的氣質來自材質與光線的細節。",
       "近年作品多見於品牌展售空間與限量工藝品開發。",
     ],
-    expertise: ["space-craft", "product"],
+    expertise: ["exhibition", "storefront"],
   },
   {
     slug: "shirley",
@@ -121,7 +101,7 @@ export const DESIGNERS: Designer[] = [
       "包裝結構與印刷工藝出身，把每一道工序視為設計的延伸。",
       "擅長以細節與材質提升品牌的儀式感。",
     ],
-    expertise: ["packaging", "branding"],
+    expertise: ["packaging", "brand-planning"],
   },
   {
     slug: "sim",
@@ -132,7 +112,7 @@ export const DESIGNERS: Designer[] = [
     bio: [
       "數位介面與動態設計的整合者，擅長把品牌精神帶進使用者每一次互動。",
     ],
-    expertise: ["digital", "marketing"],
+    expertise: ["web-visual", "poster"],
   },
 ]
 
@@ -169,12 +149,14 @@ export type Work = {
   slug: string
   title: string
   subtitle: string
-  categoryGroup: CategoryGroupValue
-  subTags: string[]
+  categoryGroup: CategoryGroupValue      // 執行項目（單選）
+  industries: IndustryValue[]            // 行業分類（複選）
   year: string
   clientSlug: string
   designerSlugs: string[]
   cover: string
+  /** 作品影片連結（YouTube / Vimeo，選填）。有值時：列表卡片顯示 ▶ 標記、詳情頁嵌入播放器。 */
+  videoUrl?: string
   size: "large" | "medium" | "small"
   description: string
   // ─── 案例詳細頁專用（皆為選填，CMS 上線後由 Payload 提供同名欄位覆寫） ─────
@@ -205,13 +187,13 @@ export const WORKS: Work[] = [
     slug: "ilo-2025",
     title: "2025 國際語言奧林匹克",
     subtitle: "International Linguistics Olympiad｜競賽識別",
-    categoryGroup: "branding",
-    subTags: ["logo", "vi-system"],
+    categoryGroup: "logo-trademark",
+    industries: ["tech"],
     year: "2024",
     clientSlug: "ilo-taiwan",
     designerSlugs: ["elise", "yvonne"],
     cover:
-      "https://cdn.myportfolio.com/ff3bffb8-20b6-47db-9e75-f18a62fdd759/87b5ed91-6162-4a07-bd08-fd072c0188b1_rwc_821x0x1862x2480x1280.jpg?h=04f9fcec1dad12c37b10dfbb7cffec03",
+      "/images/portfolio/ilo-2025.jpg",
     size: "large",
     description:
       "為 2025 年由台灣主辦的國際語言奧林匹克語言學科學競賽（International Linguistics Olympiad）打造國際性視覺標誌。",
@@ -234,13 +216,13 @@ export const WORKS: Work[] = [
     slug: "four-noble",
     title: "四喜雞煲 THE FOUR NOBLE",
     subtitle: "Brand Identity & Menu Design",
-    categoryGroup: "packaging",
-    subTags: ["label", "gift-box"],
+    categoryGroup: "menu",
+    industries: ["food-beverage"],
     year: "2025",
     clientSlug: "four-noble",
     designerSlugs: ["shirley", "kevin"],
     cover:
-      "https://cdn.myportfolio.com/ff3bffb8-20b6-47db-9e75-f18a62fdd759/dda2d3d2-ba5d-4be8-baa8-b1113b97d435_carw_3x4x1280.jpg?h=3ee49959ba72476118573577f730accf",
+      "/images/portfolio/four-noble.jpg",
     size: "small",
     description:
       "為新型態麻辣雞公煲品牌「四喜雞煲」打造完整的視覺識別與菜單系統，傳遞「一試難忘」的猛火快炒美味。",
@@ -258,13 +240,13 @@ export const WORKS: Work[] = [
     slug: "smile-castle",
     title: "微笑城堡窗簾 品牌重塑",
     subtitle: "SMILE CASTLE｜Brand Redesign",
-    categoryGroup: "branding",
-    subTags: ["vi-system", "brand-strategy", "logo"],
+    categoryGroup: "brand-planning",
+    industries: ["engineering"],
     year: "2025",
     clientSlug: "smile-castle",
     designerSlugs: ["yvonne", "sim"],
     cover:
-      "https://cdn.myportfolio.com/ff3bffb8-20b6-47db-9e75-f18a62fdd759/4494d21e-63b8-414b-b2cb-044fa3d2f786_rwc_798x0x2018x2688x1280.jpg?h=f2989c867bc00ec070bf2b3db3bf74c5",
+      "/images/portfolio/smile-castle.jpg",
     size: "medium",
     description:
       "把全台連鎖窗簾品牌「微笑城堡」從童趣印象，重塑為兼具溫度與信任感的現代家居品牌。",
@@ -282,13 +264,13 @@ export const WORKS: Work[] = [
     slug: "ch-sleep",
     title: "CH SLEEP 嘉新名床",
     subtitle: "Brand Identity & Packaging",
-    categoryGroup: "branding",
-    subTags: ["logo", "vi-system", "brand-strategy"],
+    categoryGroup: "packaging",
+    industries: ["medical"],
     year: "2025",
     clientSlug: "ch-sleep",
     designerSlugs: ["elise", "shirley"],
     cover:
-      "https://cdn.myportfolio.com/ff3bffb8-20b6-47db-9e75-f18a62fdd759/9516f37f-85d8-43d5-9c29-11f4645ad688_rwc_961x0x1922x2560x1280.jpg?h=12bcbe6b03c22ef8cbd70fc8d5b865dd",
+      "/images/portfolio/ch-sleep.jpg",
     size: "medium",
     description:
       "嘉新名床從「在地老床墊行」蛻變為主打 20 年保固、客製化枕頭的當代睡眠專門品牌 CH SLEEP。",
@@ -311,12 +293,12 @@ export const WORKS: Work[] = [
     title: "MR.WHISKEY 威士忌先生 酒袋設計",
     subtitle: "Packaging｜Whiskey Pouch",
     categoryGroup: "packaging",
-    subTags: ["package-structure", "bottle", "gift-box"],
+    industries: ["food-beverage"],
     year: "2025",
     clientSlug: "mr-whiskey",
     designerSlugs: ["shirley"],
     cover:
-      "https://cdn.myportfolio.com/ff3bffb8-20b6-47db-9e75-f18a62fdd759/03e7aef6-fdc7-49cf-a65c-3de1824c565d_carw_3x4x1280.jpg?h=5a41d111abf73bce956c2c7a313574bb",
+      "/images/portfolio/mr-whiskey.jpg",
     size: "small",
     description:
       "為威士忌選品品牌 MR.WHISKEY 設計兼具收藏感與實用性的酒款外袋。",
@@ -334,13 +316,13 @@ export const WORKS: Work[] = [
     slug: "golden-bell-60",
     title: "國父紀念館 金鐘 60",
     subtitle: "Public Art｜台灣女孩日",
-    categoryGroup: "public-art",
-    subTags: ["installation", "sculpture"],
+    categoryGroup: "exhibition",
+    industries: [],
     year: "2025",
     clientSlug: "sun-yat-sen",
     designerSlugs: ["kevin", "elise"],
     cover:
-      "https://cdn.myportfolio.com/ff3bffb8-20b6-47db-9e75-f18a62fdd759/5451bedf-c91a-4132-9e65-d87a43bff31b_rwc_648x0x1501x2000x1280.jpg?h=0fb449708272b232256a8325d428ed6c",
+      "/images/portfolio/golden-bell-60.jpg",
     size: "medium",
     description:
       "為國父紀念館慶祝金鐘 60 屆與台灣女孩日策劃的公共藝術視覺，把「光、發聲、被看見」轉化為可被走入的場域。",
@@ -358,13 +340,13 @@ export const WORKS: Work[] = [
     slug: "huohuo-bbq",
     title: "火火燒肉販賣所 菜單設計",
     subtitle: "Menu System｜Yakiniku Brand",
-    categoryGroup: "marketing",
-    subTags: ["kv", "dm"],
+    categoryGroup: "menu",
+    industries: ["food-beverage"],
     year: "2025",
     clientSlug: "huohuo-bbq",
     designerSlugs: ["sim", "shirley"],
     cover:
-      "https://cdn.myportfolio.com/ff3bffb8-20b6-47db-9e75-f18a62fdd759/6801967e-a57e-49c0-a533-8d6519d0125f_rwc_908x0x2018x2688x1280.jpg?h=d6a61a7da9a41991f193115ad3c188d2",
+      "/images/portfolio/huohuo-bbq.jpg",
     size: "small",
     description:
       "為日式燒肉品牌「火火燒肉販賣所」設計能取代服務生介紹的菜單系統，讓點餐本身成為消費體驗。",
@@ -382,13 +364,13 @@ export const WORKS: Work[] = [
     slug: "truse-x",
     title: "TRUSE X 高端運動護膚",
     subtitle: "Premium Sports Skincare Brand",
-    categoryGroup: "branding",
-    subTags: ["vi-system", "brand-strategy"],
+    categoryGroup: "brand-planning",
+    industries: ["beauty"],
     year: "2024",
     clientSlug: "truse-x",
     designerSlugs: ["yvonne", "elise"],
     cover:
-      "https://cdn.myportfolio.com/ff3bffb8-20b6-47db-9e75-f18a62fdd759/a9ef12c8-c02c-4236-987d-f8cd967a0d35_rwc_0x167x1024x1363x1024.jpg?h=a78aaa5f1dc83e8d6cd21b8fc84900e2",
+      "/images/portfolio/truse-x.jpg",
     size: "medium",
     description:
       "為新興高端運動護膚保養品牌 TRUSE X 打造科學感與性能感並存的視覺系統。",
@@ -408,8 +390,8 @@ export function getCategoryLabel(value: CategoryGroupValue): string {
   return CATEGORY_GROUPS.find((c) => c.value === value)?.label ?? value
 }
 
-export function getSubTagLabel(categoryGroup: CategoryGroupValue, value: string): string {
-  return SUB_TAGS[categoryGroup]?.find((t) => t.value === value)?.label ?? value
+export function getIndustryLabel(value: string): string {
+  return INDUSTRIES.find((i) => i.value === value)?.label ?? value
 }
 
 export function getWorksByDesigner(slug: string): Work[] {
