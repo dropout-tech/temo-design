@@ -496,7 +496,7 @@ function RelatedNav({ project }: { project: DetailProject }) {
   if (!hasAny) return null
 
   const pillClass =
-    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-temo-warm-gray/20 hover:border-temo-gold/60 text-xs text-temo-warm-gray/80 hover:text-temo-gold transition-colors"
+    "inline-flex items-center gap-1.5 px-3.5 py-2.5 md:px-3 md:py-1.5 rounded-full border border-temo-warm-gray/20 hover:border-temo-gold/60 text-xs text-temo-warm-gray/80 hover:text-temo-gold transition-colors"
 
   return (
     <div className="border-b border-temo-warm-gray/10 bg-temo-black/40">

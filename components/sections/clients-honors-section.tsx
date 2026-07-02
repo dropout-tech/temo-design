@@ -21,7 +21,7 @@ function MarqueeRow({ items, speed = 40, reverse = false }: { items: string[]; s
   return (
     <div className="relative flex overflow-hidden" style={{ maskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)" }}>
       <div
-        className="flex shrink-0 gap-4 items-center py-1"
+        className="marquee-track flex shrink-0 gap-4 items-center py-1"
         style={{
           animation: `marquee${reverse ? "Rev" : ""} ${speed}s linear infinite`,
           whiteSpace: "nowrap",
@@ -109,6 +109,9 @@ export function ClientsHonorsSection() {
         @keyframes marqueeRev {
           from { transform: translateX(-50%); }
           to { transform: translateX(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .marquee-track { animation: none !important; }
         }
       `}</style>
     </section>

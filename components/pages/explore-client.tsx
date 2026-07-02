@@ -164,14 +164,14 @@ function TodayStage({
         style={{ backgroundImage: `url('/cement-light.png')` }}
       />
 
-      {/* Layer 2: 4 個可點擊的斜線區塊（每個內含背景 + 漢字 + 編號） */}
+      {/* Layer 2: 4 個可點擊的斜線區塊（每個內含背景 + 漢字 + 編號）— 桌機限定 */}
       {SECTIONS.map((s, i) => (
         <button
           key={s.num}
           type="button"
           onClick={() => onSelect(i)}
           aria-label={`${s.top}${s.bottom}`}
-          className="tg-char-pair"
+          className="tg-char-pair hidden md:block"
           style={
             {
               ["--tg-clip" as string]: s.clip,
@@ -205,9 +205,9 @@ function TodayStage({
         </button>
       ))}
 
-      {/* Layer 3: 5 條白色斜線 */}
+      {/* Layer 3: 5 條白色斜線 — 桌機限定 */}
       <svg
-        className="absolute inset-0 z-[3] w-full h-full pointer-events-none"
+        className="hidden md:block absolute inset-0 z-[3] w-full h-full pointer-events-none"
         preserveAspectRatio="none"
         viewBox="0 0 1834 1062"
       >
@@ -218,9 +218,9 @@ function TodayStage({
         <line x1="1292" y1="1027" x2="1832" y2="339" stroke="#F2F2F2" strokeWidth="4" vectorEffect="non-scaling-stroke" />
       </svg>
 
-      {/* Layer 5: 左側文字（TODAY / SOMETHING MORE / 今天 / body） */}
+      {/* Layer 5: 左側文字（TODAY / SOMETHING MORE / 今天 / body）— 桌機限定 */}
       <div
-        className="absolute z-[5] pointer-events-none"
+        className="hidden md:block absolute z-[5] pointer-events-none"
         style={{
           left: "2.73%",
           top: "14.78%",
@@ -235,7 +235,7 @@ function TodayStage({
         TODAY
       </div>
       <div
-        className="absolute z-[5] pointer-events-none"
+        className="hidden md:block absolute z-[5] pointer-events-none"
         style={{
           left: "2.73%",
           top: "29.85%",
@@ -250,7 +250,7 @@ function TodayStage({
         SOMETHING MORE...
       </div>
       <div
-        className="absolute z-[5] pointer-events-none"
+        className="hidden md:block absolute z-[5] pointer-events-none"
         style={{
           left: "2.73%",
           top: "39.27%",
@@ -265,7 +265,7 @@ function TodayStage({
         今天我想來點...
       </div>
       <div
-        className="absolute z-[5] pointer-events-none"
+        className="hidden md:block absolute z-[5] pointer-events-none"
         style={{
           left: "2.67%",
           top: "48.78%",
@@ -282,6 +282,72 @@ function TodayStage({
         <p style={{ marginTop: "0.9em" }}>
           With a people-centered philosophy at our core, we see designers not simply as makers who craft a brand&apos;s exterior, but as &ldquo;brand doctors&rdquo; who diagnose through insight and prescribe through creativity.
         </p>
+      </div>
+
+      {/* ── 手機版佈局：直向堆疊、可讀字級、整列大按鈕（桌機隱藏） ── */}
+      <div className="md:hidden absolute inset-0 z-[4] flex flex-col overflow-y-auto px-6 pt-24 pb-10">
+        {/* 標題區 */}
+        <div className="text-[#2a2a28]">
+          <p
+            className="text-[17vw] leading-none font-black tracking-[-0.01em] text-[#F2F2F2]"
+            style={{ fontFamily: "'Barlow', sans-serif", textShadow: "0 2px 18px rgba(0,0,0,0.25)" }}
+          >
+            TODAY
+          </p>
+          <p
+            className="mt-3 text-sm font-bold tracking-[0.09em] text-[#F2F2F2]"
+            style={{ fontFamily: "'Barlow', sans-serif", textShadow: "0 1px 8px rgba(0,0,0,0.3)" }}
+          >
+            SOMETHING MORE...
+          </p>
+          <p
+            className="mt-2 text-base font-bold tracking-[0.25em] text-[#F2F2F2]"
+            style={{ fontFamily: "'Noto Sans TC', sans-serif", textShadow: "0 1px 8px rgba(0,0,0,0.3)" }}
+          >
+            今天我想來點...
+          </p>
+        </div>
+
+        {/* 4 個服務選項 — 斜切平行四邊形帶，呼應桌機版斜線構圖 */}
+        <div className="mt-8 flex flex-1 flex-col justify-end gap-3">
+          {SECTIONS.map((s, i) => (
+            <button
+              key={s.num}
+              type="button"
+              onClick={() => onSelect(i)}
+              aria-label={`${s.top}${s.bottom}`}
+              className="group relative flex min-h-[72px] items-center justify-between overflow-hidden px-7 py-5 text-left active:scale-[0.98] transition-transform"
+              style={{ clipPath: "polygon(4% 0, 100% 0, 96% 100%, 0 100%)" }}
+            >
+              {/* 帶狀水泥背景 + 依序加深，做出遠近層次 */}
+              <span
+                aria-hidden
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: "url('/cement-light.png')" }}
+              />
+              <span
+                aria-hidden
+                className="absolute inset-0"
+                style={{ background: `rgba(20,18,16,${0.05 + i * 0.04})` }}
+              />
+              <span className="relative flex items-baseline gap-4">
+                <span
+                  className="text-3xl font-black tracking-[0.13em]"
+                  style={{ fontFamily: "'Noto Sans TC', sans-serif", color: s.color }}
+                >
+                  {s.top}
+                  {s.bottom}
+                </span>
+              </span>
+              <span
+                className="relative text-lg font-black tracking-[0.12em] text-[#F2F2F2]"
+                style={{ fontFamily: "'Barlow', sans-serif" }}
+              >
+                {s.num}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* 左上角 Logo — 緊貼視窗左上角，但保留 navbar 同尺寸 h-12 */}
@@ -399,7 +465,7 @@ function CardFanStage({
       <div className="relative z-10 flex items-center justify-between px-8 md:px-14 pt-8 pb-4">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-[10px] tracking-[0.3em] text-white/40 hover:text-white transition-colors uppercase"
+          className="flex items-center gap-2 py-3 text-[10px] tracking-[0.3em] text-white/40 hover:text-white transition-colors uppercase"
         >
           <ArrowLeft className="w-3 h-3" />
           Today
@@ -412,7 +478,7 @@ function CardFanStage({
               key={s.id}
               onClick={() => goToService(i)}
               className={cn(
-                "px-3 py-1.5 text-[10px] tracking-[0.2em] uppercase transition-all duration-200 rounded-sm",
+                "px-3.5 py-3 md:px-3 md:py-1.5 text-[10px] tracking-[0.2em] uppercase transition-all duration-200 rounded-sm",
                 currentIdx === i
                   ? "bg-white/15 text-white"
                   : "text-white/30 hover:text-white/60"
@@ -464,8 +530,8 @@ function CardFanStage({
               onClick={() => setActiveCard(isActive ? null : i)}
               className="relative flex-shrink-0 flex flex-col justify-end cursor-pointer overflow-hidden rounded-sm border border-white/10"
               style={{
-                width: isActive ? "340px" : "100px",
-                height: "380px",
+                width: isActive ? "min(340px, 76vw)" : "100px",
+                height: "min(380px, 48svh)",
                 transition: "width 0.5s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease, border-color 0.3s ease",
                 opacity: isInactive ? 0.35 : 1,
                 borderColor: isActive ? `${current.colors.accent}60` : "rgba(255,255,255,0.08)",
@@ -557,7 +623,10 @@ function CardFanStage({
         })}
 
         {/* CTA card — always last */}
-        <div className="flex-shrink-0 flex flex-col justify-center items-center gap-4 w-[100px] h-[380px] border border-white/8 rounded-sm">
+        <div
+          className="flex-shrink-0 flex flex-col justify-center items-center gap-4 w-[100px] border border-white/8 rounded-sm"
+          style={{ height: "min(380px, 48svh)" }}
+        >
           <Link
             href="/contact"
             className="flex flex-col items-center gap-2 group"

@@ -84,6 +84,8 @@
   }
   body {
     @apply bg-temo-black text-temo-white;
+    /* 手機版防護：任何元素意外超寬時，裁掉而不是出現整頁橫向捲動 */
+    overflow-x: clip;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-bold tracking-wide;

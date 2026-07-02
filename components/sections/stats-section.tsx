@@ -205,6 +205,15 @@ function MiniChart({ type, progress, active }: { type: ChartType; progress: numb
 export function StatsSection() {
   const { ref, isInView } = useInView<HTMLElement>({ once: true, amount: 0.25 })
   const [hovered, setHovered] = useState<number | null>(null)
+  // 觸控裝置沒有 hover，改為全部顯示（金色數字 + 說明文字）
+  const [noHover, setNoHover] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia("(hover: none)")
+    setNoHover(mq.matches)
+    const onChange = (e: MediaQueryListEvent) => setNoHover(e.matches)
+    mq.addEventListener("change", onChange)
+    return () => mq.removeEventListener("change", onChange)
+  }, [])
   const progress = useProgress(isInView, 1600)
 
   return (
@@ -242,7 +251,7 @@ export function StatsSection() {
         {/* Stats row */}
         <div className="grid grid-cols-2 md:grid-cols-4">
           {stats.map((stat, i) => {
-            const active = hovered === i
+            const active = hovered === i || noHover
             const isLast = i === stats.length - 1
 
             return (
@@ -270,7 +279,7 @@ export function StatsSection() {
 
                 {/* Number */}
                 <div
-                  className="text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-3 leading-none"
+                  className="text-[2.6rem] sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-3 leading-none"
                   style={{
                     color: active ? "var(--temo-warm)" : "rgba(240,234,221,0.18)",
                     transition: "color 0.4s ease",
@@ -321,7 +330,7 @@ export function StatsSection() {
                 {/* Description slide-in */}
                 <div
                   style={{
-                    maxHeight: active ? "80px" : "0",
+                    maxHeight: active ? (noHover ? "200px" : "80px") : "0",
                     opacity: active ? 1 : 0,
                     overflow: "hidden",
                     transition: "max-height 0.45s ease, opacity 0.35s ease 0.08s",

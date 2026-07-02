@@ -105,11 +105,11 @@ export function ContactPageClient() {
         {/* ── Tab Switcher ── */}
         <div className="bg-temo-black border-y border-white/5 sticky top-[68px] z-40">
           <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
-            <div className="flex">
+            <div className="flex overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <button
                 onClick={() => setActiveTab("contact")}
                 className={cn(
-                  "flex items-center gap-2.5 px-6 py-4 text-xs tracking-[0.25em] font-medium border-b-2 transition-all duration-300",
+                  "flex shrink-0 items-center gap-2.5 px-4 sm:px-6 py-4 text-xs tracking-[0.12em] sm:tracking-[0.25em] font-medium border-b-2 whitespace-nowrap transition-all duration-300",
                   activeTab === "contact"
                     ? "border-temo-gold text-temo-gold"
                     : "border-transparent text-temo-warm-gray hover:text-white"
@@ -121,7 +121,7 @@ export function ContactPageClient() {
               <button
                 onClick={() => setActiveTab("quote")}
                 className={cn(
-                  "flex items-center gap-2.5 px-6 py-4 text-xs tracking-[0.25em] font-medium border-b-2 transition-all duration-300",
+                  "flex shrink-0 items-center gap-2.5 px-4 sm:px-6 py-4 text-xs tracking-[0.12em] sm:tracking-[0.25em] font-medium border-b-2 whitespace-nowrap transition-all duration-300",
                   activeTab === "quote"
                     ? "border-temo-gold text-temo-gold"
                     : "border-transparent text-temo-warm-gray hover:text-white"
@@ -133,7 +133,7 @@ export function ContactPageClient() {
               <button
                 onClick={() => setActiveTab("brief")}
                 className={cn(
-                  "flex items-center gap-2.5 px-6 py-4 text-xs tracking-[0.25em] font-medium border-b-2 transition-all duration-300",
+                  "flex shrink-0 items-center gap-2.5 px-4 sm:px-6 py-4 text-xs tracking-[0.12em] sm:tracking-[0.25em] font-medium border-b-2 whitespace-nowrap transition-all duration-300",
                   activeTab === "brief"
                     ? "border-temo-gold text-temo-gold"
                     : "border-transparent text-temo-warm-gray hover:text-white"
@@ -154,7 +154,7 @@ export function ContactPageClient() {
         >
           <section className="py-20 md:py-28 bg-temo-black">
             <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
-              <div ref={contentRef} className="grid lg:grid-cols-3 gap-16">
+              <div ref={contentRef} className="grid lg:grid-cols-3 gap-10 lg:gap-16">
 
                 {/* Info column */}
                 <div
@@ -252,7 +252,7 @@ export function ContactPageClient() {
                   >
                     <Calculator className="w-4 h-4 group-hover:scale-110 transition-transform" />
                     <span>不確定費用？先試算報價</span>
-                    <span className="ml-auto text-temo-gold opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                    <span className="ml-auto text-temo-gold opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity">→</span>
                   </button>
                 </div>
 
@@ -296,7 +296,7 @@ export function ContactPageClient() {
                               onChange={handleChange}
                               required={required}
                               placeholder={placeholder}
-                              className="w-full px-4 py-3 bg-white/3 border border-white/10 text-temo-white text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:bg-white/5 focus:outline-none transition-all rounded-sm"
+                              className="w-full px-4 py-3 bg-white/3 border border-white/10 text-temo-white text-base md:text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:bg-white/5 focus:outline-none transition-all rounded-sm"
                             />
                           </div>
                         ))}
@@ -306,12 +306,13 @@ export function ContactPageClient() {
                         <label className="block text-xs tracking-wide text-temo-warm-gray mb-2">
                           服務項目 <span className="text-temo-gold">*</span>
                         </label>
+                        <div className="relative">
                         <select
                           name="subject"
                           value={formData.subject}
                           onChange={handleChange}
                           required
-                          className="w-full px-4 py-3 bg-white/3 border border-white/10 text-temo-white text-sm focus:border-temo-gold/60 focus:outline-none transition-all rounded-sm appearance-none"
+                          className="w-full px-4 py-3 pr-10 bg-white/3 border border-white/10 text-temo-white text-base md:text-sm focus:border-temo-gold/60 focus:outline-none transition-all rounded-sm appearance-none"
                         >
                           <option value="" className="bg-temo-dark">選擇您感興趣的服務類型</option>
                           <option value="brand" className="bg-temo-dark">品牌識別設計</option>
@@ -320,6 +321,14 @@ export function ContactPageClient() {
                           <option value="crafts" className="bg-temo-dark">工藝設計</option>
                           <option value="other" className="bg-temo-dark">其他諮詢</option>
                         </select>
+                        <svg
+                          aria-hidden="true"
+                          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40"
+                          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
+                        </svg>
+                        </div>
                       </div>
 
                       <div>
@@ -333,7 +342,7 @@ export function ContactPageClient() {
                           required
                           rows={6}
                           placeholder="請詳細描述您的品牌背景、設計需求、時程規劃等..."
-                          className="w-full px-4 py-3 bg-white/3 border border-white/10 text-temo-white text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:bg-white/5 focus:outline-none transition-all rounded-sm resize-none"
+                          className="w-full px-4 py-3 bg-white/3 border border-white/10 text-temo-white text-base md:text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:bg-white/5 focus:outline-none transition-all rounded-sm resize-none"
                         />
                       </div>
 

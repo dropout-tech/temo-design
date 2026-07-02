@@ -112,7 +112,7 @@ export function TeamMemberClient({
                       href={designer.instagram}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-white/50 hover:text-temo-gold transition-colors text-xs tracking-widest"
+                      className="inline-flex items-center gap-2 py-3 text-white/50 hover:text-temo-gold transition-colors text-xs tracking-widest"
                     >
                       <Instagram className="w-4 h-4" />
                       INSTAGRAM
@@ -120,7 +120,7 @@ export function TeamMemberClient({
                   )}
                   <Link
                     href="/contact"
-                    className="ml-auto inline-flex items-center gap-2 px-6 py-2.5 bg-temo-gold text-black text-[11px] font-bold tracking-[0.25em] uppercase rounded-sm hover:brightness-110 transition-all"
+                    className="ml-auto inline-flex items-center gap-2 px-6 py-3 bg-temo-gold text-black text-[11px] font-bold tracking-[0.25em] uppercase rounded-sm hover:brightness-110 transition-all"
                   >
                     合作邀約
                     <ArrowUpRight className="w-3.5 h-3.5" />

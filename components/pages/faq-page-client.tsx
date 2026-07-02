@@ -68,14 +68,14 @@ export function FAQPageClient() {
               }}
             >
               <p className="text-xs tracking-[0.4em] text-temo-gold mb-6 uppercase">FAQ</p>
-              <h1 className="text-6xl md:text-7xl font-bold text-temo-white mb-6">常見問題</h1>
-              <p className="text-xl text-temo-warm-gray">尋找答案？瀏覽我們最常見的問題。</p>
+              <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-temo-white mb-6">常見問題</h1>
+              <p className="text-lg md:text-xl text-temo-warm-gray">尋找答案？瀏覽我們最常見的問題。</p>
             </div>
           </div>
         </section>
 
         {/* FAQ Body */}
-        <section className="py-24 md:py-32 bg-temo-black">
+        <section className="py-16 md:py-32 bg-temo-black">
           <div ref={faqRef} className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
             {/* Category tabs */}
             <div
@@ -89,7 +89,7 @@ export function FAQPageClient() {
                 <button
                   key={i}
                   onClick={() => { setActiveCatIdx(i); setActiveQ(null) }}
-                  className={`px-6 py-2 rounded-full transition-all text-sm ${
+                  className={`px-6 py-2.5 min-h-11 rounded-full transition-all text-sm ${
                     activeCatIdx === i
                       ? "bg-temo-gold text-temo-black font-medium"
                       : "border border-temo-warm-gray/50 text-temo-warm-gray hover:border-temo-gold hover:text-temo-gold"
@@ -129,7 +129,7 @@ export function FAQPageClient() {
                   <div
                     className="overflow-hidden"
                     style={{
-                      maxHeight: activeQ === i ? "500px" : 0,
+                      maxHeight: activeQ === i ? "900px" : 0,
                       opacity: activeQ === i ? 1 : 0,
                       transition: "max-height 0.35s ease, opacity 0.25s ease",
                     }}

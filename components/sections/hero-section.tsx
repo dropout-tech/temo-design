@@ -35,7 +35,7 @@ export function HeroSection() {
   }, [])
 
   return (
-    <section className="relative min-h-screen flex flex-col overflow-hidden">
+    <section className="relative min-h-svh flex flex-col overflow-hidden">
 
       {/* Background video — full section */}
       <div className="absolute inset-0 z-0">
@@ -54,7 +54,7 @@ export function HeroSection() {
       </div>
 
       {/* Content — flex col fills full screen height */}
-      <div className="relative z-10 flex flex-col flex-1 min-h-screen w-full max-w-[1400px] mx-auto px-8 md:px-24 lg:px-32 xl:px-40">
+      <div className="relative z-10 flex flex-col flex-1 min-h-svh w-full max-w-[1400px] mx-auto px-6 sm:px-8 md:px-24 lg:px-32 xl:px-40">
 
         {/* ── TOP BLOCK: Title left, Description right ────────────────── */}
         <div
@@ -87,7 +87,7 @@ export function HeroSection() {
               致力於將 品牌視覺 / 氛圍感塑造 / 使用情境模擬 / 創意策略四者融合。<br />
               透過一條龍的整合技術，為各品牌開拓創新的道路，旨在創造出最有效的品牌商業價值！
             </p>
-            <p className="text-white/55 text-[10px] md:text-[11px] leading-[2] font-light">
+            <p className="text-white/55 text-[11px] leading-[2] font-light">
               Since its establishment in 2020,<br />
               TEMO DESIGN has been dedicated to integrating brand visuals, atmosphere creation, usage scenario simulation, and market marketing. Utilizing end-to-end integrated technologies, the company paves innovative paths for various brands, aiming to generate the most effective brand commercial value.
             </p>
@@ -96,7 +96,7 @@ export function HeroSection() {
 
         {/* ── FULL-WIDTH DIVIDER ───────────────────────────────────────── */}
         <div
-          className="h-px bg-white/20 -mx-8 md:-mx-24 lg:-mx-32 xl:-mx-40"
+          className="h-px bg-white/20 -mx-6 sm:-mx-8 md:-mx-24 lg:-mx-32 xl:-mx-40"
           style={{
             transition: "opacity 1s ease 0.5s",
             opacity: visible ? 1 : 0,
@@ -138,7 +138,7 @@ export function HeroSection() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={label}
-                  className="w-9 h-9 md:w-10 md:h-10 lg:w-11 lg:h-11 rounded-full border border-white/40 flex items-center justify-center text-white/70 hover:border-white hover:text-white hover:scale-110 transition-all duration-300"
+                  className="w-11 h-11 rounded-full border border-white/40 flex items-center justify-center text-white/70 hover:border-white hover:text-white hover:scale-110 transition-all duration-300"
                 >
                   {icon}
                 </a>

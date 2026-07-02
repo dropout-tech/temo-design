@@ -51,7 +51,7 @@ function LandingHero({ landing }: { landing: CategoryLanding }) {
         {/* 兩欄：左大標 / 右描述 + 按鈕 */}
         <div className="grid md:grid-cols-[1.1fr_1fr] gap-10 md:gap-16 items-start">
           {/* 左：大標 */}
-          <h1 className="text-6xl md:text-8xl lg:text-9xl font-black text-temo-black leading-[0.95] tracking-tight">
+          <h1 className="text-[clamp(2.5rem,12vw,3.75rem)] md:text-8xl lg:text-9xl font-black text-temo-black leading-[0.95] tracking-tight break-words">
             {landing.titleEn.map((line, i) => {
               const isAmpersand = line.trim() === "&"
               return (

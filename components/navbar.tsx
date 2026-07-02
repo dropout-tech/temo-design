@@ -33,9 +33,6 @@ export function Navbar({ showSearch = false }: { showSearch?: boolean }) {
     router.push(query ? `/portfolio?q=${encodeURIComponent(query)}` : "/portfolio")
   }
 
-  // Hide entirely on full-screen explore page
-  if (pathname === "/explore") return null
-
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 60)
     return () => clearTimeout(t)
@@ -51,6 +48,9 @@ export function Navbar({ showSearch = false }: { showSearch?: boolean }) {
     document.body.style.overflow = menuOpen ? "hidden" : ""
     return () => { document.body.style.overflow = "" }
   }, [menuOpen])
+
+  // Hide entirely on full-screen explore page
+  if (pathname === "/explore") return null
 
   return (
     <>
@@ -128,7 +128,7 @@ export function Navbar({ showSearch = false }: { showSearch?: boolean }) {
             {/* Hamburger — top thick, middle medium, bottom thin */}
             <button
               onClick={() => setMenuOpen(true)}
-              className="group flex flex-col items-end gap-[5px] p-1 relative z-10"
+              className="group flex h-11 w-11 -mr-2.5 flex-col items-end justify-center gap-[5px] pr-2.5 relative z-10"
               aria-label="Open menu"
             >
               <span className="block w-6 h-[2.5px] bg-white/85 group-hover:bg-white transition-colors" />
@@ -169,7 +169,7 @@ export function Navbar({ showSearch = false }: { showSearch?: boolean }) {
             </Link>
             <button
               onClick={() => setMenuOpen(false)}
-              className="text-white/50 hover:text-white transition-colors p-1"
+              className="flex h-11 w-11 -m-2.5 items-center justify-center text-white/50 hover:text-white transition-colors"
               aria-label="Close menu"
             >
               <X className="w-6 h-6" />

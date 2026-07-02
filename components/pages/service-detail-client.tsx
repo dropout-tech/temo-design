@@ -42,11 +42,11 @@ export function ServiceDetailClient({ service }: ServiceDetailClientProps) {
               }}
             >
               <p className="text-xs tracking-[0.4em] text-temo-gold mb-6 uppercase">Services</p>
-              <h1 className="text-6xl md:text-7xl font-bold text-temo-white mb-4 leading-tight">
+              <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-temo-white mb-4 leading-tight">
                 {service.title}
               </h1>
               <p className="text-temo-warm-gray text-xs tracking-[0.2em] mb-6">{service.titleEn}</p>
-              <p className="text-xl text-temo-warm-gray max-w-2xl leading-relaxed">{service.description}</p>
+              <p className="text-lg md:text-xl text-temo-warm-gray max-w-2xl leading-relaxed">{service.description}</p>
             </div>
           </div>
         </section>

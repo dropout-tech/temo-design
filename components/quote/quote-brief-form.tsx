@@ -77,7 +77,7 @@ function Field({
   invalid: boolean
 }) {
   const baseInput =
-    "w-full px-4 py-3 bg-white/3 border text-temo-white text-sm placeholder:text-white/20 focus:outline-none transition-all rounded-sm"
+    "w-full px-4 py-3 bg-white/3 border text-temo-white text-base md:text-sm placeholder:text-white/20 focus:outline-none transition-all rounded-sm"
   const inputCls = cn(
     baseInput,
     invalid
@@ -115,7 +115,7 @@ function Field({
               <label
                 key={opt}
                 className={cn(
-                  "flex items-center gap-3 px-3.5 py-2.5 border text-xs cursor-pointer transition-all rounded-sm",
+                  "flex items-center gap-3 px-3.5 py-3 md:py-2.5 border text-xs cursor-pointer transition-all rounded-sm",
                   checked
                     ? "border-temo-gold/50 bg-temo-gold/5 text-white"
                     : "border-white/10 text-temo-warm-gray hover:border-white/25 hover:text-white"
@@ -149,7 +149,7 @@ function Field({
               <label
                 key={opt}
                 className={cn(
-                  "flex items-start gap-2.5 px-3 py-2 border text-xs cursor-pointer transition-all rounded-sm",
+                  "flex items-start gap-2.5 px-3 py-3 md:py-2 border text-xs cursor-pointer transition-all rounded-sm",
                   checked
                     ? "border-temo-gold/50 bg-temo-gold/5 text-white"
                     : "border-white/10 text-temo-warm-gray hover:border-white/25 hover:text-white"
@@ -195,7 +195,7 @@ function Field({
                   onChange(stripped)
                 }
               }}
-              className={cn(inputCls, "sm:col-span-2 text-xs py-2 px-3")}
+              className={cn(inputCls, "sm:col-span-2 text-base md:text-xs py-2.5 md:py-2 px-3")}
             />
           )}
         </div>
@@ -426,7 +426,7 @@ export function QuoteBriefForm() {
           onClick={handlePrev}
           disabled={isPicker}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-2 text-xs transition-colors",
+            "flex items-center gap-1.5 px-4 py-3 text-xs transition-colors",
             isPicker
               ? "text-white/20 cursor-not-allowed"
               : "text-temo-warm-gray hover:text-white"
@@ -440,7 +440,7 @@ export function QuoteBriefForm() {
           <button
             type="button"
             onClick={handleNext}
-            className="flex items-center gap-2 px-6 sm:px-8 py-3 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.2em] uppercase hover:brightness-110 active:scale-[0.98] transition-all rounded-sm"
+            className="flex items-center gap-2 px-6 sm:px-8 py-3.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.2em] uppercase hover:brightness-110 active:scale-[0.98] transition-all rounded-sm"
           >
             下一步
             <ArrowRight className="w-3.5 h-3.5" />
@@ -449,7 +449,7 @@ export function QuoteBriefForm() {
           <button
             type="button"
             onClick={handleSubmit}
-            className="flex items-center gap-2 px-6 sm:px-8 py-3 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.2em] uppercase hover:brightness-110 active:scale-[0.98] transition-all rounded-sm"
+            className="flex items-center gap-2 px-6 sm:px-8 py-3.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.2em] uppercase hover:brightness-110 active:scale-[0.98] transition-all rounded-sm"
           >
             送出需求單
             <Send className="w-3.5 h-3.5" />

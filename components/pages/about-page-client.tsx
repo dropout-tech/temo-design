@@ -291,7 +291,7 @@ function DesignerCard({ person, onClick }: { person: Person; onClick?: () => voi
         <img
           src={person.image}
           alt={person.name}
-          className="w-full h-full object-cover transition-all duration-500 filter grayscale group-hover:grayscale-0"
+          className="w-full h-full object-cover transition-all duration-500 filter grayscale group-hover:grayscale-0 pointer-coarse:grayscale-0"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         <div className="absolute bottom-6 md:bottom-8 left-0 right-0 text-center px-2">
@@ -359,7 +359,7 @@ function DesignerDetailPanel({
 
             <div className="grid md:grid-cols-[auto_1fr] gap-10 md:gap-16 p-8 md:p-16 lg:p-20 min-h-full">
               {/* Portrait */}
-              <div className="relative w-full max-w-[340px] md:w-[340px] aspect-[3/4] md:h-[560px] md:aspect-auto rounded-[160px] md:rounded-[180px] overflow-hidden bg-white/5 mx-auto md:mx-0">
+              <div className="relative w-full max-w-[340px] md:w-[340px] aspect-[3/4] md:h-[560px] md:aspect-auto rounded-[110px] md:rounded-[180px] overflow-hidden bg-white/5 mx-auto md:mx-0">
                 <img
                   src={person.image}
                   alt={person.name}
@@ -390,7 +390,7 @@ function DesignerDetailPanel({
                     target="_blank"
                     rel="noreferrer"
                     aria-label="Instagram"
-                    className="inline-flex w-10 h-10 rounded-full border border-white/20 items-center justify-center text-white/70 hover:text-white hover:border-white/60 hover:bg-white/5 transition"
+                    className="inline-flex w-11 h-11 rounded-full border border-white/20 items-center justify-center text-white/70 hover:text-white hover:border-white/60 hover:bg-white/5 transition"
                   >
                     <Instagram className="w-4 h-4" />
                   </a>
@@ -450,6 +450,16 @@ export function AboutPageClient() {
   const currentList = categories[activeCategory]
   const shouldMarquee = currentList.length >= 4
 
+  // 觸控裝置沒有 hover：跑馬燈改用原生橫向滑動，不跑滑鼠感應動畫
+  const [noHover, setNoHover] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia("(hover: none)")
+    setNoHover(mq.matches)
+    const onChange = (e: MediaQueryListEvent) => setNoHover(e.matches)
+    mq.addEventListener("change", onChange)
+    return () => mq.removeEventListener("change", onChange)
+  }, [])
+
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80)
     return () => clearTimeout(t)
@@ -460,6 +470,9 @@ export function AboutPageClient() {
     translateXRef.current = 0
     if (marqueeTrackRef.current) {
       marqueeTrackRef.current.style.transform = "translate3d(0, 0, 0)"
+    }
+    if (marqueeContainerRef.current) {
+      marqueeContainerRef.current.scrollLeft = 0
     }
   }, [activeCategory])
 
@@ -476,6 +489,7 @@ export function AboutPageClient() {
   }, [menuOpen])
 
   useEffect(() => {
+    if (noHover) return // 觸控裝置改用原生滑動，不需要滑鼠感應迴圈
     let rafId = 0
     const MAX_SPEED = 5 // px per frame
     const EDGE_RATIO = 0.3 // 30% from each edge is the trigger zone
@@ -533,7 +547,7 @@ export function AboutPageClient() {
     }
     rafId = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafId)
-  }, [currentList.length])
+  }, [currentList.length, noHover])
 
   const handleMarqueeMouseMove = (e: ReactMouseEvent<HTMLDivElement>) => {
     const rect = marqueeContainerRef.current?.getBoundingClientRect()
@@ -567,7 +581,7 @@ export function AboutPageClient() {
           {/* 右下角斜線裝飾 */}
           <div
             aria-hidden="true"
-            className="absolute bottom-20 right-6 md:right-12 z-10 pointer-events-none"
+            className="hidden md:block absolute bottom-20 right-6 md:right-12 z-10 pointer-events-none"
             style={{
               transition: "opacity 1.1s ease 0.6s",
               opacity: visible ? 0.55 : 0,
@@ -672,7 +686,7 @@ export function AboutPageClient() {
               opacity: visible ? 1 : 0,
             }}
           >
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-12 py-5 md:py-6 grid grid-cols-3 gap-4 text-[10px] md:text-[11px] tracking-[0.4em] uppercase text-[#3a3a37]">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-12 py-5 md:py-6 grid grid-cols-3 gap-4 text-[10px] md:text-[11px] tracking-[0.18em] md:tracking-[0.4em] uppercase text-[#3a3a37]">
               <span className="text-left">Time Built</span>
               <span className="text-center">Precision Driven</span>
               <span className="text-right">Legacy Formed</span>
@@ -730,7 +744,7 @@ export function AboutPageClient() {
                             setActiveCategory(cat)
                             setMenuOpen(false)
                           }}
-                          className={`w-full px-6 py-2.5 text-xs tracking-[0.3em] uppercase text-left transition-colors ${
+                          className={`w-full px-6 py-3 text-xs tracking-[0.3em] uppercase text-left transition-colors ${
                             isActive
                               ? "text-temo-gold"
                               : "text-white/60 hover:text-white hover:bg-white/5"
@@ -751,17 +765,25 @@ export function AboutPageClient() {
             {shouldMarquee ? (
               <div
                 ref={marqueeContainerRef}
-                onMouseMove={handleMarqueeMouseMove}
-                onMouseLeave={handleMarqueeMouseLeave}
-                className="relative w-full overflow-hidden py-4"
+                onMouseMove={noHover ? undefined : handleMarqueeMouseMove}
+                onMouseLeave={noHover ? undefined : handleMarqueeMouseLeave}
+                className={
+                  noHover
+                    ? "relative w-full overflow-x-auto overscroll-x-contain py-4 -mx-4 px-4 sm:-mx-6 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    : "relative w-full overflow-hidden py-4"
+                }
                 style={{
                   transition: "opacity 0.8s ease 0.2s",
                   opacity: visible ? 1 : 0,
                   // Initial "at start" fade; applyMask() keeps it in sync while scrolling.
-                  maskImage:
-                    "linear-gradient(to right, black 0%, black 92%, transparent 100%)",
-                  WebkitMaskImage:
-                    "linear-gradient(to right, black 0%, black 92%, transparent 100%)",
+                  ...(noHover
+                    ? {}
+                    : {
+                        maskImage:
+                          "linear-gradient(to right, black 0%, black 92%, transparent 100%)",
+                        WebkitMaskImage:
+                          "linear-gradient(to right, black 0%, black 92%, transparent 100%)",
+                      }),
                 }}
               >
                 <div
@@ -835,7 +857,7 @@ export function AboutPageClient() {
           </div>
 
           {/* 品牌理念 section（透明，疊在影片上） */}
-          <section className="relative py-24 md:py-32 overflow-hidden">
+          <section className="relative py-16 md:py-32 overflow-hidden">
 
           <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             {/* Big title */}

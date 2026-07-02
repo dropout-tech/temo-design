@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_TC, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
-import { defaultMetadata, viewport as viewportConfig } from '@/lib/site-config'
+import { defaultMetadata } from '@/lib/site-config'
 import './globals.css'
 
 const notoSansTC = Noto_Sans_TC({

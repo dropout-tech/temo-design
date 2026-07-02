@@ -409,7 +409,7 @@ function PackageCard({
                     <label
                       key={addon.id}
                       className={cn(
-                        "flex items-center justify-between gap-2 px-3 py-2 border text-[11px] cursor-pointer transition-all rounded-sm",
+                        "flex items-center justify-between gap-2 px-3 py-2.5 md:py-2 border text-[11px] cursor-pointer transition-all rounded-sm",
                         checked
                           ? "border-temo-gold/40 bg-temo-gold/5 text-white"
                           : "border-white/8 text-temo-warm-gray hover:border-white/20"
@@ -419,7 +419,7 @@ function PackageCard({
                       <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
-                          className="accent-temo-gold w-3 h-3 shrink-0"
+                          className="accent-temo-gold w-4 h-4 shrink-0"
                           checked={checked}
                           onChange={() => onToggleAddon(addon.id, addon.price)}
                         />
@@ -522,14 +522,14 @@ export function QuoteCalculator() {
                   key={cat.id}
                   onClick={() => setActiveCategoryId(cat.id)}
                   className={cn(
-                    "relative px-5 py-3 text-xs font-medium tracking-[0.2em] uppercase whitespace-nowrap transition-all duration-200 border-b-2 -mb-px",
+                    "relative px-4 sm:px-5 py-3.5 sm:py-3 text-xs font-medium tracking-[0.1em] sm:tracking-[0.2em] uppercase whitespace-nowrap transition-all duration-200 border-b-2 -mb-px",
                     activeCategoryId === cat.id
                       ? "border-temo-gold text-temo-gold"
                       : "border-transparent text-temo-warm-gray hover:text-white"
                   )}
                 >
                   <span className="hidden sm:inline">{cat.title}</span>
-                  <span className="sm:hidden">{cat.icon}</span>
+                  <span className="sm:hidden">{cat.icon} {cat.title}</span>
                 </button>
               ))}
             </div>
@@ -640,6 +640,25 @@ export function QuoteCalculator() {
           </div>
         </div>
       </div>
+
+      {/* 手機版固定底欄：即時總價 + 詢價 CTA（桌機由右側 sticky 面板負責） */}
+      {summary.total > 0 && (
+        <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#141210]/95 backdrop-blur-md px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[10px] tracking-[0.25em] text-temo-warm-gray/60 uppercase">參考總價</p>
+              <p className="text-xl font-bold text-temo-gold leading-tight">{formatPrice(summary.total)}</p>
+            </div>
+            <Link
+              href={`/contact?service=${encodeURIComponent(summary.lines.map((l) => l.pkg.name).join(", "))}&budget=${summary.total}`}
+              className="flex items-center justify-center gap-2 px-7 py-3.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.2em] uppercase rounded-sm active:scale-[0.98] transition-all"
+            >
+              立即詢價
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+      )}
 
     </section>
   )
