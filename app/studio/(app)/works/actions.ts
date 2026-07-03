@@ -26,6 +26,7 @@ export type WorkInput = {
   published: boolean
   industryValues: string[]
   designerIds: string[]
+  gallery: { src: string; alt: string; caption: string }[]
 }
 
 function toRow(input: WorkInput) {
@@ -97,7 +98,25 @@ export async function saveWork(
     if (error) return { error: error.message }
   }
 
+  // 重建 作品圖片（gallery，多張）
+  await supabase.from("work_gallery").delete().eq("work_id", workId!)
+  if (input.gallery.length > 0) {
+    const { error } = await supabase.from("work_gallery").insert(
+      input.gallery.map((g, i) => ({
+        work_id: workId!,
+        src: g.src,
+        alt: g.alt.trim() || null,
+        caption: g.caption.trim() || null,
+        sort: i,
+      }))
+    )
+    if (error) return { error: error.message }
+  }
+
+  // 後台與前台一起刷新（前台立即反映，不必等 ISR 60 秒）
   revalidatePath("/studio/works")
+  revalidatePath("/portfolio")
+  revalidatePath("/portfolio/[slug]", "page")
   redirect("/studio/works")
 }
 

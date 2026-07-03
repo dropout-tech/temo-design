@@ -6,7 +6,7 @@ import { ChevronRight, Instagram, Facebook } from "lucide-react"
 
 const socialLinks = [
   {
-    href: "https://www.behance.net/temodesign",
+    href: "https://www.behance.net/temodesign0531",
     label: "Behance",
     icon: (
       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">

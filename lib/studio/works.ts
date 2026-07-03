@@ -27,7 +27,9 @@ export async function getWorkForEdit(id: string): Promise<WorkFormInitial | null
   const supabase = await createClient()
   const { data } = await supabase
     .from("works")
-    .select("*, work_industries(industry_value), work_designers(designer_id)")
+    .select(
+      "*, work_industries(industry_value), work_designers(designer_id), work_gallery(src, alt, caption, sort)"
+    )
     .eq("id", id)
     .single()
   if (!data) return null
@@ -54,5 +56,8 @@ export async function getWorkForEdit(id: string): Promise<WorkFormInitial | null
     published: w.published ?? true,
     industryValues: (w.work_industries ?? []).map((r: any) => r.industry_value),
     designerIds: (w.work_designers ?? []).map((r: any) => r.designer_id),
+    gallery: (w.work_gallery ?? [])
+      .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
+      .map((g: any) => ({ src: g.src, alt: g.alt ?? undefined, caption: g.caption ?? undefined })),
   }
 }

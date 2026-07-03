@@ -10,7 +10,7 @@ export const siteConfig = {
   socialLinks: {
     instagram: 'https://www.instagram.com/_temo_design/',
     facebook: 'https://www.facebook.com/temodesignss',
-    behance: 'https://www.behance.net/temodesign',
+    behance: 'https://www.behance.net/temodesign0531',
   },
 }
 

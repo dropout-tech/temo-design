@@ -36,6 +36,7 @@ export type WorkFormInitial = {
   published: boolean
   industryValues: string[]
   designerIds: string[]
+  gallery: { src: string; alt?: string; caption?: string }[]
 }
 
 const EMPTY: WorkFormInitial = {
@@ -43,6 +44,7 @@ const EMPTY: WorkFormInitial = {
   cover_url: "", video_url: "", size: "medium", description: "", services: "",
   deliverables: "", challenge: "", approach: "", result: "", quote_text: "",
   quote_author: "", awards: "", published: true, industryValues: [], designerIds: [],
+  gallery: [],
 }
 
 const inputCls =
@@ -84,11 +86,7 @@ export function WorkForm({
     return list.includes(v) ? list.filter((x) => x !== v) : [...list, v]
   }
 
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploading(true)
-    setError("")
+  async function uploadToStorage(file: File): Promise<string | null> {
     const supabase = createClient()
     const ext = (file.name.split(".").pop() || "jpg").toLowerCase()
     const path = `works/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
@@ -97,12 +95,58 @@ export function WorkForm({
       .upload(path, file, { cacheControl: "3600", upsert: false })
     if (upErr) {
       setError("圖片上傳失敗：" + upErr.message)
-      setUploading(false)
-      return
+      return null
     }
-    const { data } = supabase.storage.from("media").getPublicUrl(path)
-    set("cover_url", data.publicUrl)
+    return supabase.storage.from("media").getPublicUrl(path).data.publicUrl
+  }
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setError("")
+    const url = await uploadToStorage(file)
+    if (url) set("cover_url", url)
     setUploading(false)
+    e.target.value = ""
+  }
+
+  async function onAddGalleryImages(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    if (files.length === 0) return
+    setUploading(true)
+    setError("")
+    const uploaded: { src: string; caption?: string }[] = []
+    for (const file of files) {
+      const url = await uploadToStorage(file)
+      if (url) uploaded.push({ src: url })
+    }
+    if (uploaded.length > 0) {
+      setF((prev) => ({ ...prev, gallery: [...prev.gallery, ...uploaded] }))
+    }
+    setUploading(false)
+    e.target.value = ""
+  }
+
+  function removeGalleryImage(idx: number) {
+    setF((prev) => ({ ...prev, gallery: prev.gallery.filter((_, i) => i !== idx) }))
+  }
+
+  function moveGalleryImage(idx: number, dir: -1 | 1) {
+    setF((prev) => {
+      const next = [...prev.gallery]
+      const j = idx + dir
+      if (j < 0 || j >= next.length) return prev
+      ;[next[idx], next[j]] = [next[j], next[idx]]
+      return { ...prev, gallery: next }
+    })
+  }
+
+  function setGalleryCaption(idx: number, caption: string) {
+    setF((prev) => ({
+      ...prev,
+      gallery: prev.gallery.map((g, i) => (i === idx ? { ...g, caption } : g)),
+    }))
   }
 
   function submit(e: React.FormEvent) {
@@ -117,6 +161,7 @@ export function WorkForm({
       approach: f.approach, result: f.result, quote_text: f.quote_text,
       quote_author: f.quote_author, awards: toLines(f.awards),
       published: f.published, industryValues: f.industryValues, designerIds: f.designerIds,
+      gallery: f.gallery.map((g) => ({ src: g.src, alt: g.alt ?? "", caption: g.caption ?? "" })),
     }
     startTransition(async () => {
       const res = await saveWork(input, workId)
@@ -237,6 +282,46 @@ export function WorkForm({
         <Field label="影片連結（YouTube / Vimeo，選填）" hint="貼上後詳情頁會自動嵌入播放器">
           <input className={inputCls} value={f.video_url} onChange={(e) => set("video_url", e.target.value)} placeholder="https://youtu.be/..." />
         </Field>
+      </section>
+
+      {/* 作品圖片（多張 gallery） */}
+      <section className="space-y-5">
+        <SectionTitle>作品圖片（多張）</SectionTitle>
+        <p className="text-xs text-temo-warm-gray/50 -mt-2">
+          除了封面之外，可再上傳多張圖片，會顯示在作品詳情頁下方的圖庫。可一次選多張。
+        </p>
+
+        {f.gallery.length > 0 && (
+          <div className="space-y-3">
+            {f.gallery.map((g, i) => (
+              <div key={i} className="flex items-start gap-3 p-3 rounded-lg border border-white/10 bg-white/[0.02]">
+                <div className="w-20 h-20 rounded-md overflow-hidden bg-white/[0.04] shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={g.src} alt="" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1 min-w-0 space-y-2">
+                  <input
+                    className={inputCls}
+                    value={g.caption ?? ""}
+                    onChange={(e) => setGalleryCaption(i, e.target.value)}
+                    placeholder="圖片說明（選填）"
+                  />
+                  <div className="flex items-center gap-2 text-xs">
+                    <button type="button" onClick={() => moveGalleryImage(i, -1)} disabled={i === 0} className="px-2 py-1 text-temo-warm-gray/60 hover:text-temo-white disabled:opacity-30 transition-colors">↑ 上移</button>
+                    <button type="button" onClick={() => moveGalleryImage(i, 1)} disabled={i === f.gallery.length - 1} className="px-2 py-1 text-temo-warm-gray/60 hover:text-temo-white disabled:opacity-30 transition-colors">↓ 下移</button>
+                    <button type="button" onClick={() => removeGalleryImage(i)} className="ml-auto px-2 py-1 text-red-400/70 hover:text-red-400 transition-colors">移除</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <label className={cn("inline-flex items-center gap-2 px-4 py-2.5 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
+          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+          {uploading ? "上傳中…" : "新增圖片（可多選）"}
+          <input type="file" accept="image/*" multiple className="hidden" onChange={onAddGalleryImages} disabled={uploading} />
+        </label>
       </section>
 
       {/* 案例內容 */}
