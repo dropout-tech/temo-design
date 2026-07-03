@@ -147,10 +147,24 @@ function TodayStage({
   onSelect: (idx: number) => void
 }) {
   const [mounted, setMounted] = useState(false)
+  // 桌機版構圖鎖在 1834×1062 的設計畫布上，用 scale 依螢幕 cover 縮放 → 換任何螢幕比例都不跑版
+  // 水平靠左（保護左側 TODAY 文字不被裁）、垂直置中（超寬螢幕的裁切平均分到上下空白帶，漢字不被切）
+  const [canvas, setCanvas] = useState({ scale: 1, offsetY: 0 })
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 100)
     return () => clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    function update() {
+      // cover：取寬/高兩個縮放比的較大者，確保畫布永遠鋪滿視窗、不留空邊
+      const scale = Math.max(window.innerWidth / 1834, window.innerHeight / 1062)
+      setCanvas({ scale, offsetY: (window.innerHeight - 1062 * scale) / 2 })
+    }
+    update()
+    window.addEventListener("resize", update)
+    return () => window.removeEventListener("resize", update)
   }, [])
 
   return (
@@ -158,130 +172,141 @@ function TodayStage({
       className="relative w-full h-full overflow-hidden select-none"
       style={{ opacity: mounted ? 1 : 0, transition: "opacity 0.5s ease" }}
     >
-      {/* Layer 1: 水泥背景 */}
+      {/* Layer 1: 水泥背景（手機版底圖；桌機版會被下方縮放畫布蓋滿） */}
       <div
         className="absolute inset-0 z-[1] bg-cover bg-center"
         style={{ backgroundImage: `url('/cement-light.png')` }}
       />
 
-      {/* Layer 2: 4 個可點擊的斜線區塊（每個內含背景 + 漢字 + 編號）— 桌機限定 */}
-      {SECTIONS.map((s, i) => (
-        <button
-          key={s.num}
-          type="button"
-          onClick={() => onSelect(i)}
-          aria-label={`${s.top}${s.bottom}`}
-          className="tg-char-pair hidden md:block"
-          style={
-            {
-              ["--tg-clip" as string]: s.clip,
-              ["--tg-clip-hover" as string]: s.clipHover,
-            } as React.CSSProperties
-          }
+      {/* ── 桌機版：鎖 1834×1062 比例的設計畫布，cover 縮放（桌機限定） ── */}
+      <div
+        className="hidden md:block absolute left-0 z-[2] origin-top-left"
+        style={{ width: 1834, height: 1062, top: canvas.offsetY, transform: `scale(${canvas.scale})` }}
+      >
+        {/* 畫布底層水泥：與斜切區塊同張同比例 → 未 hover 時區塊與底圖無縫、隱形 */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url('/cement-light.png')` }}
+        />
+
+        {/* 4 個可點擊的斜線區塊（每個內含背景 + 漢字 + 編號） */}
+        {SECTIONS.map((s, i) => (
+          <button
+            key={s.num}
+            type="button"
+            onClick={() => onSelect(i)}
+            aria-label={`${s.top}${s.bottom}`}
+            className="tg-char-pair"
+            style={
+              {
+                ["--tg-clip" as string]: s.clip,
+                ["--tg-clip-hover" as string]: s.clipHover,
+              } as React.CSSProperties
+            }
+          >
+            {/* 區塊背景（同樣的水泥紋，跟著 hover 一起抬起） */}
+            <span
+              aria-hidden
+              className="absolute inset-0 bg-cover bg-center pointer-events-none"
+              style={{ backgroundImage: `url('/cement-light.png')` }}
+            />
+            {/* 漢字（上下兩排） */}
+            <span
+              aria-hidden
+              className="tg-char-text"
+              style={{ left: s.textLeft, top: "65.63%", color: s.color }}
+            >
+              <span className="block">{s.top}</span>
+              <span className="block" style={{ marginTop: "0.37em" }}>{s.bottom}</span>
+            </span>
+            {/* 編號 */}
+            <span
+              aria-hidden
+              className="tg-num"
+              style={{ left: s.numLeft, top: "38.61%" }}
+            >
+              {s.num}
+            </span>
+          </button>
+        ))}
+
+        {/* 5 條白色斜線 */}
+        <svg
+          className="absolute inset-0 z-[3] w-full h-full pointer-events-none"
+          viewBox="0 0 1834 1062"
         >
-          {/* 區塊背景（同樣的水泥紋，跟著 hover 一起抬起） */}
-          <span
-            aria-hidden
-            className="absolute inset-0 bg-cover bg-center pointer-events-none"
-            style={{ backgroundImage: `url('/cement-light.png')` }}
-          />
-          {/* 漢字（上下兩排） */}
-          <span
-            aria-hidden
-            className="tg-char-text"
-            style={{ left: s.textLeft, top: "65.63%", color: s.color }}
-          >
-            <span className="block">{s.top}</span>
-            <span className="block" style={{ marginTop: "0.37em" }}>{s.bottom}</span>
-          </span>
-          {/* 編號 */}
-          <span
-            aria-hidden
-            className="tg-num"
-            style={{ left: s.numLeft, top: "38.61%" }}
-          >
-            {s.num}
-          </span>
-        </button>
-      ))}
+          <line x1="260"  y1="983"  x2="901"  y2="170" stroke="#F2F2F2" strokeWidth="4" vectorEffect="non-scaling-stroke" />
+          <line x1="533"  y1="976"  x2="1175" y2="161" stroke="#F2F2F2" strokeWidth="4" vectorEffect="non-scaling-stroke" />
+          <line x1="806"  y1="967"  x2="1447" y2="154" stroke="#F2F2F2" strokeWidth="4" vectorEffect="non-scaling-stroke" />
+          <line x1="1065" y1="966"  x2="1706" y2="153" stroke="#F2F2F2" strokeWidth="4" vectorEffect="non-scaling-stroke" />
+          <line x1="1292" y1="1027" x2="1832" y2="339" stroke="#F2F2F2" strokeWidth="4" vectorEffect="non-scaling-stroke" />
+        </svg>
 
-      {/* Layer 3: 5 條白色斜線 — 桌機限定 */}
-      <svg
-        className="hidden md:block absolute inset-0 z-[3] w-full h-full pointer-events-none"
-        preserveAspectRatio="none"
-        viewBox="0 0 1834 1062"
-      >
-        <line x1="260"  y1="983"  x2="901"  y2="170" stroke="#F2F2F2" strokeWidth="4" vectorEffect="non-scaling-stroke" />
-        <line x1="533"  y1="976"  x2="1175" y2="161" stroke="#F2F2F2" strokeWidth="4" vectorEffect="non-scaling-stroke" />
-        <line x1="806"  y1="967"  x2="1447" y2="154" stroke="#F2F2F2" strokeWidth="4" vectorEffect="non-scaling-stroke" />
-        <line x1="1065" y1="966"  x2="1706" y2="153" stroke="#F2F2F2" strokeWidth="4" vectorEffect="non-scaling-stroke" />
-        <line x1="1292" y1="1027" x2="1832" y2="339" stroke="#F2F2F2" strokeWidth="4" vectorEffect="non-scaling-stroke" />
-      </svg>
-
-      {/* Layer 5: 左側文字（TODAY / SOMETHING MORE / 今天 / body）— 桌機限定 */}
-      <div
-        className="hidden md:block absolute z-[5] pointer-events-none"
-        style={{
-          left: "2.73%",
-          top: "14.78%",
-          fontFamily: "'Barlow', sans-serif",
-          fontWeight: 900,
-          fontSize: "8.18vw",
-          lineHeight: 1,
-          letterSpacing: "-0.01em",
-          color: "#F2F2F2",
-        }}
-      >
-        TODAY
-      </div>
-      <div
-        className="hidden md:block absolute z-[5] pointer-events-none"
-        style={{
-          left: "2.73%",
-          top: "29.85%",
-          fontFamily: "'Barlow', sans-serif",
-          fontWeight: 700,
-          fontSize: "2.40vw",
-          lineHeight: 1,
-          letterSpacing: "0.09em",
-          color: "#F2F2F2",
-        }}
-      >
-        SOMETHING MORE...
-      </div>
-      <div
-        className="hidden md:block absolute z-[5] pointer-events-none"
-        style={{
-          left: "2.73%",
-          top: "39.27%",
-          fontFamily: "'Noto Sans TC', sans-serif",
-          fontWeight: 700,
-          fontSize: "2.18vw",
-          lineHeight: 1,
-          letterSpacing: "0.25em",
-          color: "#F2F2F2",
-        }}
-      >
-        今天我想來點...
-      </div>
-      <div
-        className="hidden md:block absolute z-[5] pointer-events-none"
-        style={{
-          left: "2.67%",
-          top: "48.78%",
-          width: "20.23%",
-          fontFamily: "'Barlow', sans-serif",
-          fontWeight: 600,
-          fontSize: "0.87vw",
-          lineHeight: 1.13,
-          letterSpacing: "0.04em",
-          color: "#F2F2F2",
-        }}
-      >
-        <p>At TEMO, we believe that design is not merely about appearance—it is a form of healing and a solution.</p>
-        <p style={{ marginTop: "0.9em" }}>
-          With a people-centered philosophy at our core, we see designers not simply as makers who craft a brand&apos;s exterior, but as &ldquo;brand doctors&rdquo; who diagnose through insight and prescribe through creativity.
-        </p>
+        {/* 左側文字（座標與字級一律用 px，相對固定畫布 → 永遠對齊） */}
+        <div
+          className="absolute z-[5] pointer-events-none"
+          style={{
+            left: 50,
+            top: 157,
+            fontFamily: "'Barlow', sans-serif",
+            fontWeight: 900,
+            fontSize: 150,
+            lineHeight: 1,
+            letterSpacing: "-0.01em",
+            color: "#F2F2F2",
+          }}
+        >
+          TODAY
+        </div>
+        <div
+          className="absolute z-[5] pointer-events-none"
+          style={{
+            left: 50,
+            top: 317,
+            fontFamily: "'Barlow', sans-serif",
+            fontWeight: 700,
+            fontSize: 44,
+            lineHeight: 1,
+            letterSpacing: "0.09em",
+            color: "#F2F2F2",
+          }}
+        >
+          SOMETHING MORE...
+        </div>
+        <div
+          className="absolute z-[5] pointer-events-none"
+          style={{
+            left: 50,
+            top: 417,
+            fontFamily: "'Noto Sans TC', sans-serif",
+            fontWeight: 700,
+            fontSize: 40,
+            lineHeight: 1,
+            letterSpacing: "0.25em",
+            color: "#F2F2F2",
+          }}
+        >
+          今天我想來點...
+        </div>
+        <div
+          className="absolute z-[5] pointer-events-none"
+          style={{
+            left: 49,
+            top: 518,
+            width: 371,
+            fontFamily: "'Barlow', sans-serif",
+            fontWeight: 600,
+            fontSize: 16,
+            lineHeight: 1.13,
+            letterSpacing: "0.04em",
+            color: "#F2F2F2",
+          }}
+        >
+          <p>At TEMO, we believe that design is not merely about appearance—it is a form of healing and a solution.</p>
+          <p style={{ marginTop: "0.9em" }}>
+            With a people-centered philosophy at our core, we see designers not simply as makers who craft a brand&apos;s exterior, but as &ldquo;brand doctors&rdquo; who diagnose through insight and prescribe through creativity.
+          </p>
+        </div>
       </div>
 
       {/* ── 手機版佈局：直向堆疊、可讀字級、整列大按鈕（桌機隱藏） ── */}
@@ -391,7 +416,7 @@ function TodayStage({
           position: absolute;
           font-family: 'Noto Sans TC', sans-serif;
           font-weight: 900;
-          font-size: 5.45vw;
+          font-size: 100px;
           line-height: 1;
           letter-spacing: 0.13em;
           white-space: nowrap;
@@ -400,7 +425,7 @@ function TodayStage({
           position: absolute;
           font-family: 'Barlow', sans-serif;
           font-weight: 900;
-          font-size: 3.27vw;
+          font-size: 60px;
           line-height: 1;
           letter-spacing: 0.12em;
           color: #F2F2F2;
