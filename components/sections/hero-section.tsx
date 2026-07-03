@@ -148,7 +148,7 @@ export function HeroSection() {
 
           {/* Right — large circle CTA */}
           <div
-            className="flex items-center justify-center md:justify-end flex-shrink-0 md:mr-8 lg:mr-16 xl:mr-24"
+            className="flex items-center justify-end flex-shrink-0 md:mr-8 lg:mr-16 xl:mr-24"
             style={{
               transition: "opacity 1.2s ease 0.7s, transform 1.2s ease 0.7s",
               opacity: visible ? 1 : 0,
@@ -157,9 +157,9 @@ export function HeroSection() {
           >
             <Link
               href="/explore"
-              className="group relative z-20 flex items-center justify-center w-32 h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 rounded-full border-2 border-white/60 hover:border-temo-gold transition-colors duration-300"
+              className="group relative z-20 flex items-center justify-center w-24 h-24 md:w-40 md:h-40 lg:w-48 lg:h-48 rounded-full border-2 border-white/60 hover:border-temo-gold transition-colors duration-300"
             >
-              <ChevronRight className="h-10 w-10 md:h-14 md:w-14 lg:h-16 lg:w-16 text-white group-hover:text-temo-gold group-hover:translate-x-2 transition-all duration-300" />
+              <ChevronRight className="h-8 w-8 md:h-14 md:w-14 lg:h-16 lg:w-16 text-white group-hover:text-temo-gold group-hover:translate-x-2 transition-all duration-300" />
               {/* Gold ping ring — behind the button */}
               <span className="absolute inset-0 rounded-full border border-temo-gold/50 opacity-0 group-hover:opacity-100 group-hover:animate-ping pointer-events-none" />
               <span className="absolute inset-[-10px] rounded-full border border-temo-gold/20 opacity-0 group-hover:opacity-100 group-hover:animate-ping pointer-events-none" style={{ animationDelay: "0.4s" }} />
