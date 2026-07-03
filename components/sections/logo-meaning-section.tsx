@@ -185,14 +185,6 @@ export function LogoMeaningSection() {
   return (
     <section ref={ref} className="relative py-24 md:py-36 overflow-hidden">
       {/* 背景影片由父層 wrapper 提供，本段透明 */}
-      {/* Watermark logo：浮在共用影片之上、文字之下 */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[1]">
-        <img
-          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-17-7KdvO1A2YbJzYmo4y1zm35MCjefkkC.png"
-          alt=""
-          className="w-[600px] h-[600px] object-contain opacity-[0.05]"
-        />
-      </div>
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Logo hero */}
