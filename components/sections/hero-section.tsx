@@ -104,7 +104,7 @@ export function HeroSection() {
         />
 
         {/* ── BOTTOM BLOCK: tagline left, circle CTA right ────────────── */}
-        <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-12 flex-1 pb-8 md:pb-10">
+        <div className="relative flex flex-col md:flex-row md:items-center gap-8 md:gap-12 flex-1 pb-8 md:pb-10">
           {/* Left — tagline + social */}
           <div
             className="flex-1 flex flex-col justify-between min-h-[160px]"
@@ -146,9 +146,9 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* Right — large circle CTA */}
+          {/* Right — large circle CTA（手機版靠右、對齊標語高度；桌機維持右欄置中） */}
           <div
-            className="flex items-center justify-end flex-shrink-0 md:mr-8 lg:mr-16 xl:mr-24"
+            className="absolute right-0 top-1 md:static flex items-center justify-end flex-shrink-0 md:mr-8 lg:mr-16 xl:mr-24"
             style={{
               transition: "opacity 1.2s ease 0.7s, transform 1.2s ease 0.7s",
               opacity: visible ? 1 : 0,
