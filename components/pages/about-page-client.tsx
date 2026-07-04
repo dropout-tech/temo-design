@@ -6,7 +6,7 @@ import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { LogoMeaningSection } from "@/components/sections/logo-meaning-section"
 import { StatsSection } from "@/components/sections/stats-section"
-import { ClientsHonorsSection } from "@/components/sections/clients-honors-section"
+import { ClientsHonorsSection, type ClientLogoItem } from "@/components/sections/clients-honors-section"
 import { ArrowUpRight, ChevronDown, Instagram, X } from "lucide-react"
 import Link from "next/link"
 
@@ -436,7 +436,7 @@ function DesignerDetailPanel({
   )
 }
 
-export function AboutPageClient() {
+export function AboutPageClient({ clientLogos = [] }: { clientLogos?: ClientLogoItem[] }) {
   const [visible, setVisible] = useState(false)
   const [activeCategory, setActiveCategory] = useState<Category>("DESIGNER")
   const [menuOpen, setMenuOpen] = useState(false)
@@ -934,7 +934,7 @@ export function AboutPageClient() {
         {/* ─── 影片底圖 wrapper 結束 ─── */}
 
         <StatsSection />
-        <ClientsHonorsSection />
+        <ClientsHonorsSection clientLogos={clientLogos} />
       </main>
       <Footer />
       <DesignerDetailPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} />

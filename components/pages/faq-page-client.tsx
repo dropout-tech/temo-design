@@ -6,7 +6,9 @@ import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { ChevronDown } from "lucide-react"
 
-const faqs = [
+type FaqGroup = { category: string; questions: { q: string; a: string }[] }
+
+const FALLBACK_FAQS: FaqGroup[] = [
   {
     category: "服務相關",
     questions: [
@@ -41,7 +43,8 @@ const faqs = [
   },
 ]
 
-export function FAQPageClient() {
+export function FAQPageClient({ faqs: faqsProp }: { faqs?: FaqGroup[] }) {
+  const faqs = faqsProp && faqsProp.length > 0 ? faqsProp : FALLBACK_FAQS
   const [visible, setVisible] = useState(false)
   const [activeCatIdx, setActiveCatIdx] = useState(0)
   const [activeQ, setActiveQ] = useState<number | null>(null)

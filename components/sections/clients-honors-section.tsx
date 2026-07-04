@@ -1,7 +1,9 @@
 "use client"
 
+import Image from "next/image"
 import { useInView } from "@/hooks/use-in-view"
-import { useRef } from "react"
+
+export type ClientLogoItem = { name: string; image_url: string }
 
 const clients = [
   "Gogoro", "Cannondale", "OXO", "IOL", "Johnson & Johnson",
@@ -42,8 +44,53 @@ function MarqueeRow({ items, speed = 40, reverse = false }: { items: string[]; s
   )
 }
 
-export function ClientsHonorsSection() {
+function LogoMarqueeRow({
+  items,
+  speed = 40,
+  reverse = false,
+}: {
+  items: ClientLogoItem[]
+  speed?: number
+  reverse?: boolean
+}) {
+  const doubled = [...items, ...items]
+  return (
+    <div className="relative flex overflow-hidden" style={{ maskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)" }}>
+      <div
+        className="marquee-track flex shrink-0 gap-4 items-center py-1"
+        style={{
+          animation: `marquee${reverse ? "Rev" : ""} ${speed}s linear infinite`,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {doubled.map((logo, i) => (
+          <div
+            key={i}
+            title={logo.name}
+            className="group flex items-center justify-center h-20 min-w-[160px] px-8 border border-white/8 bg-white/[0.02] hover:border-temo-gold/50 hover:bg-temo-gold/[0.04] transition-all duration-300 rounded-sm"
+          >
+            <Image
+              src={logo.image_url}
+              alt={logo.name}
+              width={200}
+              height={72}
+              unoptimized
+              className="max-h-12 w-auto object-contain opacity-55 group-hover:opacity-100 transition-opacity duration-300"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export function ClientsHonorsSection({ clientLogos = [] }: { clientLogos?: ClientLogoItem[] }) {
   const { ref, isInView } = useInView<HTMLElement>({ once: true, amount: 0.1 })
+  const hasLogos = clientLogos.length > 0
+  // logo 數量夠多才分兩排；否則單排避免重複太密
+  const half = Math.ceil(clientLogos.length / 2)
+  const logoRowA = clientLogos.slice(0, half)
+  const logoRowB = clientLogos.slice(half)
 
   return (
     <section ref={ref} className="relative py-24 md:py-32 bg-temo-black overflow-hidden">
@@ -67,10 +114,23 @@ export function ClientsHonorsSection() {
             <div className="flex-1 h-px bg-white/8" />
             <h3 className="text-sm font-bold text-white tracking-[0.25em] uppercase">Our Client</h3>
           </div>
-          <MarqueeRow items={clients} speed={38} />
-          <div className="mt-3">
-            <MarqueeRow items={[...clients].reverse()} speed={32} reverse />
-          </div>
+          {hasLogos ? (
+            <>
+              <LogoMarqueeRow items={logoRowA} speed={44} />
+              {logoRowB.length > 0 && (
+                <div className="mt-3">
+                  <LogoMarqueeRow items={logoRowB} speed={38} reverse />
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <MarqueeRow items={clients} speed={38} />
+              <div className="mt-3">
+                <MarqueeRow items={[...clients].reverse()} speed={32} reverse />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Divider */}

@@ -2,18 +2,30 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { LayoutDashboard, FolderKanban, LogOut, Users, Building2 } from "lucide-react"
+import {
+  LayoutDashboard,
+  FolderKanban,
+  LogOut,
+  Users,
+  Building2,
+  HelpCircle,
+  MessageSquareQuote,
+  Settings,
+} from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
 const NAV = [
   { href: "/studio", label: "總覽", icon: LayoutDashboard, exact: true },
   { href: "/studio/works", label: "作品", icon: FolderKanban },
+  { href: "/studio/faqs", label: "常見問答", icon: HelpCircle },
+  { href: "/studio/testimonials", label: "客戶見證", icon: MessageSquareQuote },
+  { href: "/studio/clients", label: "客戶 Logo", icon: Building2 },
+  { href: "/studio/settings", label: "網站設定", icon: Settings },
 ]
 
 const COMING_SOON = [
   { label: "設計師", icon: Users },
-  { label: "客戶", icon: Building2 },
 ]
 
 export function StudioShell({

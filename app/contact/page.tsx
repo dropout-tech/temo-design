@@ -1,11 +1,23 @@
 import type { Metadata } from "next"
 import { ContactPageClient } from "@/components/pages/contact-page-client"
+import { getSiteSettings } from "@/lib/content-supabase"
 
 export const metadata: Metadata = {
   title: "聯絡我們 | TEMO DESIGN",
   description: "聯繫提摩設計。準備好開始您的設計之旅？讓我們一起創造品牌奇蹟。",
 }
 
-export default function ContactPage() {
-  return <ContactPageClient />
+export const revalidate = 60
+
+export default async function ContactPage() {
+  const s = await getSiteSettings()
+  return (
+    <ContactPageClient
+      contact={{
+        email: s?.email ?? "info@temo.design",
+        phone: s?.phone ?? "+886-2-1234-5678",
+        address: s?.address ?? "台北市大安區敦化南路一段 123 號 8 樓",
+      }}
+    />
+  )
 }

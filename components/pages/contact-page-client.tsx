@@ -11,7 +11,16 @@ import { cn } from "@/lib/utils"
 
 type Tab = "contact" | "quote" | "brief"
 
-export function ContactPageClient() {
+export function ContactPageClient({
+  contact,
+}: {
+  contact?: { email: string; phone: string; address: string }
+} = {}) {
+  const info = contact ?? {
+    email: "info@temo.design",
+    phone: "+886-2-1234-5678",
+    address: "台北市大安區敦化南路一段 123 號 8 樓",
+  }
   const [visible, setVisible] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>("contact")
   const { ref: contentRef, isInView } = useInView<HTMLDivElement>({ once: true, amount: 0.1 })
@@ -172,19 +181,19 @@ export function ContactPageClient() {
                         {
                           icon: Mail,
                           label: "電子郵件",
-                          value: "info@temo.design",
-                          href: "mailto:info@temo.design",
+                          value: info.email,
+                          href: `mailto:${info.email}`,
                         },
                         {
                           icon: Phone,
                           label: "電話",
-                          value: "+886-2-1234-5678",
-                          href: "tel:+886-2-1234-5678",
+                          value: info.phone,
+                          href: `tel:${info.phone}`,
                         },
                         {
                           icon: MapPin,
                           label: "地址",
-                          value: "台北市大安區敦化南路一段 123 號 8 樓",
+                          value: info.address,
                           href: undefined,
                         },
                       ].map(({ icon: Icon, label, value, href }) => (

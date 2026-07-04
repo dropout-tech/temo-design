@@ -3,7 +3,9 @@
 import { useInView } from "@/hooks/use-in-view"
 import { Star } from "lucide-react"
 
-const testimonials = [
+type Testimonial = { rating: number; text: string; author: string; company?: string }
+
+const FALLBACK_TESTIMONIALS: Testimonial[] = [
   {
     rating: 5,
     text: "提摩設計不僅提供設計服務，更是我們品牌成長的策略夥伴。他們的專業團隊深入理解我們的需求，並提供超出預期的創意解決方案。",
@@ -24,7 +26,8 @@ const testimonials = [
   },
 ]
 
-export function TestimonialsSection() {
+export function TestimonialsSection({ testimonials: prop }: { testimonials?: Testimonial[] }) {
+  const testimonials = prop && prop.length > 0 ? prop : FALLBACK_TESTIMONIALS
   const { ref, isInView } = useInView<HTMLElement>({ once: true, amount: 0.15 })
 
   return (
