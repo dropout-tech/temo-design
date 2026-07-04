@@ -84,13 +84,23 @@ function LogoMarqueeRow({
   )
 }
 
-export function ClientsHonorsSection({ clientLogos = [] }: { clientLogos?: ClientLogoItem[] }) {
+export function ClientsHonorsSection({
+  clientLogos = [],
+  awardLogos = [],
+}: {
+  clientLogos?: ClientLogoItem[]
+  awardLogos?: ClientLogoItem[]
+}) {
   const { ref, isInView } = useInView<HTMLElement>({ once: true, amount: 0.1 })
   const hasLogos = clientLogos.length > 0
   // logo 數量夠多才分兩排；否則單排避免重複太密
   const half = Math.ceil(clientLogos.length / 2)
   const logoRowA = clientLogos.slice(0, half)
   const logoRowB = clientLogos.slice(half)
+  const hasAwardLogos = awardLogos.length > 0
+  const awardHalf = Math.ceil(awardLogos.length / 2)
+  const awardRowA = awardLogos.slice(0, awardHalf)
+  const awardRowB = awardLogos.slice(awardHalf)
 
   return (
     <section ref={ref} className="relative py-24 md:py-32 bg-temo-black overflow-hidden">
@@ -157,7 +167,18 @@ export function ClientsHonorsSection({ clientLogos = [] }: { clientLogos?: Clien
             <div className="flex-1 h-px bg-white/8" />
             <h3 className="text-sm font-bold text-white tracking-[0.25em] uppercase">Our Honor</h3>
           </div>
-          <MarqueeRow items={honors} speed={45} reverse />
+          {hasAwardLogos ? (
+            <>
+              <LogoMarqueeRow items={awardRowA} speed={46} reverse />
+              {awardRowB.length > 0 && (
+                <div className="mt-3">
+                  <LogoMarqueeRow items={awardRowB} speed={40} />
+                </div>
+              )}
+            </>
+          ) : (
+            <MarqueeRow items={honors} speed={45} reverse />
+          )}
         </div>
       </div>
 

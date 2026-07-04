@@ -26,6 +26,13 @@ export type ClientLogo = {
   sort: number
 }
 
+export type AwardLogo = {
+  id: string
+  name: string
+  image_url: string
+  sort: number
+}
+
 export type SiteSettings = {
   name: string | null
   description: string | null
@@ -78,6 +85,15 @@ export async function getClientLogos(): Promise<ClientLogo[]> {
     .select("id, name, image_url, sort")
     .order("sort")
   return (data as ClientLogo[]) ?? []
+}
+
+export async function getAwardLogos(): Promise<AwardLogo[]> {
+  const supa = createPublicClient()
+  const { data } = await supa
+    .from("award_logos")
+    .select("id, name, image_url, sort")
+    .order("sort")
+  return (data as AwardLogo[]) ?? []
 }
 
 export async function getSiteSettings(): Promise<SiteSettings | null> {

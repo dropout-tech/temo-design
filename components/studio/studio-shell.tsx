@@ -11,6 +11,7 @@ import {
   HelpCircle,
   MessageSquareQuote,
   Settings,
+  Award,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -21,6 +22,7 @@ const NAV = [
   { href: "/studio/faqs", label: "常見問答", icon: HelpCircle },
   { href: "/studio/testimonials", label: "客戶見證", icon: MessageSquareQuote },
   { href: "/studio/clients", label: "客戶 Logo", icon: Building2 },
+  { href: "/studio/awards", label: "得獎紀錄", icon: Award },
   { href: "/studio/settings", label: "網站設定", icon: Settings },
 ]
 

@@ -436,7 +436,13 @@ function DesignerDetailPanel({
   )
 }
 
-export function AboutPageClient({ clientLogos = [] }: { clientLogos?: ClientLogoItem[] }) {
+export function AboutPageClient({
+  clientLogos = [],
+  awardLogos = [],
+}: {
+  clientLogos?: ClientLogoItem[]
+  awardLogos?: ClientLogoItem[]
+}) {
   const [visible, setVisible] = useState(false)
   const [activeCategory, setActiveCategory] = useState<Category>("DESIGNER")
   const [menuOpen, setMenuOpen] = useState(false)
@@ -934,7 +940,7 @@ export function AboutPageClient({ clientLogos = [] }: { clientLogos?: ClientLogo
         {/* ─── 影片底圖 wrapper 結束 ─── */}
 
         <StatsSection />
-        <ClientsHonorsSection clientLogos={clientLogos} />
+        <ClientsHonorsSection clientLogos={clientLogos} awardLogos={awardLogos} />
       </main>
       <Footer />
       <DesignerDetailPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} />
