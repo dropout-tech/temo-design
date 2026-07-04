@@ -7,50 +7,69 @@ import { useInView } from "@/hooks/use-in-view"
 export type ClientLogoItem = { name: string; image_url: string }
 export type PressLinkItem = { title: string; source: string; url: string; image_url: string }
 
+function PressCard({ item }: { item: PressLinkItem }) {
+  return (
+    <>
+      {/* 縮圖 */}
+      <div className="relative aspect-[16/9] bg-[#1a1815] overflow-hidden">
+        {item.image_url ? (
+          <Image
+            src={item.image_url}
+            alt={item.title}
+            fill
+            unoptimized
+            className="object-cover opacity-80 group-hover:opacity-100 group-hover:scale-[1.03] transition-all duration-500"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-temo-warm-gray/25">
+            <Newspaper className="w-7 h-7" />
+          </div>
+        )}
+      </div>
+      {/* 文字 */}
+      <div className="flex flex-1 flex-col p-4">
+        {item.source && (
+          <p className="text-[10px] tracking-[0.2em] text-temo-gold/80 uppercase mb-2">
+            {item.source}
+          </p>
+        )}
+        <p className="text-sm leading-relaxed text-temo-warm-gray/80 group-hover:text-white transition-colors line-clamp-3">
+          {item.title}
+        </p>
+      </div>
+    </>
+  )
+}
+
 function PressGrid({ items }: { items: PressLinkItem[] }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {items.map((item, i) => (
-        <a
-          key={i}
-          href={item.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group flex flex-col border border-white/8 bg-white/[0.02] hover:border-temo-gold/50 hover:bg-temo-gold/[0.04] transition-all duration-300 rounded-sm overflow-hidden"
-        >
-          {/* 縮圖 */}
-          <div className="relative aspect-[16/9] bg-[#1a1815] overflow-hidden">
-            {item.image_url ? (
-              <Image
-                src={item.image_url}
-                alt={item.title}
-                fill
-                unoptimized
-                className="object-cover opacity-80 group-hover:opacity-100 group-hover:scale-[1.03] transition-all duration-500"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-temo-warm-gray/25">
-                <Newspaper className="w-7 h-7" />
-              </div>
-            )}
-          </div>
-          {/* 文字 */}
-          <div className="flex flex-1 flex-col p-4">
-            {item.source && (
-              <p className="text-[10px] tracking-[0.2em] text-temo-gold/80 uppercase mb-2">
-                {item.source}
-              </p>
-            )}
-            <p className="text-sm leading-relaxed text-temo-warm-gray/80 group-hover:text-white transition-colors line-clamp-3">
-              {item.title}
-            </p>
-            <span className="mt-3 inline-flex items-center gap-1 text-[11px] text-temo-warm-gray/40 group-hover:text-temo-gold transition-colors">
+      {items.map((item, i) => {
+        const hasUrl = item.url.trim().length > 0
+        // 有連結 → 可點、開新分頁；沒連結 → 純展示、不可點（防呆，避免點到死連結）
+        return hasUrl ? (
+          <a
+            key={i}
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex flex-col border border-white/8 bg-white/[0.02] hover:border-temo-gold/50 hover:bg-temo-gold/[0.04] transition-all duration-300 rounded-sm overflow-hidden"
+          >
+            <PressCard item={item} />
+            <span className="flex items-center gap-1 px-4 pb-4 text-[11px] text-temo-warm-gray/40 group-hover:text-temo-gold transition-colors">
               閱讀報導
               <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
             </span>
+          </a>
+        ) : (
+          <div
+            key={i}
+            className="group flex flex-col border border-white/8 bg-white/[0.02] rounded-sm overflow-hidden"
+          >
+            <PressCard item={item} />
           </div>
-        </a>
-      ))}
+        )
+      })}
     </div>
   )
 }
