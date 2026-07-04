@@ -21,7 +21,7 @@ type Person = {
   tags?: string[]
 }
 
-const CATEGORY_ORDER = ["DESIGNER", "VENDOR", "CONSULTANT", "PARTNER"] as const
+const CATEGORY_ORDER = ["DESIGNER", "PATENT ATTORNEY", "LEGAL CONSULTANT"] as const
 type Category = (typeof CATEGORY_ORDER)[number]
 
 const categories: Record<Category, Person[]> = {
@@ -172,14 +172,7 @@ const categories: Record<Category, Person[]> = {
       tags: ["廣告企劃", "平面設計", "電商設計", "展覽設計"],
     },
   ],
-  VENDOR: [
-    { name: "VENDOR 01", role: "印刷夥伴", image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=600&fit=crop&crop=face" },
-    { name: "VENDOR 02", role: "影像製作", image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=600&fit=crop&crop=face" },
-    { name: "VENDOR 03", role: "後製團隊", image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=600&fit=crop&crop=face" },
-    { name: "VENDOR 04", role: "特殊工藝", image: "https://images.unsplash.com/photo-1521119989659-a83eee488004?w=400&h=600&fit=crop&crop=face" },
-    { name: "VENDOR 05", role: "物料供應", image: "https://images.unsplash.com/photo-1463453091185-61582044d556?w=400&h=600&fit=crop&crop=face" },
-  ],
-  CONSULTANT: [
+  "PATENT ATTORNEY": [
     {
       name: "JERRY WANG",
       nameZh: "王志翔",
@@ -225,12 +218,47 @@ const categories: Record<Category, Person[]> = {
       tags: ["設計專利", "智慧財產權", "國際化商業"],
     },
   ],
-  PARTNER: [
-    { name: "PARTNER 01", role: "創意夥伴", image: "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?w=400&h=600&fit=crop&crop=face" },
-    { name: "PARTNER 02", role: "技術夥伴", image: "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=400&h=600&fit=crop&crop=face" },
-    { name: "PARTNER 03", role: "媒體夥伴", image: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=400&h=600&fit=crop&crop=face" },
-    { name: "PARTNER 04", role: "通路夥伴", image: "https://images.unsplash.com/photo-1607990281513-2c110a25bd8c?w=400&h=600&fit=crop&crop=face" },
-    { name: "PARTNER 05", role: "國際夥伴", image: "https://images.unsplash.com/photo-1513956589380-bad6acb9b9d4?w=400&h=600&fit=crop&crop=face" },
+  "LEGAL CONSULTANT": [
+    {
+      name: "NICOLE TSAI",
+      nameZh: "蔡懿萍",
+      role: "INTERNATIONAL LEGAL CONSULTANT 國際法律顧問",
+      image: "/images/team/nicole.jpg",
+      bio: [
+        "20 多年科技業上市櫃公司法務及智慧財產權管理資歷與豐富的實務經驗，技術領域涵蓋半導體、網路通訊、IC 設計及系統廠等。",
+        "擅長各類型中英文商務合約草擬及協商、公司治理、企業內部法務及智慧財產權制度建置、智慧財產權全方位策略佈局、授權及技術移轉等，提供企業客戶營運上所需之全方位法務及智慧財產權顧問服務。",
+        "商場如戰場，讓我們與您一起步步為贏，運用法務及智慧財產權創造無限商機。",
+      ],
+      achievements: [
+        "現任律方國際顧問有限公司 - 執行長",
+        "具備法律、電子工程及中英翻譯等跨領域的科技法律及智慧財產權背景",
+        "曾任職數家台灣科技業上市櫃公司，擔任法務及智慧財產權部門主管並帶領團隊，從零草創建立內部法務及智財制度",
+        "專精各式中英文商務合約草擬協商，具多年跨國合約實務經驗；曾協助企業與日本軟銀 (Softbank)、歐美電信商等談判，合約標的金額超過數千萬美金",
+      ],
+      tags: ["中英文商務合約", "智慧財產權", "跨國合約談判", "授權及技術轉移"],
+    },
+    {
+      name: "IRVING SHIH",
+      nameZh: "史洱梵",
+      role: "LAWYER 律師 / LEGAL CONSULTANT 國際法律顧問",
+      image: "/images/team/irving.jpg",
+      bio: [
+        "現任眾勤法律事務所所長，曾任臺灣臺南地方法院法官助理。",
+        "專長橫跨智慧財產權管理諮詢及訴訟、商務投資與股權規劃、新興商業與服務模式諮詢、個資法制度建置，以及民刑事、行政與勞動法令等領域，提供企業常年法律顧問與爭端處理服務。",
+      ],
+      achievements: [
+        "現任眾勤法律事務所 - 所長",
+        "高雄市政府青年局【創業 O'STAR 及諮詢輔導】- 創業導師顧問",
+        "勞動部勞動力發展署【微型創業鳳凰】- 創業輔導顧問",
+        "臺灣臺南地方法院 - 法官助理",
+        "智慧財產權管理諮詢及訴訟",
+        "商務投資諮詢及股權規劃",
+        "新興商業及服務模式諮詢",
+        "個資法諮詢及制度建置",
+        "民刑事及行政訴訟、勞動法令諮詢",
+      ],
+      tags: ["常年法律顧問", "審擬商務契約", "訴訟爭端處理"],
+    },
   ],
 }
 
@@ -725,7 +753,7 @@ export function AboutPageClient({
                   aria-haspopup="listbox"
                   aria-expanded={menuOpen}
                 >
-                  <span className="text-xs md:text-sm tracking-[0.3em] text-temo-white uppercase font-medium">
+                  <span className="text-xs md:text-sm tracking-[0.3em] text-temo-white uppercase font-medium whitespace-nowrap">
                     {activeCategory}
                   </span>
                   <ChevronDown
@@ -750,7 +778,7 @@ export function AboutPageClient({
                             setActiveCategory(cat)
                             setMenuOpen(false)
                           }}
-                          className={`w-full px-6 py-3 text-xs tracking-[0.3em] uppercase text-left transition-colors ${
+                          className={`w-full px-6 py-3 text-xs tracking-[0.3em] uppercase text-left whitespace-nowrap transition-colors ${
                             isActive
                               ? "text-temo-gold"
                               : "text-white/60 hover:text-white hover:bg-white/5"
