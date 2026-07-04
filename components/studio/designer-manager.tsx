@@ -44,10 +44,15 @@ export function DesignerManager({
   categories: string[]
 }) {
   const [rows, setRows] = useState<Row[]>(initial)
+  const [activeCat, setActiveCat] = useState<string>("全部")
   let keyCounter = 0
+
+  // 分類順序：以現有資料的順序為主，加上新打的分類
+  const catOrder = Array.from(new Set([...categories, ...rows.map((r) => r.category)])).filter(Boolean)
 
   function addRow() {
     const maxSort = rows.reduce((m, r) => Math.max(m, r.sort), -1)
+    const cat = activeCat !== "全部" ? activeCat : catOrder[0] ?? "DESIGNER"
     setRows((p) => [
       ...p,
       {
@@ -56,7 +61,7 @@ export function DesignerManager({
         name: "",
         name_zh: "",
         role: "",
-        category: categories[0] ?? "DESIGNER",
+        category: cat,
         photo_url: "",
         instagram: "",
         bio: "",
@@ -102,21 +107,61 @@ export function DesignerManager({
         </button>
       </div>
 
-      <div className="space-y-3">
-        {rows.map((r) => (
-          <Card
-            key={r.key}
-            row={r}
-            onChange={(patch) => update(r.key, patch)}
-            onRemove={() => removeRow(r.key)}
-          />
-        ))}
-        {rows.length === 0 && (
-          <p className="text-temo-warm-gray/50 text-sm py-10 text-center">
-            還沒有團隊成員，點右上「新增成員」。
-          </p>
-        )}
+      {/* 分類標籤 */}
+      <div className="flex flex-wrap gap-2 mb-7">
+        {["全部", ...catOrder].map((c) => {
+          const count = c === "全部" ? rows.length : rows.filter((r) => r.category === c).length
+          const active = activeCat === c
+          return (
+            <button
+              key={c}
+              onClick={() => setActiveCat(c)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs tracking-wider border transition-colors",
+                active
+                  ? "bg-temo-gold/15 border-temo-gold/50 text-temo-gold"
+                  : "border-white/10 text-temo-warm-gray/60 hover:text-temo-white hover:border-white/25"
+              )}
+            >
+              {c}
+              <span className="opacity-50">{count}</span>
+            </button>
+          )
+        })}
       </div>
+
+      {/* 依分類分組（全部＝顯示所有分類的區塊；選特定分類＝只看那組） */}
+      {(activeCat === "全部" ? catOrder : [activeCat]).map((cat) => {
+        const groupRows = rows.filter((r) => r.category === cat)
+        return (
+          <div key={cat} className="mb-8">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-[11px] tracking-[0.25em] text-temo-gold uppercase whitespace-nowrap">{cat}</span>
+              <span className="text-[11px] text-temo-warm-gray/40 whitespace-nowrap">{groupRows.length} 人</span>
+              <div className="flex-1 h-px bg-white/8" />
+            </div>
+            <div className="space-y-3">
+              {groupRows.map((r) => (
+                <Card
+                  key={r.key}
+                  row={r}
+                  onChange={(patch) => update(r.key, patch)}
+                  onRemove={() => removeRow(r.key)}
+                />
+              ))}
+              {groupRows.length === 0 && (
+                <p className="text-temo-warm-gray/40 text-xs py-3">此分類還沒有成員。</p>
+              )}
+            </div>
+          </div>
+        )
+      })}
+
+      {rows.length === 0 && (
+        <p className="text-temo-warm-gray/50 text-sm py-10 text-center">
+          還沒有團隊成員，點右上「新增成員」。
+        </p>
+      )}
     </div>
   )
 }
