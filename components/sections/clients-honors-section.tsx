@@ -136,7 +136,7 @@ function LogoMarqueeRow({
           <div
             key={i}
             title={logo.name}
-            className="group flex items-center justify-center h-20 min-w-[160px] px-8 border border-white/8 bg-white/[0.02] hover:border-temo-gold/50 hover:bg-temo-gold/[0.04] transition-all duration-300 rounded-sm"
+            className="group flex items-center justify-center h-20 min-w-[160px] px-8"
           >
             <Image
               src={logo.image_url}
