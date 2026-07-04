@@ -10,15 +10,6 @@ export type Faq = {
   sort: number
 }
 
-export type Testimonial = {
-  id: string
-  text: string
-  author: string
-  company: string | null
-  rating: number
-  sort: number
-}
-
 export type ClientLogo = {
   id: string
   name: string
@@ -76,15 +67,6 @@ export async function getFaqsGrouped(): Promise<{ category: string; questions: {
     map.get(cat)!.push({ q: f.question, a: f.answer })
   }
   return order.map((category) => ({ category, questions: map.get(category)! }))
-}
-
-export async function getTestimonials(): Promise<Testimonial[]> {
-  const supa = createPublicClient()
-  const { data } = await supa
-    .from("testimonials")
-    .select("id, text, author, company, rating, sort")
-    .order("sort")
-  return (data as Testimonial[]) ?? []
 }
 
 export async function getClientLogos(): Promise<ClientLogo[]> {
