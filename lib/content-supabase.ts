@@ -33,6 +33,15 @@ export type AwardLogo = {
   sort: number
 }
 
+export type PressLink = {
+  id: string
+  title: string
+  source: string
+  url: string
+  image_url: string
+  sort: number
+}
+
 export type SiteSettings = {
   name: string | null
   description: string | null
@@ -94,6 +103,15 @@ export async function getAwardLogos(): Promise<AwardLogo[]> {
     .select("id, name, image_url, sort")
     .order("sort")
   return (data as AwardLogo[]) ?? []
+}
+
+export async function getPressLinks(): Promise<PressLink[]> {
+  const supa = createPublicClient()
+  const { data } = await supa
+    .from("press_links")
+    .select("id, title, source, url, image_url, sort")
+    .order("sort")
+  return (data as PressLink[]) ?? []
 }
 
 export async function getSiteSettings(): Promise<SiteSettings | null> {

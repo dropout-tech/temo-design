@@ -12,6 +12,7 @@ import {
   MessageSquareQuote,
   Settings,
   Award,
+  Newspaper,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -23,6 +24,7 @@ const NAV = [
   { href: "/studio/testimonials", label: "客戶見證", icon: MessageSquareQuote },
   { href: "/studio/clients", label: "客戶 Logo", icon: Building2 },
   { href: "/studio/awards", label: "得獎紀錄", icon: Award },
+  { href: "/studio/press", label: "媒體報導", icon: Newspaper },
   { href: "/studio/settings", label: "網站設定", icon: Settings },
 ]
 
