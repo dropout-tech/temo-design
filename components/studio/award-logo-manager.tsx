@@ -8,6 +8,8 @@ import { saveAwardLogo, deleteAwardLogo } from "@/app/studio/(app)/awards/action
 
 const inputCls =
   "w-full px-3 py-2.5 bg-white/[0.03] border border-white/10 text-temo-white text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:outline-none transition-all rounded-sm"
+// 排序數字框：拿掉 w-full 只留固定寬，否則 w-full 會壓過 w-20 把整行吃滿
+const numberInputCls = inputCls.replace("w-full", "w-20 shrink-0")
 
 type Row = {
   key: string
@@ -174,7 +176,7 @@ function Card({
         />
         <input
           type="number"
-          className={inputCls + " w-20 shrink-0"}
+          className={numberInputCls}
           value={row.sort}
           onChange={(e) => {
             onChange({ sort: Number(e.target.value) })
