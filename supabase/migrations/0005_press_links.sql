@@ -14,14 +14,21 @@ create table if not exists public.press_links (
 );
 
 -- RLS：公開可讀、登入者可寫（同 award_logos / client_logos）
+-- 先 drop if exists 讓整支 migration 可安全重跑（create policy 沒有 if not exists）
 alter table public.press_links enable row level security;
+drop policy if exists press_links_public_read on public.press_links;
 create policy press_links_public_read on public.press_links
   for select using (true);
+drop policy if exists press_links_auth_all on public.press_links;
 create policy press_links_auth_all on public.press_links
   for all to authenticated using (true) with check (true);
 
 -- 範例資料 3 筆（縮圖留空會顯示報紙佔位圖）——看完前台效果後可在 /studio/press 直接刪除
-insert into public.press_links (title, source, url, image_url, sort) values
+-- 只在表為空時塞，避免重跑產生重複
+insert into public.press_links (title, source, url, image_url, sort)
+select * from (values
   ('【範例】提摩設計榮獲 2025 國際設計大獎，作品登上國際舞台', '設計媒體 DESIGN NEWS', 'https://example.com/press-1', '', 0),
   ('【範例】專訪創辦人：以人為本的品牌設計如何幫企業提升 20%–300% 業績', '部落客・品牌觀察筆記', 'https://example.com/press-2', '', 1),
-  ('【範例】從紅海突圍──提摩設計操刀金鐘 60 台灣女孩日視覺', '文創產業週報', 'https://example.com/press-3', '', 2);
+  ('【範例】從紅海突圍──提摩設計操刀金鐘 60 台灣女孩日視覺', '文創產業週報', 'https://example.com/press-3', '', 2)
+) as v(title, source, url, image_url, sort)
+where not exists (select 1 from public.press_links);
