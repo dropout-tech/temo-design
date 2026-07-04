@@ -117,10 +117,12 @@ function LogoMarqueeRow({
   items,
   speed = 40,
   reverse = false,
+  large = false,
 }: {
   items: ClientLogoItem[]
   speed?: number
   reverse?: boolean
+  large?: boolean
 }) {
   const doubled = [...items, ...items]
   return (
@@ -136,15 +138,21 @@ function LogoMarqueeRow({
           <div
             key={i}
             title={logo.name}
-            className="group flex items-center justify-center h-20 min-w-[160px] px-8"
+            className={
+              "group flex items-center justify-center px-8 " +
+              (large ? "h-32 min-w-[220px]" : "h-20 min-w-[160px]")
+            }
           >
             <Image
               src={logo.image_url}
               alt={logo.name}
-              width={200}
-              height={72}
+              width={300}
+              height={120}
               unoptimized
-              className="max-h-12 w-auto object-contain opacity-55 group-hover:opacity-100 transition-opacity duration-300"
+              className={
+                "w-auto object-contain opacity-55 group-hover:opacity-100 transition-opacity duration-300 " +
+                (large ? "max-h-24" : "max-h-12")
+              }
             />
           </div>
         ))}
@@ -198,10 +206,10 @@ export function ClientsHonorsSection({
           </div>
           {hasLogos ? (
             <>
-              <LogoMarqueeRow items={logoRowA} speed={44} />
+              <LogoMarqueeRow items={logoRowA} speed={44} large />
               {logoRowB.length > 0 && (
                 <div className="mt-3">
-                  <LogoMarqueeRow items={logoRowB} speed={38} reverse />
+                  <LogoMarqueeRow items={logoRowB} speed={38} reverse large />
                 </div>
               )}
             </>
