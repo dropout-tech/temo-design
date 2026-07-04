@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils"
 const NAV = [
   { href: "/studio", label: "總覽", icon: LayoutDashboard, exact: true },
   { href: "/studio/works", label: "作品", icon: FolderKanban },
+  { href: "/studio/designers", label: "設計師 / 團隊", icon: Users },
   { href: "/studio/faqs", label: "常見問答", icon: HelpCircle },
   { href: "/studio/testimonials", label: "客戶見證", icon: MessageSquareQuote },
   { href: "/studio/clients", label: "客戶 Logo", icon: Building2 },
@@ -28,9 +29,7 @@ const NAV = [
   { href: "/studio/settings", label: "網站設定", icon: Settings },
 ]
 
-const COMING_SOON = [
-  { label: "設計師", icon: Users },
-]
+const COMING_SOON: { label: string; icon: typeof Users }[] = []
 
 export function StudioShell({
   email,
@@ -88,18 +87,22 @@ export function StudioShell({
             )
           })}
 
-          <p className="px-3 mt-6 mb-2 text-[10px] tracking-[0.25em] text-temo-warm-gray/30 uppercase">
-            即將加入
-          </p>
-          {COMING_SOON.map((item) => (
-            <div
-              key={item.label}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-temo-warm-gray/25 cursor-not-allowed"
-            >
-              <item.icon className="w-4 h-4" />
-              {item.label}
-            </div>
-          ))}
+          {COMING_SOON.length > 0 && (
+            <>
+              <p className="px-3 mt-6 mb-2 text-[10px] tracking-[0.25em] text-temo-warm-gray/30 uppercase">
+                即將加入
+              </p>
+              {COMING_SOON.map((item) => (
+                <div
+                  key={item.label}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-temo-warm-gray/25 cursor-not-allowed"
+                >
+                  <item.icon className="w-4 h-4" />
+                  {item.label}
+                </div>
+              ))}
+            </>
+          )}
         </nav>
 
         {/* 桌機版底部：帳號 + 登出 */}

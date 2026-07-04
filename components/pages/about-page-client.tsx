@@ -21,10 +21,12 @@ type Person = {
   tags?: string[]
 }
 
-const CATEGORY_ORDER = ["DESIGNER", "PATENT ATTORNEY", "LEGAL CONSULTANT"] as const
-type Category = (typeof CATEGORY_ORDER)[number]
+export type TeamGroup = { category: string; members: Person[] }
 
-const categories: Record<Category, Person[]> = {
+// 後備資料：DB 沒資料時才用（正常情況團隊由 /studio/designers 管理、Supabase 供應）
+const FALLBACK_ORDER = ["DESIGNER", "PATENT ATTORNEY", "LEGAL CONSULTANT"]
+
+const FALLBACK_CATEGORIES: Record<string, Person[]> = {
   DESIGNER: [
     {
       name: "KEVIN KUO",
@@ -468,13 +470,22 @@ export function AboutPageClient({
   clientLogos = [],
   awardLogos = [],
   pressLinks = [],
+  team = [],
 }: {
   clientLogos?: ClientLogoItem[]
   awardLogos?: ClientLogoItem[]
   pressLinks?: PressLinkItem[]
+  team?: TeamGroup[]
 }) {
+  // 有 DB 團隊資料就用，否則回退到內建後備資料
+  const categoryOrder = team.length > 0 ? team.map((g) => g.category) : FALLBACK_ORDER
+  const categories: Record<string, Person[]> =
+    team.length > 0
+      ? Object.fromEntries(team.map((g) => [g.category, g.members]))
+      : FALLBACK_CATEGORIES
+
   const [visible, setVisible] = useState(false)
-  const [activeCategory, setActiveCategory] = useState<Category>("DESIGNER")
+  const [activeCategory, setActiveCategory] = useState<string>(categoryOrder[0] ?? "DESIGNER")
   const [menuOpen, setMenuOpen] = useState(false)
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -483,7 +494,7 @@ export function AboutPageClient({
   const mouseXRef = useRef<number | null>(null)
   const translateXRef = useRef(0)
 
-  const currentList = categories[activeCategory]
+  const currentList = categories[activeCategory] ?? []
   const shouldMarquee = currentList.length >= 4
 
   // 觸控裝置沒有 hover：跑馬燈改用原生橫向滑動，不跑滑鼠感應動畫
@@ -768,7 +779,7 @@ export function AboutPageClient({
                     role="listbox"
                     className="absolute top-full left-1/2 -translate-x-1/2 mt-3 min-w-[200px] bg-temo-black/95 backdrop-blur-sm border border-white/20 rounded-2xl py-2 z-50 shadow-2xl"
                   >
-                    {CATEGORY_ORDER.map((cat) => {
+                    {categoryOrder.map((cat) => {
                       const isActive = cat === activeCategory
                       return (
                         <button
