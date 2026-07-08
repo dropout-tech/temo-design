@@ -139,8 +139,8 @@ function LogoMarqueeRow({
             key={i}
             title={logo.name}
             className={
-              "group flex items-center justify-center px-8 " +
-              (large ? "h-32 min-w-[220px]" : "h-20 min-w-[160px]")
+              "group flex items-center justify-center px-4 " +
+              (large ? "h-[150px] min-w-[150px]" : "h-[112px] min-w-[115px]")
             }
           >
             <Image
@@ -151,7 +151,7 @@ function LogoMarqueeRow({
               unoptimized
               className={
                 "w-auto object-contain opacity-55 group-hover:opacity-100 transition-opacity duration-300 " +
-                (large ? "max-h-24" : "max-h-12")
+                (large ? "max-h-[132px]" : "max-h-[68px]")
               }
             />
           </div>
