@@ -14,8 +14,8 @@ export default async function ContactPage() {
   return (
     <ContactPageClient
       contact={{
-        email: s?.email ?? "info@temo.design",
-        phone: s?.phone ?? "+886-2-1234-5678",
+        email: s?.email ?? "temo.design0531@gmail.com",
+        phone: s?.phone ?? "0913-322-070",
         address: s?.address ?? "台北市大安區敦化南路一段 123 號 8 樓",
       }}
     />

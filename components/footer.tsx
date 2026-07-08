@@ -75,18 +75,18 @@ export function Footer() {
             </h3>
             <div className="flex flex-col gap-1.5">
               <a
-                href="mailto:info@temo.design"
+                href="mailto:temo.design0531@gmail.com"
                 className="flex items-center gap-3 py-2 text-temo-warm-gray hover:text-temo-gold transition-colors text-sm"
               >
                 <Mail className="h-4 w-4" />
-                info@temo.design
+                temo.design0531@gmail.com
               </a>
               <a
-                href="tel:+886-2-1234-5678"
+                href="tel:0913322070"
                 className="flex items-center gap-3 py-2 text-temo-warm-gray hover:text-temo-gold transition-colors text-sm"
               >
                 <Phone className="h-4 w-4" />
-                +886-2-1234-5678
+                0913-322-070
               </a>
               <div className="flex items-start gap-3 text-temo-warm-gray text-sm">
                 <MapPin className="h-4 w-4 mt-0.5 shrink-0" />

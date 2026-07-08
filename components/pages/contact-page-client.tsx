@@ -17,8 +17,8 @@ export function ContactPageClient({
   contact?: { email: string; phone: string; address: string }
 } = {}) {
   const info = contact ?? {
-    email: "info@temo.design",
-    phone: "+886-2-1234-5678",
+    email: "temo.design0531@gmail.com",
+    phone: "0913-322-070",
     address: "台北市大安區敦化南路一段 123 號 8 樓",
   }
   const [visible, setVisible] = useState(false)

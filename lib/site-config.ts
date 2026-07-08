@@ -4,8 +4,8 @@ export const siteConfig = {
   name: 'TEMO DESIGN',
   description: '以人為本的品牌設計工作室。我們相信設計不只是造型，更是一種療癒與解方。服務超過 200+ 品牌。',
   url: 'https://www.temo.design',
-  email: 'info@temo.design',
-  phone: '+886-2-1234-5678',
+  email: 'temo.design0531@gmail.com',
+  phone: '0913-322-070',
   address: '台北市大安區敦化南路一段 123 號 8 樓',
   socialLinks: {
     instagram: 'https://www.instagram.com/_temo_design/',
