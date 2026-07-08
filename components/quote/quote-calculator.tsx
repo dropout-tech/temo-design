@@ -46,7 +46,9 @@ const bundleAddons: Addon[] = [
 
 // Pricing sourced from https://temo.design/price (2026-05 snapshot).
 // 範圍價以下限做為計算基準；範圍以 priceNote 標示。
-const categories: ServiceCategory[] = [
+// ⚠️ 這只是「後台讀取失敗時的 fallback 預設值」。正式價目已搬進 Supabase，
+//    由 /studio/quote 後台管理；同步的種子資料見 supabase/migrations/0008_quote_pricing.sql。
+const DEFAULT_CATEGORIES: ServiceCategory[] = [
   {
     id: "single",
     title: "純享單品",
@@ -442,12 +444,17 @@ function PackageCard({
 // Main
 // ─────────────────────────────────────────────
 
-export function QuoteCalculator() {
+export function QuoteCalculator({
+  categories = DEFAULT_CATEGORIES,
+}: {
+  categories?: ServiceCategory[]
+}) {
   const { ref: sectionRef, isInView } = useInView<HTMLElement>({ once: true, amount: 0.08 })
-  const [activeCategoryId, setActiveCategoryId] = useState(categories[0].id)
+  const safeCategories = categories.length > 0 ? categories : DEFAULT_CATEGORIES
+  const [activeCategoryId, setActiveCategoryId] = useState(safeCategories[0].id)
   const [selections, setSelections] = useState<Record<string, { packageId: string; addons: Record<string, number> }>>({})
 
-  const activeCategory = categories.find((c) => c.id === activeCategoryId)!
+  const activeCategory = safeCategories.find((c) => c.id === activeCategoryId) ?? safeCategories[0]
 
   function selectPackage(pkg: Package) {
     setSelections((prev) => ({
@@ -472,7 +479,7 @@ export function QuoteCalculator() {
 
   const summary = useMemo(() => {
     const lines: { category: ServiceCategory; pkg: Package; addonList: { label: string; price: number }[]; subtotal: number }[] = []
-    for (const cat of categories) {
+    for (const cat of safeCategories) {
       const sel = selections[cat.id]
       if (!sel) continue
       const pkg = cat.packages.find((p) => p.id === sel.packageId)
@@ -484,7 +491,7 @@ export function QuoteCalculator() {
       lines.push({ category: cat, pkg, addonList, subtotal: pkg.basePrice + addonList.reduce((s, a) => s + a.price, 0) })
     }
     return { lines, total: lines.reduce((s, l) => s + l.subtotal, 0) }
-  }, [selections])
+  }, [selections, safeCategories])
 
   const headerFade = {
     transition: "opacity 0.8s ease, transform 0.8s ease",
@@ -517,7 +524,7 @@ export function QuoteCalculator() {
           <div>
             {/* Category Tabs */}
             <div className="flex border-b border-white/10 mb-6 overflow-x-auto">
-              {categories.map((cat) => (
+              {safeCategories.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategoryId(cat.id)}

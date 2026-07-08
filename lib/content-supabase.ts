@@ -106,6 +106,105 @@ export async function getSiteSettings(): Promise<SiteSettings | null> {
   return (data as SiteSettings) ?? null
 }
 
+// ── 即時報價試算（/quote 前台 + /studio/quote 後台共用）──────────────────────
+export type QuoteAddon = { id: string; label: string; price: number; sort: number }
+
+export type QuotePackage = {
+  id: string
+  name: string
+  nameEn: string
+  basePrice: number
+  originalPrice?: number
+  priceNote?: string
+  features: string[]
+  recommended?: boolean
+  showAddons: boolean
+  sort: number
+  addons?: QuoteAddon[]
+}
+
+export type QuoteCategory = {
+  id: string
+  title: string
+  titleEn: string
+  description: string
+  icon: string
+  sort: number
+  packages: QuotePackage[]
+}
+
+export type QuotePricing = { categories: QuoteCategory[]; addons: QuoteAddon[] }
+
+/**
+ * 前台計算機 + 後台管理共用的報價資料。
+ * 回傳巢狀結構（類別 → 方案），show_addons 的方案自動掛上共用加購池。
+ */
+export async function getQuotePricing(): Promise<QuotePricing> {
+  const supa = createPublicClient()
+  const [catsRes, pkgsRes, addonsRes] = await Promise.all([
+    supa.from("quote_categories").select("id, title, title_en, description, icon, sort").order("sort"),
+    supa
+      .from("quote_packages")
+      .select("id, category_id, name, name_en, base_price, original_price, price_note, features, recommended, show_addons, sort")
+      .order("sort"),
+    supa.from("quote_addons").select("id, label, price, sort").order("sort"),
+  ])
+
+  const addons: QuoteAddon[] = (addonsRes.data ?? []).map((a) => ({
+    id: a.id as string,
+    label: a.label as string,
+    price: a.price as number,
+    sort: a.sort as number,
+  }))
+
+  const pkgRows = (pkgsRes.data ?? []) as {
+    id: string
+    category_id: string
+    name: string
+    name_en: string
+    base_price: number
+    original_price: number | null
+    price_note: string | null
+    features: unknown
+    recommended: boolean
+    show_addons: boolean
+    sort: number
+  }[]
+
+  const categories: QuoteCategory[] = ((catsRes.data ?? []) as {
+    id: string
+    title: string
+    title_en: string
+    description: string
+    icon: string
+    sort: number
+  }[]).map((c) => ({
+    id: c.id,
+    title: c.title,
+    titleEn: c.title_en,
+    description: c.description,
+    icon: c.icon,
+    sort: c.sort,
+    packages: pkgRows
+      .filter((p) => p.category_id === c.id)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        nameEn: p.name_en,
+        basePrice: p.base_price,
+        originalPrice: p.original_price ?? undefined,
+        priceNote: p.price_note ?? undefined,
+        features: Array.isArray(p.features) ? (p.features as string[]) : [],
+        recommended: p.recommended || undefined,
+        showAddons: p.show_addons,
+        sort: p.sort,
+        addons: p.show_addons ? addons : undefined,
+      })),
+  }))
+
+  return { categories, addons }
+}
+
 // ── 團隊 / 設計師（關於頁團隊區 + /studio/designers 共用）──────────────────────
 /** 後台編輯用的完整欄位 */
 export type TeamMemberRow = {

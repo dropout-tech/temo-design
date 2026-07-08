@@ -12,6 +12,7 @@ import {
   Settings,
   Award,
   Newspaper,
+  Calculator,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -21,6 +22,7 @@ const NAV = [
   { href: "/studio/works", label: "作品", icon: FolderKanban },
   { href: "/studio/designers", label: "設計師 / 團隊", icon: Users },
   { href: "/studio/faqs", label: "常見問答", icon: HelpCircle },
+  { href: "/studio/quote", label: "報價試算", icon: Calculator },
   { href: "/studio/clients", label: "客戶 Logo", icon: Building2 },
   { href: "/studio/awards", label: "得獎紀錄", icon: Award },
   { href: "/studio/press", label: "媒體報導", icon: Newspaper },
