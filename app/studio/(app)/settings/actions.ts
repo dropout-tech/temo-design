@@ -12,6 +12,9 @@ export type SettingsInput = {
   instagram: string
   facebook: string
   behance: string
+  business_hours: string
+  line_url: string
+  line_qr_url: string
 }
 
 export async function saveSettings(input: SettingsInput): Promise<{ ok?: true; error?: string }> {
@@ -26,6 +29,9 @@ export async function saveSettings(input: SettingsInput): Promise<{ ok?: true; e
     instagram: input.instagram.trim() || null,
     facebook: input.facebook.trim() || null,
     behance: input.behance.trim() || null,
+    business_hours: input.business_hours.trim() || null,
+    line_url: input.line_url.trim() || null,
+    line_qr_url: input.line_qr_url.trim() || null,
   })
   if (error) return { error: error.message }
   // footer 遍布全站 → 整站刷新

@@ -17,6 +17,9 @@ export default async function StudioSettingsPage() {
         instagram: s?.instagram ?? "",
         facebook: s?.facebook ?? "",
         behance: s?.behance ?? "",
+        business_hours: s?.business_hours ?? "",
+        line_url: s?.line_url ?? "",
+        line_qr_url: s?.line_qr_url ?? "",
       }}
     />
   )

@@ -1,12 +1,14 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ArrowLeft, ArrowRight, Check, Send, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { createClient } from "@/lib/supabase/client"
 import {
   type BriefQuestion,
+  type BriefQuestionType,
   type BriefSection,
-  getApplicableSections,
+  briefSections as STATIC_BRIEF_SECTIONS,
 } from "@/lib/quote-brief-questions"
 
 // ─────────────────────────────────────────────
@@ -222,9 +224,51 @@ export function QuoteBriefForm() {
   const [answers, setAnswers] = useState<Answers>({})
   const [showErrors, setShowErrors] = useState(false)
 
+  // 問卷區塊/題目改由後台（brief_sections / brief_questions）管理；
+  // 掛載時從 Supabase 讀取，讀不到就沿用靜態題庫當 fallback。
+  const [allSections, setAllSections] = useState<BriefSection[]>(STATIC_BRIEF_SECTIONS)
+  useEffect(() => {
+    const supa = createClient()
+    supa
+      .from("brief_sections")
+      .select(
+        "id, title, title_en, description, applies_to, sort, brief_questions(qid, label, hint, type, required, options, placeholder, allow_other, sort)"
+      )
+      .order("sort")
+      .then(({ data }) => {
+        if (!data || data.length === 0) return
+        const mapped: BriefSection[] = (data as any[]).map((s) => ({
+          id: s.id,
+          title: s.title,
+          titleEn: s.title_en ?? "",
+          description: s.description ?? undefined,
+          appliesTo: s.applies_to ?? undefined,
+          questions: (s.brief_questions ?? [])
+            .slice()
+            .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
+            .map((q: any) => ({
+              id: q.qid,
+              label: q.label,
+              hint: q.hint ?? undefined,
+              type: q.type as BriefQuestionType,
+              required: q.required ?? undefined,
+              options: q.options ?? undefined,
+              placeholder: q.placeholder ?? undefined,
+              allowOther: q.allow_other ?? undefined,
+            })),
+        }))
+        setAllSections(mapped)
+      })
+  }, [])
+
   const sections = useMemo(
-    () => (selectedCategories.length > 0 ? getApplicableSections(selectedCategories) : []),
-    [selectedCategories]
+    () =>
+      selectedCategories.length > 0
+        ? allSections.filter(
+            (s) => !s.appliesTo || s.appliesTo.some((c) => (selectedCategories as string[]).includes(c))
+          )
+        : [],
+    [selectedCategories, allSections]
   )
 
   // steps: 0 = picker, 1..sections.length = sections, sections.length+1 = review

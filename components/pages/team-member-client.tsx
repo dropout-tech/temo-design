@@ -12,10 +12,15 @@ import { getCategoryLabel, type Designer, type Work } from "@/lib/portfolio-data
 export function TeamMemberClient({
   designer,
   works,
+  categoryGroups,
 }: {
   designer: Designer
   works: Work[]
+  categoryGroups?: { value: string; label: string }[]
 }) {
+  // 分類 label：優先用 Supabase 傳入的清單，找不到時退回寫死的 helper
+  const catLabel = (v: string) =>
+    categoryGroups?.find((g) => g.value === v)?.label ?? getCategoryLabel(v as never)
   const [visible, setVisible] = useState(false)
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80)
@@ -98,7 +103,7 @@ export function TeamMemberClient({
                           key={e}
                           className="px-3 py-1.5 text-[11px] tracking-wider border border-temo-gold/30 text-temo-gold rounded-sm"
                         >
-                          {getCategoryLabel(e)}
+                          {catLabel(e)}
                         </span>
                       ))}
                     </div>
@@ -189,7 +194,7 @@ export function TeamMemberClient({
                       />
                       <div className="absolute bottom-0 left-0 right-0 p-5">
                         <p className="text-[10px] tracking-[0.3em] text-temo-gold uppercase mb-1">
-                          {getCategoryLabel(work.categoryGroup)}
+                          {catLabel(work.categoryGroup)}
                         </p>
                         <h3 className="text-base font-bold leading-tight">{work.title}</h3>
                         <p className="text-[11px] text-white/40 mt-0.5">{work.subtitle}</p>

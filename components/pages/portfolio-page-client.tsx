@@ -26,12 +26,25 @@ import {
 
 export type { Work }
 
+// 作品分類選項（可由 Supabase 傳入；未傳入時 fallback 到 portfolio-data 的常數）。
+type Facet = { value: string; label: string }
+
+// 以 DB facet 為主、找不到時退回寫死的 label helper，建立 value→label 查詢函式
+function makeCatLabel(groups?: Facet[]) {
+  const map = new Map((groups ?? CATEGORY_GROUPS).map((g) => [g.value, g.label]))
+  return (v: string) => map.get(v) ?? getCategoryLabel(v as CategoryGroupValue)
+}
+function makeIndLabel(inds?: Facet[]) {
+  const map = new Map((inds ?? INDUSTRIES).map((i) => [i.value, i.label]))
+  return (v: string) => map.get(v) ?? getIndustryLabel(v)
+}
+
 
 // ─── Filter Bar ────────────────────────────────────────────────────────────────
 
 export type FilterState = {
   query: string
-  group: "all" | CategoryGroupValue  // 執行項目（單選）
+  group: string  // 執行項目（單選）："all" 或分類 value（可為後台新增的動態分類）
   industries: string[]               // 行業分類（複選，獨立維度）
   designer: string  // "all" or slug
   client: string    // "all" or slug
@@ -48,14 +61,18 @@ export const INITIAL_FILTERS: FilterState = {
 }
 
 // 把每件作品攤平成一段可搜尋的小寫字串，包含作品名、客戶、設計師、標籤等
-function buildSearchHaystack(w: Work): string {
+function buildSearchHaystack(
+  w: Work,
+  catLabel: (v: string) => string,
+  indLabel: (v: string) => string
+): string {
   const parts: string[] = [
     w.title,
     w.subtitle,
     w.description,
     w.year,
-    getCategoryLabel(w.categoryGroup),
-    ...w.industries.map((i) => getIndustryLabel(i)),
+    catLabel(w.categoryGroup),
+    ...w.industries.map((i) => indLabel(i)),
   ]
   const client = CLIENT_MAP[w.clientSlug]
   if (client) {
@@ -77,13 +94,21 @@ function FilterBar({
   setFilters,
   works,
   filteredCount,
+  categoryGroups,
+  industries,
 }: {
   filters: FilterState
   setFilters: (f: FilterState) => void
   works: Work[]
   filteredCount: number
+  categoryGroups?: Facet[]
+  industries?: Facet[]
 }) {
   const years = useMemo(() => getAllYears(), [])
+  const groups = categoryGroups ?? CATEGORY_GROUPS
+  const inds = industries ?? INDUSTRIES
+  const catLabel = useMemo(() => makeCatLabel(categoryGroups), [categoryGroups])
+  const indLabel = useMemo(() => makeIndLabel(industries), [industries])
 
   function toggleIndustry(value: string) {
     const next = filters.industries.includes(value)
@@ -93,7 +118,7 @@ function FilterBar({
   }
 
   // 行業分類是獨立維度，切換執行項目時不重設它
-  function setGroup(group: "all" | CategoryGroupValue) {
+  function setGroup(group: string) {
     setFilters({ ...filters, group })
   }
 
@@ -123,7 +148,7 @@ function FilterBar({
             全部
             <span className="ml-1.5 text-[9px] opacity-50">{works.length}</span>
           </button>
-          {CATEGORY_GROUPS.map((cat) => {
+          {groups.map((cat) => {
             const count = works.filter((w) => w.categoryGroup === cat.value).length
             return (
               <button
@@ -148,7 +173,7 @@ function FilterBar({
       <div>
         <p className="text-[10px] tracking-[0.3em] text-white/30 uppercase mb-3">行業分類（可複選）</p>
         <div className="flex items-center gap-1.5 flex-wrap">
-          {INDUSTRIES.map((ind) => {
+          {inds.map((ind) => {
             const active = filters.industries.includes(ind.value)
             return (
               <button
@@ -223,12 +248,12 @@ function FilterBar({
             />
           )}
           {filters.group !== "all" && (
-            <ActivePill label={getCategoryLabel(filters.group)} onRemove={() => setGroup("all")} />
+            <ActivePill label={catLabel(filters.group)} onRemove={() => setGroup("all")} />
           )}
           {filters.industries.map((i) => (
             <ActivePill
               key={i}
-              label={getIndustryLabel(i)}
+              label={indLabel(i)}
               onRemove={() => toggleIndustry(i)}
             />
           ))}
@@ -362,14 +387,15 @@ function ActivePill({ label, onRemove }: { label: string; onRemove: () => void }
 
 // ─── Category Ticker（Hero 與 Grid 之間的過渡帶） ──────────────────────────────
 
-function CategoryTicker({ works }: { works: Work[] }) {
+function CategoryTicker({ works, categoryGroups }: { works: Work[]; categoryGroups?: Facet[] }) {
   // 依案例數量排序分類，只顯示有作品的類別
   const stats = useMemo(() => {
     const counts = new Map<string, number>()
     works.forEach((w) => counts.set(w.categoryGroup, (counts.get(w.categoryGroup) ?? 0) + 1))
-    return CATEGORY_GROUPS.filter((c) => counts.get(c.value))
+    return (categoryGroups ?? CATEGORY_GROUPS)
+      .filter((c) => counts.get(c.value))
       .map((c) => ({ label: c.label, count: counts.get(c.value) ?? 0 }))
-  }, [works])
+  }, [works, categoryGroups])
 
   const years = useMemo(() => {
     const ys = Array.from(new Set(works.map((w) => w.year))).sort()
@@ -411,6 +437,8 @@ export function PortfolioGrid({
   setFilters,
   showFilters = true,
   transparentBg = false,
+  categoryGroups,
+  industries,
 }: {
   works: Work[]
   filters: FilterState
@@ -419,9 +447,14 @@ export function PortfolioGrid({
   showFilters?: boolean
   // 分類落地頁鋪滿背景圖時傳 true：去掉本區深色實底，改半透明深色遮罩，露出後面的背景圖
   transparentBg?: boolean
+  // 由 Supabase 傳入的分類選項；未傳入時 fallback 到 portfolio-data 常數
+  categoryGroups?: Facet[]
+  industries?: Facet[]
 }) {
   const [hoveredId, setHoveredId] = useState<number | null>(null)
   const [visible, setVisible] = useState(false)
+  const catLabel = useMemo(() => makeCatLabel(categoryGroups), [categoryGroups])
+  const indLabel = useMemo(() => makeIndLabel(industries), [industries])
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 100)
@@ -431,9 +464,9 @@ export function PortfolioGrid({
   // 預先計算每件作品的搜尋字串，避免每次輸入都重算
   const haystacks = useMemo(() => {
     const map = new Map<number, string>()
-    works.forEach((w) => map.set(w.id, buildSearchHaystack(w)))
+    works.forEach((w) => map.set(w.id, buildSearchHaystack(w, catLabel, indLabel)))
     return map
-  }, [works])
+  }, [works, catLabel, indLabel])
 
   const filtered = useMemo(() => {
     // 支援空白分隔的多關鍵字（AND 邏輯）
@@ -479,6 +512,8 @@ export function PortfolioGrid({
               setFilters={setFilters}
               works={works}
               filteredCount={filtered.length}
+              categoryGroups={categoryGroups}
+              industries={industries}
             />
           </div>
         )}
@@ -562,7 +597,7 @@ export function PortfolioGrid({
                       }}
                     >
                       <p className="text-[10px] tracking-[0.3em] text-temo-gold uppercase mb-1">
-                        {getCategoryLabel(work.categoryGroup)}
+                        {catLabel(work.categoryGroup)}
                       </p>
                       <h3 className="text-base font-bold text-white leading-tight mb-0.5">{work.title}</h3>
                       <p className="text-[11px] text-white/40">{work.subtitle}</p>
@@ -670,7 +705,15 @@ function PortfolioHero({
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export function PortfolioPageClient({ works }: { works?: Work[] } = {}) {
+export function PortfolioPageClient({
+  works,
+  categoryGroups,
+  industries,
+}: {
+  works?: Work[]
+  categoryGroups?: Facet[]
+  industries?: Facet[]
+} = {}) {
   // 有從 Supabase 傳入就用，否則 fallback 到本地 DEMO_WORKS
   const effectiveWorks = works && works.length > 0 ? works : DEMO_WORKS
 
@@ -681,12 +724,12 @@ export function PortfolioPageClient({ works }: { works?: Work[] } = {}) {
     const next: FilterState = { ...INITIAL_FILTERS }
 
     const groupParam = searchParams?.get("group")
-    if (groupParam && CATEGORY_GROUPS.some((g) => g.value === groupParam)) {
-      next.group = groupParam as CategoryGroupValue
+    if (groupParam && (categoryGroups ?? CATEGORY_GROUPS).some((g) => g.value === groupParam)) {
+      next.group = groupParam
     }
 
     const industryParam = searchParams?.get("industry")
-    if (industryParam && INDUSTRIES.some((i) => i.value === industryParam)) {
+    if (industryParam && (industries ?? INDUSTRIES).some((i) => i.value === industryParam)) {
       next.industries = [industryParam]
     }
 
@@ -719,12 +762,14 @@ export function PortfolioPageClient({ works }: { works?: Work[] } = {}) {
         />
 
         {/* ─── 分類索引橫條（hero 與 grid 之間的視覺過渡） ─────────────── */}
-        <CategoryTicker works={effectiveWorks} />
+        <CategoryTicker works={effectiveWorks} categoryGroups={categoryGroups} />
 
         <PortfolioGrid
           works={effectiveWorks}
           filters={filters}
           setFilters={setFilters}
+          categoryGroups={categoryGroups}
+          industries={industries}
         />
       </main>
       <Footer />

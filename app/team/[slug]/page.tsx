@@ -6,6 +6,7 @@ import {
   getDesignerSlugs,
   getWorksByDesignerSlug,
 } from "@/lib/portfolio-supabase"
+import { getCategoryGroups } from "@/lib/content-supabase"
 
 interface TeamMemberPageProps {
   params: Promise<{ slug: string }>
@@ -33,6 +34,9 @@ export default async function TeamMemberPage(props: TeamMemberPageProps) {
   const designer = await getDesignerBySlug(slug)
   if (!designer) notFound()
 
-  const works = await getWorksByDesignerSlug(slug)
-  return <TeamMemberClient designer={designer} works={works} />
+  const [works, categoryGroups] = await Promise.all([
+    getWorksByDesignerSlug(slug),
+    getCategoryGroups(),
+  ])
+  return <TeamMemberClient designer={designer} works={works} categoryGroups={categoryGroups} />
 }

@@ -1,9 +1,14 @@
 "use client"
 
 import Link from "next/link"
+import { useEffect, useState } from "react"
 import { Instagram, Facebook, Mail, Phone, MapPin } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
-const quickLinks = [
+type QuickLink = { href: string; label: string }
+
+// 預設值＝目前站台既有連結；掛載後從 nav_links 覆蓋（後台可改）。
+const DEFAULT_QUICK_LINKS: QuickLink[] = [
   { href: "/", label: "首頁" },
   { href: "/about", label: "關於我們" },
   { href: "/explore", label: "作品探索" },
@@ -11,12 +16,52 @@ const quickLinks = [
   { href: "/contact", label: "聯絡我們" },
 ]
 
-const socialLinks = [
-  { href: "https://www.instagram.com/_temo_design/", icon: Instagram, label: "Instagram" },
-  { href: "https://www.facebook.com/temodesignss", icon: Facebook, label: "Facebook" },
-]
+// 預設值＝目前站台既有聯絡資訊；掛載後再從 site_settings 覆蓋（後台可改）。
+const DEFAULTS = {
+  email: "temo.design0531@gmail.com",
+  phone: "0913-322-070",
+  address: "台中市西區台灣大道二段229號13樓之2",
+  instagram: "https://www.instagram.com/_temo_design/",
+  facebook: "https://www.facebook.com/temodesignss",
+}
 
 export function Footer() {
+  const [c, setC] = useState(DEFAULTS)
+  const [quickLinks, setQuickLinks] = useState<QuickLink[]>(DEFAULT_QUICK_LINKS)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from("site_settings")
+      .select("email, phone, address, instagram, facebook")
+      .eq("id", 1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return
+        setC((prev) => ({
+          email: data.email || prev.email,
+          phone: data.phone || prev.phone,
+          address: data.address || prev.address,
+          instagram: data.instagram || prev.instagram,
+          facebook: data.facebook || prev.facebook,
+        }))
+      })
+    // 頁尾快速連結（後台可改）；讀不到就沿用預設。
+    supabase
+      .from("nav_links")
+      .select("href, label, sort")
+      .eq("location", "footer")
+      .order("sort")
+      .then(({ data }) => {
+        if (data && data.length) setQuickLinks(data.map((r) => ({ href: r.href, label: r.label })))
+      })
+  }, [])
+
+  const socialLinks = [
+    { href: c.instagram, icon: Instagram, label: "Instagram" },
+    { href: c.facebook, icon: Facebook, label: "Facebook" },
+  ].filter((s) => s.href)
+
   return (
     <footer className="bg-temo-black border-t border-temo-gold/20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
@@ -75,22 +120,22 @@ export function Footer() {
             </h3>
             <div className="flex flex-col gap-1.5">
               <a
-                href="mailto:temo.design0531@gmail.com"
+                href={`mailto:${c.email}`}
                 className="flex items-center gap-3 py-2 text-temo-warm-gray hover:text-temo-gold transition-colors text-sm"
               >
                 <Mail className="h-4 w-4" />
-                temo.design0531@gmail.com
+                {c.email}
               </a>
               <a
-                href="tel:0913322070"
+                href={`tel:${c.phone.replace(/[^0-9+]/g, "")}`}
                 className="flex items-center gap-3 py-2 text-temo-warm-gray hover:text-temo-gold transition-colors text-sm"
               >
                 <Phone className="h-4 w-4" />
-                0913-322-070
+                {c.phone}
               </a>
               <div className="flex items-start gap-3 text-temo-warm-gray text-sm">
                 <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>台中市西區台灣大道二段229號13樓之2</span>
+                <span>{c.address}</span>
               </div>
             </div>
           </div>

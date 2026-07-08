@@ -11,15 +11,30 @@ import { cn } from "@/lib/utils"
 
 type Tab = "contact" | "quote" | "brief"
 
+type ContactInfo = {
+  email: string
+  phone: string
+  address: string
+  businessHours: { label: string; value: string }[]
+  lineUrl: string
+  lineQrUrl: string
+}
+
 export function ContactPageClient({
   contact,
 }: {
-  contact?: { email: string; phone: string; address: string }
+  contact?: ContactInfo
 } = {}) {
-  const info = contact ?? {
+  const info: ContactInfo = contact ?? {
     email: "temo.design0531@gmail.com",
     phone: "0913-322-070",
     address: "台中市西區台灣大道二段229號13樓之2",
+    businessHours: [
+      { label: "週一 — 週五", value: "09:00 – 21:00" },
+      { label: "週六 · 週日", value: "休息" },
+    ],
+    lineUrl: "",
+    lineQrUrl: "",
   }
   const [visible, setVisible] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>("contact")
@@ -216,43 +231,59 @@ export function ContactPageClient({
                     </div>
                   </div>
 
-                  <div className="border-t border-white/8 pt-8">
-                    <p className="text-[10px] tracking-[0.4em] text-temo-gold mb-4 uppercase">營業時間</p>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between text-temo-white">
-                        <span>週一 — 週五</span>
-                        <span className="text-temo-gold">09:00 – 18:00</span>
-                      </div>
-                      <div className="flex justify-between text-temo-warm-gray">
-                        <span>週末 / 國定假日</span>
-                        <span>休息</span>
+                  {info.businessHours.length > 0 && (
+                    <div className="border-t border-white/8 pt-8">
+                      <p className="text-[10px] tracking-[0.4em] text-temo-gold mb-4 uppercase">營業時間</p>
+                      <div className="space-y-2 text-sm">
+                        {info.businessHours.map((h, i) => {
+                          const closed = /休|close/i.test(h.value)
+                          return (
+                            <div
+                              key={i}
+                              className={cn(
+                                "flex justify-between",
+                                closed ? "text-temo-warm-gray" : "text-temo-white"
+                              )}
+                            >
+                              <span>{h.label}</span>
+                              {h.value && <span className={closed ? "" : "text-temo-gold"}>{h.value}</span>}
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* LINE QR code */}
-                  <div className="border-t border-white/8 pt-8">
-                    <p className="text-[10px] tracking-[0.4em] text-temo-gold mb-4 uppercase">LINE 官方帳號</p>
-                    <div className="flex items-start gap-5">
-                      <div className="relative w-32 h-32 shrink-0 rounded-md border border-white/10 bg-white/3 overflow-hidden flex items-center justify-center">
-                        {/* TODO: 將下方 <img> 的 src 換成實際 LINE QR code 圖片路徑（建議放在 /public/line-qr.png） */}
-                        {/* <img src="/line-qr.png" alt="LINE QR code" className="w-full h-full object-contain p-2" /> */}
-                        <span className="text-[10px] tracking-[0.2em] text-temo-warm-gray/60 text-center px-2">
-                          QR CODE
-                          <br />
-                          預留位置
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-temo-white leading-relaxed mb-2">
-                          掃描加入好友
-                        </p>
-                        <p className="text-xs text-temo-warm-gray leading-relaxed">
-                          直接透過 LINE 與我們聯繫，討論您的品牌與設計需求。
-                        </p>
+                  {/* LINE 官方帳號（後台有設定連結或 QR 才顯示） */}
+                  {(info.lineUrl || info.lineQrUrl) && (
+                    <div className="border-t border-white/8 pt-8">
+                      <p className="text-[10px] tracking-[0.4em] text-temo-gold mb-4 uppercase">LINE 官方帳號</p>
+                      <div className="flex items-start gap-5">
+                        {info.lineQrUrl && (
+                          <div className="relative w-32 h-32 shrink-0 rounded-md border border-white/10 bg-white overflow-hidden flex items-center justify-center">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={info.lineQrUrl} alt="LINE QR code" className="w-full h-full object-contain p-2" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-temo-white leading-relaxed mb-2">掃描加入好友</p>
+                          <p className="text-xs text-temo-warm-gray leading-relaxed mb-3">
+                            直接透過 LINE 與我們聯繫，討論您的品牌與設計需求。
+                          </p>
+                          {info.lineUrl && (
+                            <a
+                              href={info.lineUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 text-xs text-temo-gold hover:brightness-110 transition-all border border-temo-gold/30 rounded-full px-4 py-2"
+                            >
+                              加入 LINE 好友 →
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Switch to quote hint */}
                   <button

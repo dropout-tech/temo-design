@@ -4,14 +4,18 @@ import { useState, useEffect, type FormEvent } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { X, AlignJustify, Search, ArrowRight } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
-const navLinks = [
+type NavItem = { href: string; label: string; labelZh: string }
+
+// 預設值＝目前站台既有連結；掛載後從 nav_links 覆蓋（後台可改）。
+const DEFAULT_NAV_LINKS: NavItem[] = [
   { href: "/contact", label: "CONTACT US", labelZh: "聯絡我們" },
   { href: "/about", label: "ABOUT US", labelZh: "關於我們" },
 ]
 
-const menuLinks = [
+const DEFAULT_MENU_LINKS: NavItem[] = [
   { href: "/", label: "HOME", labelZh: "首頁" },
   { href: "/about", label: "ABOUT", labelZh: "關於我們" },
   { href: "/explore", label: "WORKS", labelZh: "作品探索" },
@@ -26,6 +30,29 @@ export function Navbar({ showSearch = false }: { showSearch?: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [q, setQ] = useState("")
+  const [navLinks, setNavLinks] = useState<NavItem[]>(DEFAULT_NAV_LINKS)
+  const [menuLinks, setMenuLinks] = useState<NavItem[]>(DEFAULT_MENU_LINKS)
+
+  // 從 nav_links 讀取 header / menu 連結（後台可改）；讀不到就沿用預設。
+  useEffect(() => {
+    const supabase = createClient()
+    supabase
+      .from("nav_links")
+      .select("href, label, label_en, location, sort")
+      .in("location", ["header", "menu"])
+      .order("sort")
+      .then(({ data }) => {
+        if (!data) return
+        const pick = (loc: string): NavItem[] =>
+          data
+            .filter((r) => r.location === loc)
+            .map((r) => ({ href: r.href, label: r.label_en || r.label, labelZh: r.label }))
+        const header = pick("header")
+        const menu = pick("menu")
+        if (header.length) setNavLinks(header)
+        if (menu.length) setMenuLinks(menu)
+      })
+  }, [])
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault()
