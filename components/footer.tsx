@@ -90,7 +90,7 @@ export function Footer() {
               </a>
               <div className="flex items-start gap-3 text-temo-warm-gray text-sm">
                 <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>台北市大安區敦化南路一段 123 號 8 樓</span>
+                <span>台中市西區台灣大道二段229號13樓之2</span>
               </div>
             </div>
           </div>

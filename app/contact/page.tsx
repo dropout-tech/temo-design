@@ -16,7 +16,7 @@ export default async function ContactPage() {
       contact={{
         email: s?.email ?? "temo.design0531@gmail.com",
         phone: s?.phone ?? "0913-322-070",
-        address: s?.address ?? "台北市大安區敦化南路一段 123 號 8 樓",
+        address: s?.address ?? "台中市西區台灣大道二段229號13樓之2",
       }}
     />
   )

@@ -19,7 +19,7 @@ export function ContactPageClient({
   const info = contact ?? {
     email: "temo.design0531@gmail.com",
     phone: "0913-322-070",
-    address: "台北市大安區敦化南路一段 123 號 8 樓",
+    address: "台中市西區台灣大道二段229號13樓之2",
   }
   const [visible, setVisible] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>("contact")
