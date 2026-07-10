@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import Image from "next/image"
 import { Loader2, Plus, Trash2, Check, Upload, ImageIcon, ExternalLink } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { downscaleImage } from "@/lib/downscale-image"
 import { savePressLink, deletePressLink } from "@/app/studio/(app)/press/actions"
 
 const inputCls =
@@ -100,10 +101,11 @@ function Card({
   const [error, setError] = useState("")
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const raw = e.target.files?.[0]
+    if (!raw) return
     setUploading(true)
     setError("")
+    const file = await downscaleImage(raw, 1280)
     const supabase = createClient()
     const ext = (file.name.split(".").pop() || "png").toLowerCase()
     const path = `press/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`

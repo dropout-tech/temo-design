@@ -3,6 +3,7 @@
 import Image from "next/image"
 import { ArrowUpRight, Newspaper } from "lucide-react"
 import { useInView } from "@/hooks/use-in-view"
+import { optimizeLogoUrl } from "@/lib/image-url"
 
 export type ClientLogoItem = { name: string; image_url: string }
 export type PressLinkItem = { title: string; source: string; url: string; image_url: string }
@@ -87,7 +88,7 @@ const honors = [
   "LH 汽車", "神隆汽車", "Nvidia", "安信建議", "遠東集團",
 ]
 
-function MarqueeRow({ items, speed = 40, reverse = false }: { items: string[]; speed?: number; reverse?: boolean }) {
+function MarqueeRow({ items, speed = 40, reverse = false, playing = true }: { items: string[]; speed?: number; reverse?: boolean; playing?: boolean }) {
   const doubled = [...items, ...items]
   return (
     <div className="relative flex overflow-hidden" style={{ maskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)" }}>
@@ -95,6 +96,7 @@ function MarqueeRow({ items, speed = 40, reverse = false }: { items: string[]; s
         className="marquee-track flex shrink-0 gap-4 items-center py-1"
         style={{
           animation: `marquee${reverse ? "Rev" : ""} ${speed}s linear infinite`,
+          animationPlayState: playing ? "running" : "paused",
           whiteSpace: "nowrap",
         }}
       >
@@ -118,11 +120,13 @@ function LogoMarqueeRow({
   speed = 40,
   reverse = false,
   large = false,
+  playing = true,
 }: {
   items: ClientLogoItem[]
   speed?: number
   reverse?: boolean
   large?: boolean
+  playing?: boolean
 }) {
   const doubled = [...items, ...items]
   return (
@@ -131,6 +135,7 @@ function LogoMarqueeRow({
         className="marquee-track flex shrink-0 gap-4 items-center py-1"
         style={{
           animation: `marquee${reverse ? "Rev" : ""} ${speed}s linear infinite`,
+          animationPlayState: playing ? "running" : "paused",
           whiteSpace: "nowrap",
         }}
       >
@@ -144,11 +149,12 @@ function LogoMarqueeRow({
             }
           >
             <Image
-              src={logo.image_url}
+              src={optimizeLogoUrl(logo.image_url, large ? 560 : 360, large ? 300 : 190)}
               alt={logo.name}
               width={300}
               height={120}
               unoptimized
+              loading="eager"
               className={
                 "w-auto object-contain opacity-55 group-hover:opacity-100 transition-opacity duration-300 " +
                 (large ? "max-h-[132px]" : "max-h-[68px]")
@@ -171,6 +177,12 @@ export function ClientsHonorsSection({
   pressLinks?: PressLinkItem[]
 }) {
   const { ref, isInView } = useInView<HTMLElement>({ once: true, amount: 0.1 })
+  // 捲離畫面時暫停跑馬燈動畫，省 GPU（動畫預設會一直跑，就算看不到也在燒效能）
+  const { ref: playRef, isInView: playing } = useInView<HTMLElement>({ once: false, amount: 0, rootMargin: "300px" })
+  const setSectionRef = (el: HTMLElement | null) => {
+    ;(ref as { current: HTMLElement | null }).current = el
+    ;(playRef as { current: HTMLElement | null }).current = el
+  }
   const hasLogos = clientLogos.length > 0
   // logo 數量夠多才分兩排；否則單排避免重複太密
   const half = Math.ceil(clientLogos.length / 2)
@@ -183,7 +195,7 @@ export function ClientsHonorsSection({
   const hasPress = pressLinks.length > 0
 
   return (
-    <section ref={ref} className="relative py-24 md:py-32 bg-temo-black overflow-hidden">
+    <section ref={setSectionRef} className="relative py-24 md:py-32 bg-temo-black overflow-hidden">
       {/* Fine grain overlay */}
       <div className="absolute inset-0 pointer-events-none opacity-[0.018]"
         style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")" }}
@@ -206,18 +218,18 @@ export function ClientsHonorsSection({
           </div>
           {hasLogos ? (
             <>
-              <LogoMarqueeRow items={logoRowA} speed={44} large />
+              <LogoMarqueeRow items={logoRowA} speed={44} large playing={playing} />
               {logoRowB.length > 0 && (
                 <div className="mt-3">
-                  <LogoMarqueeRow items={logoRowB} speed={38} reverse large />
+                  <LogoMarqueeRow items={logoRowB} speed={38} reverse large playing={playing} />
                 </div>
               )}
             </>
           ) : (
             <>
-              <MarqueeRow items={clients} speed={38} />
+              <MarqueeRow items={clients} speed={38} playing={playing} />
               <div className="mt-3">
-                <MarqueeRow items={[...clients].reverse()} speed={32} reverse />
+                <MarqueeRow items={[...clients].reverse()} speed={32} reverse playing={playing} />
               </div>
             </>
           )}
@@ -249,15 +261,15 @@ export function ClientsHonorsSection({
           </div>
           {hasAwardLogos ? (
             <>
-              <LogoMarqueeRow items={awardRowA} speed={46} reverse />
+              <LogoMarqueeRow items={awardRowA} speed={46} reverse playing={playing} />
               {awardRowB.length > 0 && (
                 <div className="mt-3">
-                  <LogoMarqueeRow items={awardRowB} speed={40} />
+                  <LogoMarqueeRow items={awardRowB} speed={40} playing={playing} />
                 </div>
               )}
             </>
           ) : (
-            <MarqueeRow items={honors} speed={45} reverse />
+            <MarqueeRow items={honors} speed={45} reverse playing={playing} />
           )}
         </div>
 

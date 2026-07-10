@@ -2,7 +2,31 @@
 
 > 會變的狀態放這裡（不變的事實放 CLAUDE.md）。開場先讀。
 
-## 目前進度（2026-07-09）
+## 目前進度（2026-07-10）
+
+### 本次完成：修好「關於我們」客戶/得獎牆爆卡問題
+
+**症狀**：後台新增客戶(55)＋得獎(15) logo 後，關於頁超級卡。
+
+**根因**：客戶/得獎牆是一直在跑的跑馬燈動畫；圖片全用 `unoptimized`（不壓縮直送原圖），
+得獎圖 1000～4000px、卻只顯示 68～150px，55＋15 張大點陣圖一直被 GPU 重新合成 → 爆卡。
+（GPU 貼圖記憶體估算：改前約 200MB，改後約 30MB。）
+
+| 修法 | 檔案 | 證據 |
+|---|---|---|
+| 客戶 logo 改走 Supabase CDN 即時縮圖(render/image, contain, webp) | `lib/image-url.ts` + `components/sections/clients-honors-section.tsx` | Playwright：原圖抓取 0 次、最大解碼寬 500px(原 11052)、110 張縮圖端點皆 200 |
+| 得獎本地圖 `public/awards/*.png` 縮到最長邊 500px | 15 檔（sips） | 資料夾 2.3M→940K；原檔備份在 scratchpad |
+| 跑馬燈捲離畫面自動暫停動畫 | 同 section（第二個 IntersectionObserver 控 animationPlayState） | Playwright：offscreenPlayState=paused |
+| logo 改 eager 載入杜絕跑馬燈空白 | 同 section | Playwright：140 張 broken=0、載入 6ms(快取) |
+| 三個後台上傳器加「上傳前自動縮圖」(≤800px webp) 防再傳巨圖 | `lib/downscale-image.ts` + client/award/press-link-manager | tsc 0 錯誤 |
+
+**驗證**：`npx tsc --noEmit` 全專案 0 錯誤；Playwright 桌面+手機截圖經 agent 判讀「logo 清晰無破圖、可上線」；
+55 張客戶縮圖已預熱進 Supabase CDN 快取（首位訪客不必等冷生成）。
+⚠️ 未在真機 GPU 上量 fps（headless 軟體渲染值 41，不代表真機）；真正指標是貼圖記憶體 -85%。
+
+---
+
+## 前次進度（2026-07-09）
 
 ### 本次完成：後台可自訂範圍大幅擴充（5 項）＋ 一併修好聯絡資訊 bug
 
