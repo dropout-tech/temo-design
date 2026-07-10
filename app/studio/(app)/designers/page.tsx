@@ -2,7 +2,7 @@ import { DesignerManager } from "@/components/studio/designer-manager"
 import { getTeamForStudio } from "@/lib/content-supabase"
 
 export const dynamic = "force-dynamic"
-export const metadata = { title: "設計師 / 團隊 — TEMO Studio" }
+export const metadata = { title: "團隊成員 — TEMO Studio" }
 
 export default async function StudioDesignersPage() {
   const rows = await getTeamForStudio()

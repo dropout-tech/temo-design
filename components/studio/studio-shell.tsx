@@ -26,7 +26,7 @@ const NAV = [
   { href: "/studio/works", label: "作品", icon: FolderKanban },
   { href: "/studio/categories", label: "作品分類", icon: Tags },
   { href: "/studio/navigation", label: "選單 / 頁尾", icon: Menu },
-  { href: "/studio/designers", label: "設計師 / 團隊", icon: Users },
+  { href: "/studio/designers", label: "團隊成員", icon: Users },
   { href: "/studio/faqs", label: "常見問答", icon: HelpCircle },
   { href: "/studio/quote", label: "報價試算", icon: Calculator },
   { href: "/studio/brief", label: "報價問卷", icon: ClipboardList },

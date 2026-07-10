@@ -82,7 +82,11 @@ export function DesignerManager({
     setRows((p) => p.filter((r) => r.key !== key))
   }
 
-  const allCats = Array.from(new Set([...categories, ...rows.map((r) => r.category)])).filter(Boolean)
+  // 類別建議：現有類別 + 常見團隊職務（讓下拉不只出現 DESIGNER，暗示可加各種成員）
+  const SUGGESTED_CATS = ["DESIGNER", "PHOTOGRAPHER", "MARKETING", "CONSULTANT", "PATENT ATTORNEY", "LEGAL CONSULTANT"]
+  const allCats = Array.from(
+    new Set([...categories, ...rows.map((r) => r.category), ...SUGGESTED_CATS])
+  ).filter(Boolean)
 
   return (
     <div className="px-6 md:px-10 py-10 md:py-14 max-w-3xl">
@@ -95,9 +99,9 @@ export function DesignerManager({
       <div className="flex items-end justify-between mb-8 gap-4">
         <div>
           <p className="text-[10px] tracking-[0.5em] text-temo-gold uppercase mb-2">Team</p>
-          <h1 className="text-3xl md:text-4xl font-bold text-temo-white">設計師 / 團隊</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-temo-white">團隊成員</h1>
           <p className="text-temo-warm-gray/60 text-sm mt-1">
-            共 {rows.length} 人 · 顯示在「關於我們」的團隊區，可切換分類；數字越小越前面
+            共 {rows.length} 人 · 顯示在「關於我們」的團隊區。<span className="text-temo-warm-gray/80">不限設計師</span>——用下方「類別」把成員分組（設計師、攝影師、顧問…），每個類別在前台是一個分頁。
           </p>
         </div>
         <button
@@ -322,7 +326,7 @@ function Card({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>分類（可自訂）*</label>
+              <label className={labelCls}>類別 / 職務群組 *</label>
               <input list="team-categories" className={inputCls} value={row.category} onChange={(e) => set({ category: e.target.value })} placeholder="DESIGNER" />
             </div>
             <div>
@@ -330,6 +334,11 @@ function Card({
               <input type="number" className={inputCls} value={row.sort} onChange={(e) => set({ sort: Number(e.target.value) })} />
             </div>
           </div>
+          <p className="text-[10px] text-temo-warm-gray/50 leading-relaxed -mt-2">
+            同一類別的成員會在「關於我們」歸成一組（一個分頁）。要加<span className="text-temo-warm-gray/80">非設計師</span>（攝影師、顧問、行銷…）就直接打新的類別名稱。
+            <br />
+            ⚠️ 只有類別填 <span className="text-temo-gold/80">DESIGNER</span> 的成員，才會出現在「作品」的設計師選單裡。
+          </p>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
