@@ -149,7 +149,7 @@ function TodayStage({
   const [mounted, setMounted] = useState(false)
   // 桌機版構圖鎖在 1834×1062 的設計畫布上，用 scale 依螢幕 cover 縮放 → 換任何螢幕比例都不跑版
   // 水平靠左（保護左側 TODAY 文字不被裁）、垂直置中（超寬螢幕的裁切平均分到上下空白帶，漢字不被切）
-  const [canvas, setCanvas] = useState({ scale: 1, offsetY: 0 })
+  const [canvas, setCanvas] = useState({ scale: 1, offsetY: 0, textShift: 0 })
 
   useEffect(() => {
     const t = setTimeout(() => setMounted(true), 100)
@@ -160,7 +160,11 @@ function TodayStage({
     function update() {
       // cover：取寬/高兩個縮放比的較大者，確保畫布永遠鋪滿視窗、不留空邊
       const scale = Math.max(window.innerWidth / 1834, window.innerHeight / 1062)
-      setCanvas({ scale, offsetY: (window.innerHeight - 1062 * scale) / 2 })
+      const offsetY = (window.innerHeight - 1062 * scale) / 2
+      // 寬扁視窗會裁掉畫布頂部，把 TODAY 推進左上角 Logo（top 20 + 高 48 + 緩衝 20 = 88px）。
+      // 此時把左欄文字整組往下滑到安全線，四段文字的相對間距不變；一般比例下 shift = 0。
+      const textShift = Math.max(0, (88 - offsetY) / scale - 157)
+      setCanvas({ scale, offsetY, textShift })
     }
     update()
     window.addEventListener("resize", update)
@@ -242,9 +246,14 @@ function TodayStage({
           <line x1="1292" y1="1027" x2="1832" y2="339" stroke="#F2F2F2" strokeWidth="4" vectorEffect="non-scaling-stroke" />
         </svg>
 
-        {/* 左側文字（座標與字級一律用 px，相對固定畫布 → 永遠對齊） */}
+        {/* 左側文字（座標與字級一律用 px，相對固定畫布 → 永遠對齊；
+            整欄包一層做 textShift：頂部被裁時整組下移避開 Logo，段落間距不變） */}
         <div
-          className="absolute z-[5] pointer-events-none"
+          className="absolute inset-0 z-[5] pointer-events-none"
+          style={{ transform: `translateY(${canvas.textShift}px)` }}
+        >
+        <div
+          className="absolute pointer-events-none"
           style={{
             left: 50,
             top: 157,
@@ -259,7 +268,7 @@ function TodayStage({
           TODAY
         </div>
         <div
-          className="absolute z-[5] pointer-events-none"
+          className="absolute pointer-events-none"
           style={{
             left: 50,
             top: 317,
@@ -274,7 +283,7 @@ function TodayStage({
           SOMETHING MORE...
         </div>
         <div
-          className="absolute z-[5] pointer-events-none"
+          className="absolute pointer-events-none"
           style={{
             left: 50,
             top: 417,
@@ -289,7 +298,7 @@ function TodayStage({
           今天我想來點...
         </div>
         <div
-          className="absolute z-[5] pointer-events-none"
+          className="absolute pointer-events-none"
           style={{
             left: 49,
             top: 518,
@@ -306,6 +315,7 @@ function TodayStage({
           <p style={{ marginTop: "0.9em" }}>
             With a people-centered philosophy at our core, we see designers not simply as makers who craft a brand&apos;s exterior, but as &ldquo;brand doctors&rdquo; who diagnose through insight and prescribe through creativity.
           </p>
+        </div>
         </div>
       </div>
 
