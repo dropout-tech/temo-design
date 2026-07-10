@@ -132,8 +132,76 @@ function FilterBar({
 
   return (
     <div className="mb-12 space-y-6">
+      {/* ─ 手機版：chip 牆太佔空間，全部收成下拉選單（桌面版仍用 chips）─ */}
+      <div className="md:hidden space-y-4">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-4">
+          <FilterSelect
+            label="執行項目"
+            value={filters.group}
+            onChange={setGroup}
+            fullWidth
+            options={[
+              { value: "all", label: `全部（${works.length}）` },
+              ...groups.map((cat) => ({
+                value: cat.value,
+                label: `${cat.label}（${works.filter((w) => w.categoryGroup === cat.value).length}）`,
+              })),
+            ]}
+          />
+          <IndustryMultiSelect
+            industries={inds}
+            selected={filters.industries}
+            onToggle={toggleIndustry}
+          />
+          <FilterSelect
+            label="客戶"
+            value={filters.client}
+            onChange={(v) => setFilters({ ...filters, client: v })}
+            fullWidth
+            options={[
+              { value: "all", label: "全部客戶" },
+              ...CLIENTS.map((c) => ({ value: c.slug, label: c.name })),
+            ]}
+          />
+          <FilterSelect
+            label="設計師"
+            value={filters.designer}
+            onChange={(v) => setFilters({ ...filters, designer: v })}
+            fullWidth
+            options={[
+              { value: "all", label: "全部設計師" },
+              ...DESIGNERS.map((d) => ({ value: d.slug, label: d.name })),
+            ]}
+          />
+          <FilterSelect
+            label="年份"
+            value={filters.year}
+            onChange={(v) => setFilters({ ...filters, year: v })}
+            fullWidth
+            options={[
+              { value: "all", label: "全部年份" },
+              ...years.map((y) => ({ value: y, label: y })),
+            ]}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-white/25 tracking-widest">
+            {filteredCount} 件作品
+          </span>
+          {hasActive && (
+            <button
+              onClick={() => setFilters(INITIAL_FILTERS)}
+              className="py-2.5 text-[10px] tracking-widest text-white/40 hover:text-temo-gold transition-colors uppercase"
+            >
+              清除全部
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ─ 以下桌面版 chips ─ */}
       {/* Row 1: 執行項目 chips（單選，固定顯示全部項目） */}
-      <div>
+      <div className="hidden md:block">
         <p className="text-[10px] tracking-[0.3em] text-white/30 uppercase mb-3">執行項目</p>
         <div className="flex items-center gap-2 flex-wrap">
           <button
@@ -170,7 +238,7 @@ function FilterBar({
       </div>
 
       {/* Row 2: 行業分類（獨立維度，固定顯示、可複選） */}
-      <div>
+      <div className="hidden md:block">
         <p className="text-[10px] tracking-[0.3em] text-white/30 uppercase mb-3">行業分類（可複選）</p>
         <div className="flex items-center gap-1.5 flex-wrap">
           {inds.map((ind) => {
@@ -194,7 +262,7 @@ function FilterBar({
       </div>
 
       {/* Row 3: 下拉篩選 + 結果數 */}
-      <div className="flex items-end gap-4 flex-wrap pt-2">
+      <div className="hidden md:flex items-end gap-4 flex-wrap pt-2">
         <FilterSelect
           label="客戶"
           value={filters.client}
@@ -349,25 +417,70 @@ function FilterSelect({
   value,
   onChange,
   options,
+  fullWidth = false,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   options: { value: string; label: string }[]
+  fullWidth?: boolean
 }) {
   return (
-    <label className="flex flex-col gap-1.5">
+    <label className={cn("flex flex-col gap-1.5", fullWidth && "w-full")}>
       <span className="text-[10px] tracking-[0.3em] text-white/30 uppercase">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-[#161412] border border-white/10 hover:border-white/25 text-white/80 text-base md:text-xs px-3 py-2.5 md:py-2 rounded-sm focus:outline-none focus:border-temo-gold transition-colors min-w-[140px] cursor-pointer"
+        className={cn(
+          "bg-[#161412] border border-white/10 hover:border-white/25 text-white/80 text-base md:text-xs px-3 py-2.5 md:py-2 rounded-sm focus:outline-none focus:border-temo-gold transition-colors min-w-[140px] cursor-pointer",
+          fullWidth && "w-full min-w-0"
+        )}
       >
         {options.map((o) => (
           <option key={o.value} value={o.value} className="bg-[#161412] text-white">
             {o.label}
           </option>
         ))}
+      </select>
+    </label>
+  )
+}
+
+// 行業分類複選下拉（手機版用）：value 固定停在提示列，選一項＝切換一項；
+// 已選項目顯示在下方的金色 ActivePill，可點 ✕ 移除。
+function IndustryMultiSelect({
+  industries,
+  selected,
+  onToggle,
+}: {
+  industries: readonly Facet[]
+  selected: string[]
+  onToggle: (value: string) => void
+}) {
+  return (
+    <label className="flex flex-col gap-1.5 w-full">
+      <span className="text-[10px] tracking-[0.3em] text-white/30 uppercase">行業分類（可複選）</span>
+      <select
+        value=""
+        onChange={(e) => {
+          if (e.target.value) onToggle(e.target.value)
+        }}
+        className={cn(
+          "w-full min-w-0 bg-[#161412] border text-base px-3 py-2.5 rounded-sm focus:outline-none focus:border-temo-gold transition-colors cursor-pointer",
+          selected.length > 0 ? "border-temo-gold/40 text-temo-gold" : "border-white/10 text-white/80"
+        )}
+      >
+        <option value="" className="bg-[#161412] text-white">
+          {selected.length > 0 ? `已選 ${selected.length} 項` : "全部行業"}
+        </option>
+        {industries.map((ind) => {
+          const active = selected.includes(ind.value)
+          return (
+            <option key={ind.value} value={ind.value} className="bg-[#161412] text-white">
+              {active ? `✓ ${ind.label}（點選移除）` : ind.label}
+            </option>
+          )
+        })}
       </select>
     </label>
   )
