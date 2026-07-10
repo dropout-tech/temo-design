@@ -12,6 +12,7 @@ import {
   User,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { downscaleImage } from "@/lib/downscale-image"
 import { saveDesigner, deleteDesigner } from "@/app/studio/(app)/designers/actions"
 import { cn } from "@/lib/utils"
 
@@ -187,10 +188,11 @@ function Card({
   }
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const raw = e.target.files?.[0]
+    if (!raw) return
     setUploading(true)
     setError("")
+    const file = await downscaleImage(raw, 1000)
     const supabase = createClient()
     const ext = (file.name.split(".").pop() || "jpg").toLowerCase()
     const path = `team/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`

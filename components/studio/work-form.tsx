@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Upload, Trash2, ArrowLeft } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { downscaleImage } from "@/lib/downscale-image"
 import { cn } from "@/lib/utils"
 import { saveWork, deleteWork, type WorkInput } from "@/app/studio/(app)/works/actions"
 
@@ -86,7 +87,9 @@ export function WorkForm({
     return list.includes(v) ? list.filter((x) => x !== v) : [...list, v]
   }
 
-  async function uploadToStorage(file: File): Promise<string | null> {
+  async function uploadToStorage(raw: File): Promise<string | null> {
+    // 作品是大圖展示 → 上限放寬到 1920px（只砍超大怪圖，正常尺寸原檔不動）
+    const file = await downscaleImage(raw, 1920, 0.9)
     const supabase = createClient()
     const ext = (file.name.split(".").pop() || "jpg").toLowerCase()
     const path = `works/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`

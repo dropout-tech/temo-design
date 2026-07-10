@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import Image from "next/image"
 import { Loader2, Check, Upload } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { downscaleImage } from "@/lib/downscale-image"
 import { saveSettings, type SettingsInput } from "@/app/studio/(app)/settings/actions"
 
 const inputCls =
@@ -23,10 +24,12 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
   }
 
   async function onQrFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const raw = e.target.files?.[0]
+    if (!raw) return
     setUploading(true)
     setError("")
+    // QR 要能掃 → 保守上限、高品質，正常尺寸不動
+    const file = await downscaleImage(raw, 1200, 0.92)
     const supabase = createClient()
     const ext = (file.name.split(".").pop() || "png").toLowerCase()
     const path = `line/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
