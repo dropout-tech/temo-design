@@ -2,10 +2,12 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { Instagram, Facebook, Mail, Phone, MapPin } from "lucide-react"
+import { Mail, Phone, MapPin } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { SocialIcon, SOCIAL_PLATFORMS } from "@/components/social-icons"
 
 type QuickLink = { href: string; label: string }
+type SocialLink = { platform: string; href: string; label: string }
 
 // 預設值＝目前站台既有連結；掛載後從 nav_links 覆蓋（後台可改）。
 const DEFAULT_QUICK_LINKS: QuickLink[] = [
@@ -25,25 +27,35 @@ const DEFAULTS = {
   facebook: "https://www.facebook.com/temodesignss",
 }
 
+function platformLabel(key: string) {
+  return SOCIAL_PLATFORMS.find((p) => p.key === key)?.label ?? key
+}
+
+// social_links 表讀不到時（尚未套用 migration 0013）的 fallback，沿用原本站台 IG/FB。
+const DEFAULT_SOCIAL_LINKS: SocialLink[] = [
+  { platform: "instagram", href: DEFAULTS.instagram, label: platformLabel("instagram") },
+  { platform: "facebook", href: DEFAULTS.facebook, label: platformLabel("facebook") },
+]
+
 export function Footer() {
   const [c, setC] = useState(DEFAULTS)
   const [quickLinks, setQuickLinks] = useState<QuickLink[]>(DEFAULT_QUICK_LINKS)
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>(DEFAULT_SOCIAL_LINKS)
 
   useEffect(() => {
     const supabase = createClient()
     supabase
       .from("site_settings")
-      .select("email, phone, address, instagram, facebook")
+      .select("email, phone, address")
       .eq("id", 1)
       .maybeSingle()
       .then(({ data }) => {
         if (!data) return
         setC((prev) => ({
+          ...prev,
           email: data.email || prev.email,
           phone: data.phone || prev.phone,
           address: data.address || prev.address,
-          instagram: data.instagram || prev.instagram,
-          facebook: data.facebook || prev.facebook,
         }))
       })
     // 頁尾快速連結（後台可改）；讀不到就沿用預設。
@@ -55,12 +67,24 @@ export function Footer() {
       .then(({ data }) => {
         if (data && data.length) setQuickLinks(data.map((r) => ({ href: r.href, label: r.label })))
       })
+    // 社群連結（後台可改，任意多組）；表尚未建立或讀取失敗就沿用預設 IG/FB。
+    supabase
+      .from("social_links")
+      .select("platform, href, visible, sort")
+      .order("sort")
+      .then(({ data, error }) => {
+        if (error || !data) return
+        const visible = data.filter((r) => r.visible && r.href)
+        if (visible.length) {
+          setSocialLinks(
+            visible.map((r) => ({ platform: r.platform, href: r.href as string, label: platformLabel(r.platform) }))
+          )
+        } else if (data.length) {
+          // 表已建立但目前沒有任何顯示中的連結 → 尊重後台設定，清空而非硬塞預設值
+          setSocialLinks([])
+        }
+      })
   }, [])
-
-  const socialLinks = [
-    { href: c.instagram, icon: Instagram, label: "Instagram" },
-    { href: c.facebook, icon: Facebook, label: "Facebook" },
-  ].filter((s) => s.href)
 
   return (
     <footer className="bg-temo-black border-t border-temo-gold/20">
@@ -82,14 +106,14 @@ export function Footer() {
             <div className="flex gap-2 -ml-3">
               {socialLinks.map((social) => (
                 <a
-                  key={social.label}
+                  key={social.platform}
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex h-11 w-11 items-center justify-center text-temo-warm-gray hover:text-temo-gold transition-colors"
                   aria-label={social.label}
                 >
-                  <social.icon className="h-5 w-5" />
+                  <SocialIcon platform={social.platform} className="h-5 w-5" />
                 </a>
               ))}
             </div>

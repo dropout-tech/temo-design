@@ -9,9 +9,6 @@ export type SettingsInput = {
   email: string
   phone: string
   address: string
-  instagram: string
-  facebook: string
-  behance: string
   business_hours: string
   line_url: string
   line_qr_url: string
@@ -26,9 +23,6 @@ export async function saveSettings(input: SettingsInput): Promise<{ ok?: true; e
     email: input.email.trim() || null,
     phone: input.phone.trim() || null,
     address: input.address.trim() || null,
-    instagram: input.instagram.trim() || null,
-    facebook: input.facebook.trim() || null,
-    behance: input.behance.trim() || null,
     business_hours: input.business_hours.trim() || null,
     line_url: input.line_url.trim() || null,
     line_qr_url: input.line_qr_url.trim() || null,

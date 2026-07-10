@@ -64,7 +64,7 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
       <div>
         <p className="text-[10px] tracking-[0.5em] text-temo-gold uppercase mb-3">Settings</p>
         <h1 className="text-3xl md:text-4xl font-bold text-temo-white">網站設定</h1>
-        <p className="text-temo-warm-gray/60 text-sm mt-1">聯絡資訊、營業時間與社群連結，改完會顯示在聯絡頁與頁尾。</p>
+        <p className="text-temo-warm-gray/60 text-sm mt-1">聯絡資訊與營業時間，改完會顯示在聯絡頁與頁尾。社群連結在下方另外管理。</p>
       </div>
 
       <div className="space-y-5">
@@ -123,14 +123,6 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
             </label>
           </div>
         </div>
-      </div>
-
-      {/* 社群連結 */}
-      <div className="space-y-5 pt-4 border-t border-white/[0.06]">
-        <p className="text-[10px] tracking-[0.4em] text-temo-gold uppercase">社群連結</p>
-        <Field label="Instagram" k="instagram" placeholder="https://instagram.com/..." />
-        <Field label="Facebook" k="facebook" placeholder="https://facebook.com/..." />
-        <Field label="Behance" k="behance" placeholder="https://behance.net/..." />
       </div>
 
       {error && <p className="text-sm text-red-400/90">{error}</p>}
