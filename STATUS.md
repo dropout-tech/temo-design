@@ -4,7 +4,25 @@
 
 ## 目前進度（2026-07-10）
 
-### 本次完成：修好 /explore「TODAY」區塊在寬扁視窗頂到 logo 的問題
+### 本次完成：作品集篩選區手機版改下拉式選單（commit 557223e，已部署已驗）
+
+**需求**：使用者截圖反映手機版篩選區 11+1 顆執行項目 chip＋7 顆行業 chip 太佔空間太醜，要改下拉選單。
+
+**做法**：`components/pages/portfolio-page-client.tsx` 的 FilterBar——手機（<768px）收成五顆下拉
+（執行項目/行業分類/客戶/設計師/年份，兩欄）；行業複選＝下拉點選加入、再選同項移除、金色 pill 可 ✕ 移除；
+**桌面版 chip 牆不變**。所有用到 FilterBar 的頁面（/portfolio 與各服務作品頁）一體生效。
+
+**驗證**：確定性 Playwright 腳本 16 條斷言全過（390/375px 無橫向溢出、chip 已隱藏、5 顆下拉高度 48px≥44、
+下拉篩選件數正確、複選加入/移除正確、桌面 1280px chips 照舊）；`tsc --noEmit` 0 錯誤；
+**線上已驗**（temo-design.vercel.app/portfolio 手機視窗：selects=5、chip 隱藏、無溢出）。
+截圖在 scratchpad/filter-mobile-390x844-filters.png、filter-prod-390.png。
+
+**過程備註**：視覺判讀 agent 曾報「下拉上方有 chip 殘影」，經 DOM 裁決是本來就存在的 CategoryTicker
+分類索引橫條（非 bug、非本次改動）。
+
+---
+
+### 同日完成：修好 /explore「TODAY」區塊在寬扁視窗頂到 logo 的問題
 
 **症狀**：TODAY 大標題與左上角 logo 重疊、左欄文字間距看起來走位。
 
