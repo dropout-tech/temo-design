@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Loader2, Plus, Trash2, Check } from "lucide-react"
-import { saveNavLink, deleteNavLink } from "@/app/studio/(app)/navigation/actions"
+import { Loader2, Plus, Trash2, Check, GripVertical } from "lucide-react"
+import { saveNavLink, deleteNavLink, reorderNavLinks } from "@/app/studio/(app)/navigation/actions"
+import { SortableList, type DragHandleProps } from "@/components/studio/sortable-list"
 
 const inputCls =
   "w-full px-3 py-2.5 bg-white/[0.03] border border-white/10 text-temo-white text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:outline-none transition-all rounded-sm"
@@ -53,6 +54,7 @@ export function NavigationManager({ links }: { links: NavLinkRow[] }) {
   const [rows, setRows] = useState<ClientRow[]>(
     links.map((l) => ({ ...l, key: l.id ?? randomKey() }))
   )
+  const [orderPending, startOrder] = useTransition()
 
   function addRow(location: string) {
     const maxSort = rows
@@ -73,21 +75,45 @@ export function NavigationManager({ links }: { links: NavLinkRow[] }) {
     setRows((p) => p.map((r) => (r.key === key ? { ...r, id } : r)))
   }
 
+  // 依 SECTIONS 順序 + 某一組（header/menu/footer）的新成員順序，重建整份 rows（含未變的組）
+  function rebuildRows(location: string, nextGroup: ClientRow[]): ClientRow[] {
+    const next: ClientRow[] = []
+    for (const s of SECTIONS) {
+      next.push(...(s.location === location ? nextGroup : rows.filter((r) => r.location === s.location)))
+    }
+    return next
+  }
+
+  function reorderSectionLive(location: string, nextGroup: ClientRow[]) {
+    setRows(rebuildRows(location, nextGroup))
+  }
+
+  function reorderSectionCommit(location: string, nextGroup: ClientRow[]) {
+    const next = rebuildRows(location, nextGroup)
+    setRows(next)
+    const ids = next.filter((r) => r.location === location && r.id).map((r) => r.id!)
+    startOrder(async () => {
+      await reorderNavLinks(ids)
+    })
+  }
+
   return (
     <div className="px-6 md:px-10 py-10 md:py-14 max-w-4xl">
       <div className="mb-8">
         <p className="text-[10px] tracking-[0.5em] text-temo-gold uppercase mb-2">Navigation</p>
         <h1 className="text-3xl md:text-4xl font-bold text-temo-white">選單 / 頁尾連結</h1>
         <p className="text-temo-warm-gray/60 text-sm mt-1">
-          改這裡會同步到全站頂部導覽、漢堡選單與頁尾。
+          改這裡會同步到全站頂部導覽、漢堡選單與頁尾。每組可用<span className="text-temo-warm-gray/80"> ⠿ 把手拖拉排序</span>。
         </p>
+        {orderPending && (
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-temo-warm-gray/50 mt-2">
+            <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
+          </span>
+        )}
       </div>
 
       {SECTIONS.map((section, idx) => {
-        const sectionRows = rows
-          .filter((r) => r.location === section.location)
-          .slice()
-          .sort((a, b) => a.sort - b.sort)
+        const sectionRows = rows.filter((r) => r.location === section.location)
         return (
           <div
             key={section.location}
@@ -108,17 +134,24 @@ export function NavigationManager({ links }: { links: NavLinkRow[] }) {
               </button>
             </div>
             <p className="text-temo-warm-gray/50 text-xs mb-3">{section.desc}</p>
-            <div className="space-y-3">
-              {sectionRows.map((row) => (
+            <SortableList
+              items={sectionRows}
+              getKey={(r) => r.key}
+              onReorder={(next) => reorderSectionLive(section.location, next)}
+              onCommit={(next) => reorderSectionCommit(section.location, next)}
+              className="space-y-3"
+              renderItem={(row, handle) => (
                 <NavLinkCard
-                  key={row.key}
                   row={row}
+                  handle={handle}
                   labelEnHint={section.labelEnHint}
                   onChange={(p) => updateRow(row.key, p)}
                   onRemove={() => removeRow(row.key)}
                   onSaved={(id) => setId(row.key, id)}
                 />
-              ))}
+              )}
+            />
+            <div className="space-y-3">
               {sectionRows.length === 0 && (
                 <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
                   還沒有任何連結，點「新增」開始。
@@ -137,12 +170,14 @@ export function NavigationManager({ links }: { links: NavLinkRow[] }) {
 // ─────────────────────────────────────────────
 function NavLinkCard({
   row,
+  handle,
   labelEnHint,
   onChange,
   onRemove,
   onSaved,
 }: {
   row: ClientRow
+  handle: DragHandleProps
   labelEnHint: string
   onChange: (p: Partial<ClientRow>) => void
   onRemove: () => void
@@ -197,6 +232,14 @@ function NavLinkCard({
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
       <div className="flex flex-wrap items-end gap-3">
+        <button
+          type="button"
+          aria-label="拖拉排序"
+          className="text-temo-warm-gray/40 hover:text-temo-warm-gray active:cursor-grabbing shrink-0 pb-2.5"
+          {...handle}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
         <label className="space-y-1 flex-1 min-w-[140px]">
           <span className={labelCls}>中文名稱</span>
           <input
@@ -224,15 +267,6 @@ function NavLinkCard({
             value={row.href}
             onChange={(e) => dirty({ href: e.target.value })}
             placeholder="例：/about"
-          />
-        </label>
-        <label className="space-y-1 w-24">
-          <span className={labelCls}>排序</span>
-          <input
-            type="number"
-            className={inputCls}
-            value={row.sort}
-            onChange={(e) => dirty({ sort: Number(e.target.value) })}
           />
         </label>
       </div>

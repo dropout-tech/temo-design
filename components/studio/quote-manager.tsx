@@ -1,18 +1,23 @@
 "use client"
 
 import { useRef, useState, useTransition } from "react"
-import { Loader2, Plus, Trash2, Check, Star } from "lucide-react"
+import { Loader2, Plus, Trash2, Check, Star, GripVertical } from "lucide-react"
 import {
   saveCategory,
   deleteCategory,
+  reorderQuoteCategories,
   savePackage,
   deletePackage,
+  reorderQuotePackages,
   saveAddon,
   deleteAddon,
+  reorderQuoteAddons,
   saveComponent,
   deleteComponent,
+  reorderQuoteComponents,
 } from "@/app/studio/(app)/quote/actions"
 import type { QuoteCategory, QuoteAddon, QuoteComponent } from "@/lib/content-supabase"
+import { SortableList, type DragHandleProps } from "@/components/studio/sortable-list"
 import { cn } from "@/lib/utils"
 
 const inputCls =
@@ -100,6 +105,7 @@ export function QuoteManager({
 
   const [activeKey, setActiveKey] = useState<string>(cats[0]?.key ?? "")
   const activeCat = cats.find((c) => c.key === activeKey) ?? cats[0]
+  const [orderPending, startOrder] = useTransition()
 
   // ── 類別 ──
   function addCategory() {
@@ -176,9 +182,52 @@ export function QuoteManager({
   // 只有「已儲存（有 id）」的元件才能掛到方案上
   const savedComponents = compRows.filter((c): c is CompRow & { id: string } => !!c.id)
 
-  const activePkgs = activeCat?.id
-    ? pkgs.filter((p) => p.categoryId === activeCat.id).sort((a, b) => a.sort - b.sort)
-    : []
+  const activePkgs = activeCat?.id ? pkgs.filter((p) => p.categoryId === activeCat.id) : []
+
+  // ── 拖拉排序 ──
+  function reorderCatsLive(next: CatRow[]) {
+    setCats(next)
+  }
+  function reorderCatsCommit(next: CatRow[]) {
+    setCats(next)
+    const ids = next.filter((c) => c.id).map((c) => c.id!)
+    startOrder(async () => {
+      await reorderQuoteCategories(ids)
+    })
+  }
+
+  function reorderPkgsLive(categoryId: string, nextGroup: PkgRow[]) {
+    setPkgs((prev) => [...prev.filter((p) => p.categoryId !== categoryId), ...nextGroup])
+  }
+  function reorderPkgsCommit(categoryId: string, nextGroup: PkgRow[]) {
+    reorderPkgsLive(categoryId, nextGroup)
+    const ids = nextGroup.filter((p) => p.id).map((p) => p.id!)
+    startOrder(async () => {
+      await reorderQuotePackages(ids)
+    })
+  }
+
+  function reorderAddonsLive(next: AddonRow[]) {
+    setAddonRows(next)
+  }
+  function reorderAddonsCommit(next: AddonRow[]) {
+    setAddonRows(next)
+    const ids = next.filter((a) => a.id).map((a) => a.id!)
+    startOrder(async () => {
+      await reorderQuoteAddons(ids)
+    })
+  }
+
+  function reorderCompsLive(next: CompRow[]) {
+    setCompRows(next)
+  }
+  function reorderCompsCommit(next: CompRow[]) {
+    setCompRows(next)
+    const ids = next.filter((c) => c.id).map((c) => c.id!)
+    startOrder(async () => {
+      await reorderQuoteComponents(ids)
+    })
+  }
 
   return (
     <div className="px-6 md:px-10 py-10 md:py-14 max-w-4xl">
@@ -192,27 +241,47 @@ export function QuoteManager({
 
       {/* 類別分頁 */}
       <div className="flex flex-wrap items-center gap-2 border-b border-white/10 pb-3 mb-6">
-        {cats.map((c) => (
-          <button
-            key={c.key}
-            onClick={() => setActiveKey(c.key)}
-            className={cn(
-              "px-3.5 py-2 text-xs font-medium tracking-wide rounded-sm border transition-all",
-              c.key === activeKey
-                ? "border-temo-gold/60 bg-temo-gold/10 text-temo-gold"
-                : "border-white/10 text-temo-warm-gray hover:text-white hover:border-white/25"
-            )}
-          >
-            {c.title || "（未命名類別）"}
-            {!c.id && <span className="ml-1 text-[10px] text-temo-gold/70">未儲存</span>}
-          </button>
-        ))}
+        <SortableList
+          items={cats}
+          getKey={(c) => c.key}
+          onReorder={reorderCatsLive}
+          onCommit={reorderCatsCommit}
+          className="contents"
+          renderItem={(c, handle) => (
+            <div
+              className={cn(
+                "inline-flex items-center gap-1 pl-1.5 pr-1 py-1 rounded-sm border transition-all",
+                c.key === activeKey
+                  ? "border-temo-gold/60 bg-temo-gold/10 text-temo-gold"
+                  : "border-white/10 text-temo-warm-gray hover:text-white hover:border-white/25"
+              )}
+            >
+              <button
+                type="button"
+                aria-label="拖拉排序類別"
+                className="text-current opacity-50 hover:opacity-90 active:cursor-grabbing shrink-0"
+                {...handle}
+              >
+                <GripVertical className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={() => setActiveKey(c.key)} className="px-2 py-1 text-xs font-medium tracking-wide">
+                {c.title || "（未命名類別）"}
+                {!c.id && <span className="ml-1 text-[10px] text-temo-gold/70">未儲存</span>}
+              </button>
+            </div>
+          )}
+        />
         <button
           onClick={addCategory}
           className="px-3 py-2 text-xs text-temo-warm-gray/70 hover:text-temo-gold inline-flex items-center gap-1 rounded-sm border border-dashed border-white/15 hover:border-temo-gold/40 transition-all"
         >
           <Plus className="w-3.5 h-3.5" /> 新增類別
         </button>
+        {orderPending && (
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-temo-warm-gray/50">
+            <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
+          </span>
+        )}
       </div>
 
       {activeCat ? (
@@ -237,22 +306,33 @@ export function QuoteManager({
             <p className="text-[11px] text-temo-gold/70 mb-3">↑ 這個類別還沒儲存，先在上方卡片按「儲存類別」，才能加方案。</p>
           )}
 
-          <div className="space-y-4">
-            {activePkgs.map((r) => (
+          <SortableList
+            items={activePkgs}
+            getKey={(r) => r.key}
+            onReorder={(next) => {
+              const cid = activeCat.id
+              if (cid) reorderPkgsLive(cid, next)
+            }}
+            onCommit={(next) => {
+              const cid = activeCat.id
+              if (cid) reorderPkgsCommit(cid, next)
+            }}
+            className="space-y-4"
+            renderItem={(r, handle) => (
               <PackageCard
-                key={r.key}
                 row={r}
+                handle={handle}
                 components={savedComponents}
                 onChange={(p) => updatePkg(r.key, p)}
                 onRemove={() => removePkg(r.key)}
               />
-            ))}
-            {activeCat.id && activePkgs.length === 0 && (
-              <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
-                這個類別還沒有方案，點右上「新增方案」。
-              </p>
             )}
-          </div>
+          />
+          {activeCat.id && activePkgs.length === 0 && (
+            <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
+              這個類別還沒有方案，點右上「新增方案」。
+            </p>
+          )}
         </>
       ) : (
         <p className="text-temo-warm-gray/50 text-sm py-8 text-center">還沒有任何類別，點「新增類別」開始。</p>
@@ -275,16 +355,21 @@ export function QuoteManager({
         <p className="text-[11px] text-temo-warm-gray/50 mb-4">
           這些加購項會出現在「有勾選『顯示加購池』的方案」底下，讓客戶自由加選。
         </p>
-        <div className="space-y-3">
-          {addonRows.map((a) => (
-            <AddonCard key={a.key} row={a} onChange={(p) => updateAddon(a.key, p)} onRemove={() => removeAddon(a.key)} />
-          ))}
-          {addonRows.length === 0 && (
-            <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
-              還沒有加購項。
-            </p>
+        <SortableList
+          items={addonRows}
+          getKey={(a) => a.key}
+          onReorder={reorderAddonsLive}
+          onCommit={reorderAddonsCommit}
+          className="space-y-3"
+          renderItem={(a, handle) => (
+            <AddonCard row={a} handle={handle} onChange={(p) => updateAddon(a.key, p)} onRemove={() => removeAddon(a.key)} />
           )}
-        </div>
+        />
+        {addonRows.length === 0 && (
+          <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
+            還沒有加購項。
+          </p>
+        )}
       </div>
 
       {/* 內容元件（重疊自動扣抵）*/}
@@ -306,16 +391,21 @@ export function QuoteManager({
           當客人同時選到兩個都含同一元件的方案時，系統會自動扣掉重複那份的抵扣值，不重複計價。<br />
           設好元件後，回上方每個「方案」卡片勾選它包含哪些元件即可生效。<span className="text-temo-gold/70">建議抵扣值寧可少填一點，避免多扣＝少收錢。</span>
         </p>
-        <div className="space-y-3">
-          {compRows.map((c) => (
-            <ComponentCard key={c.key} row={c} onChange={(p) => updateComponent(c.key, p)} onRemove={() => removeComponent(c.key)} />
-          ))}
-          {compRows.length === 0 && (
-            <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
-              還沒有內容元件。想啟用「重疊自動扣抵」，先新增元件（如 LOGO），再到方案卡勾選。
-            </p>
+        <SortableList
+          items={compRows}
+          getKey={(c) => c.key}
+          onReorder={reorderCompsLive}
+          onCommit={reorderCompsCommit}
+          className="space-y-3"
+          renderItem={(c, handle) => (
+            <ComponentCard row={c} handle={handle} onChange={(p) => updateComponent(c.key, p)} onRemove={() => removeComponent(c.key)} />
           )}
-        </div>
+        />
+        {compRows.length === 0 && (
+          <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
+            還沒有內容元件。想啟用「重疊自動扣抵」，先新增元件（如 LOGO），再到方案卡勾選。
+          </p>
+        )}
       </div>
     </div>
   )
@@ -372,16 +462,10 @@ function CategoryCard({ row, onChange, onRemove }: { row: CatRow; onChange: (p: 
         <span className={labelCls}>類別說明</span>
         <input className={inputCls} value={row.description} onChange={(e) => dirty({ description: e.target.value })} placeholder="單一品項設計，依需求挑選" />
       </label>
-      <div className="grid grid-cols-2 gap-3">
-        <label className="space-y-1">
-          <span className={labelCls}>手機圖示（單字）</span>
-          <input className={inputCls} value={row.icon} onChange={(e) => dirty({ icon: e.target.value })} placeholder="S" maxLength={2} />
-        </label>
-        <label className="space-y-1">
-          <span className={labelCls}>排序</span>
-          <input type="number" className={inputCls} value={row.sort} onChange={(e) => dirty({ sort: Number(e.target.value) })} />
-        </label>
-      </div>
+      <label className="space-y-1 block w-40">
+        <span className={labelCls}>手機圖示（單字）</span>
+        <input className={inputCls} value={row.icon} onChange={(e) => dirty({ icon: e.target.value })} placeholder="S" maxLength={2} />
+      </label>
       {error && <p className="text-xs text-red-400/90">{error}</p>}
       <div className="flex items-center gap-3">
         <SaveButton pending={pending} saved={saved} onClick={save} label="儲存類別" />
@@ -398,11 +482,13 @@ function CategoryCard({ row, onChange, onRemove }: { row: CatRow; onChange: (p: 
 // ─────────────────────────────────────────────
 function PackageCard({
   row,
+  handle,
   components,
   onChange,
   onRemove,
 }: {
   row: PkgRow
+  handle: DragHandleProps
   components: (CompRow & { id: string })[]
   onChange: (p: Partial<PkgRow>) => void
   onRemove: () => void
@@ -458,6 +544,14 @@ function PackageCard({
 
   return (
     <div className={cn("rounded-lg border bg-white/[0.02] p-4 space-y-3", row.recommended ? "border-temo-gold/40" : "border-white/10")}>
+      <button
+        type="button"
+        aria-label="拖拉排序方案"
+        className="text-temo-warm-gray/40 hover:text-temo-warm-gray active:cursor-grabbing"
+        {...handle}
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
       <div className="grid sm:grid-cols-2 gap-3">
         <label className="space-y-1">
           <span className={labelCls}>方案名稱（中）</span>
@@ -469,7 +563,7 @@ function PackageCard({
         </label>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <label className="space-y-1">
           <span className={labelCls}>起價 NT$</span>
           <input type="number" className={inputCls} value={row.basePrice} onChange={(e) => dirty({ basePrice: Number(e.target.value) })} />
@@ -483,10 +577,6 @@ function PackageCard({
             onChange={(e) => dirty({ originalPrice: e.target.value === "" ? null : Number(e.target.value) })}
             placeholder="—"
           />
-        </label>
-        <label className="space-y-1 col-span-2">
-          <span className={labelCls}>排序</span>
-          <input type="number" className={inputCls} value={row.sort} onChange={(e) => dirty({ sort: Number(e.target.value) })} />
         </label>
       </div>
 
@@ -562,7 +652,17 @@ function PackageCard({
 // ─────────────────────────────────────────────
 // 加購卡
 // ─────────────────────────────────────────────
-function AddonCard({ row, onChange, onRemove }: { row: AddonRow; onChange: (p: Partial<AddonRow>) => void; onRemove: () => void }) {
+function AddonCard({
+  row,
+  handle,
+  onChange,
+  onRemove,
+}: {
+  row: AddonRow
+  handle: DragHandleProps
+  onChange: (p: Partial<AddonRow>) => void
+  onRemove: () => void
+}) {
   const [pending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState("")
@@ -593,6 +693,14 @@ function AddonCard({ row, onChange, onRemove }: { row: AddonRow; onChange: (p: P
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
       <div className="flex flex-wrap items-end gap-3">
+        <button
+          type="button"
+          aria-label="拖拉排序加購項"
+          className="text-temo-warm-gray/40 hover:text-temo-warm-gray active:cursor-grabbing self-center"
+          {...handle}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
         <label className="space-y-1 flex-1 min-w-[180px]">
           <span className={labelCls}>加購項名稱</span>
           <input className={inputCls} value={row.label} onChange={(e) => dirty({ label: e.target.value })} placeholder="文宣海報 / A3 菜單 (1 款)" />
@@ -600,10 +708,6 @@ function AddonCard({ row, onChange, onRemove }: { row: AddonRow; onChange: (p: P
         <label className="space-y-1 w-28">
           <span className={labelCls}>加價 NT$</span>
           <input type="number" className={inputCls} value={row.price} onChange={(e) => dirty({ price: Number(e.target.value) })} />
-        </label>
-        <label className="space-y-1 w-20">
-          <span className={labelCls}>排序</span>
-          <input type="number" className={inputCls} value={row.sort} onChange={(e) => dirty({ sort: Number(e.target.value) })} />
         </label>
       </div>
       {error && <p className="text-xs text-red-400/90 mt-2">{error}</p>}
@@ -620,7 +724,17 @@ function AddonCard({ row, onChange, onRemove }: { row: AddonRow; onChange: (p: P
 // ─────────────────────────────────────────────
 // 內容元件卡
 // ─────────────────────────────────────────────
-function ComponentCard({ row, onChange, onRemove }: { row: CompRow; onChange: (p: Partial<CompRow>) => void; onRemove: () => void }) {
+function ComponentCard({
+  row,
+  handle,
+  onChange,
+  onRemove,
+}: {
+  row: CompRow
+  handle: DragHandleProps
+  onChange: (p: Partial<CompRow>) => void
+  onRemove: () => void
+}) {
   const [pending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState("")
@@ -651,6 +765,14 @@ function ComponentCard({ row, onChange, onRemove }: { row: CompRow; onChange: (p
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
       <div className="flex flex-wrap items-end gap-3">
+        <button
+          type="button"
+          aria-label="拖拉排序元件"
+          className="text-temo-warm-gray/40 hover:text-temo-warm-gray active:cursor-grabbing self-center"
+          {...handle}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
         <label className="space-y-1 flex-1 min-w-[180px]">
           <span className={labelCls}>元件名稱</span>
           <input className={inputCls} value={row.name} onChange={(e) => dirty({ name: e.target.value })} placeholder="LOGO 商標" />
@@ -658,10 +780,6 @@ function ComponentCard({ row, onChange, onRemove }: { row: CompRow; onChange: (p
         <label className="space-y-1 w-32">
           <span className={labelCls}>抵扣值 NT$</span>
           <input type="number" className={inputCls} value={row.deductValue} onChange={(e) => dirty({ deductValue: Number(e.target.value) })} />
-        </label>
-        <label className="space-y-1 w-20">
-          <span className={labelCls}>排序</span>
-          <input type="number" className={inputCls} value={row.sort} onChange={(e) => dirty({ sort: Number(e.target.value) })} />
         </label>
       </div>
       {!row.id && <p className="text-[11px] text-temo-gold/70 mt-2">↑ 先按「儲存」，這個元件才會出現在方案卡的可勾選清單裡。</p>}

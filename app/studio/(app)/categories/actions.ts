@@ -29,6 +29,18 @@ export async function deleteCategoryGroup(value: string): Promise<{ error?: stri
   return {}
 }
 
+/** 拖拉排序後把執行項目新順序寫回（依陣列索引重寫 sort） */
+export async function reorderCategoryGroups(values: string[]): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const results = await Promise.all(
+    values.map((value, i) => supabase.from("category_groups").update({ sort: i }).eq("value", value))
+  )
+  const failed = results.find((r) => r.error)
+  if (failed?.error) return { error: failed.error.message }
+  revalidate()
+  return {}
+}
+
 // ── 行業分類（industries，複選）───────────────────────────
 export async function saveIndustry(input: FacetInput): Promise<{ ok?: true; error?: string }> {
   const supabase = await createClient()
@@ -44,6 +56,18 @@ export async function deleteIndustry(value: string): Promise<{ error?: string }>
   const supabase = await createClient()
   const { error } = await supabase.from("industries").delete().eq("value", value)
   if (error) return { error: error.message }
+  revalidate()
+  return {}
+}
+
+/** 拖拉排序後把行業分類新順序寫回（依陣列索引重寫 sort） */
+export async function reorderIndustries(values: string[]): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const results = await Promise.all(
+    values.map((value, i) => supabase.from("industries").update({ sort: i }).eq("value", value))
+  )
+  const failed = results.find((r) => r.error)
+  if (failed?.error) return { error: failed.error.message }
   revalidate()
   return {}
 }

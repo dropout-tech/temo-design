@@ -1,13 +1,16 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Loader2, Plus, Trash2, Check } from "lucide-react"
+import { Loader2, Plus, Trash2, Check, GripVertical } from "lucide-react"
 import {
   saveSection,
   deleteSection,
   saveQuestion,
   deleteQuestion,
+  reorderBriefSections,
+  reorderBriefQuestions,
 } from "@/app/studio/(app)/brief/actions"
+import { SortableList, type DragHandleProps } from "@/components/studio/sortable-list"
 
 const inputCls =
   "w-full px-3 py-2.5 bg-white/[0.03] border border-white/10 text-temo-white text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:outline-none transition-all rounded-sm"
@@ -118,6 +121,8 @@ export function BriefManager({ sections }: { sections: BriefSectionRow[] }) {
     )
   )
 
+  const [orderPending, startOrder] = useTransition()
+
   function addSection() {
     const maxSort = secs.reduce((m, s) => Math.max(m, s.sort), -1)
     setSecs((p) => [
@@ -168,7 +173,29 @@ export function BriefManager({ sections }: { sections: BriefSectionRow[] }) {
     setQs((p) => p.filter((q) => q.key !== key))
   }
 
-  const sortedSecs = secs.slice().sort((a, b) => a.sort - b.sort)
+  // 區塊排序：陣列順序即顯示順序
+  function reorderSectionsLive(next: SectionState[]) {
+    setSecs(next)
+  }
+  function reorderSectionsCommit(next: SectionState[]) {
+    setSecs(next)
+    const ids = next.filter((s) => s.savedToDb).map((s) => s.id)
+    startOrder(async () => {
+      await reorderBriefSections(ids)
+    })
+  }
+
+  // 題目排序：只調整同一區塊內的子集合，其他區塊的題目不受影響
+  function reorderQuestionsLive(sectionId: string, nextGroup: QuestionState[]) {
+    setQs((prev) => [...prev.filter((q) => q.sectionId !== sectionId), ...nextGroup])
+  }
+  function reorderQuestionsCommit(sectionId: string, nextGroup: QuestionState[]) {
+    reorderQuestionsLive(sectionId, nextGroup)
+    const ids = nextGroup.filter((q) => q.id).map((q) => q.id!)
+    startOrder(async () => {
+      await reorderBriefQuestions(ids)
+    })
+  }
 
   return (
     <div className="px-6 md:px-10 py-10 md:py-14 max-w-4xl">
@@ -185,34 +212,48 @@ export function BriefManager({ sections }: { sections: BriefSectionRow[] }) {
           問卷區塊
           <span className="text-temo-warm-gray/50 font-normal ml-2">共 {secs.length} 個</span>
         </h2>
-        <button
-          onClick={addSection}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:brightness-110 transition-all"
-        >
-          <Plus className="w-4 h-4" /> 新增區塊
-        </button>
+        <div className="flex items-center gap-3">
+          {orderPending && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-temo-warm-gray/50">
+              <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
+            </span>
+          )}
+          <button
+            onClick={addSection}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:brightness-110 transition-all"
+          >
+            <Plus className="w-4 h-4" /> 新增區塊
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-8">
-        {sortedSecs.map((s) => (
+      <SortableList
+        items={secs}
+        getKey={(s) => s.id}
+        onReorder={reorderSectionsLive}
+        onCommit={reorderSectionsCommit}
+        className="space-y-8"
+        renderItem={(s, handle) => (
           <SectionCard
-            key={s.id}
             row={s}
-            questions={qs.filter((q) => q.sectionId === s.id).sort((a, b) => a.sort - b.sort)}
+            handle={handle}
+            questions={qs.filter((q) => q.sectionId === s.id)}
             onChange={(p) => updateSection(s.id, p)}
             onRemove={() => removeSection(s.id)}
             onMarkSaved={() => updateSection(s.id, { savedToDb: true })}
             onAddQuestion={() => addQuestion(s.id)}
             onUpdateQuestion={updateQuestion}
             onRemoveQuestion={removeQuestion}
+            onReorderQuestions={(next) => reorderQuestionsLive(s.id, next)}
+            onCommitQuestions={(next) => reorderQuestionsCommit(s.id, next)}
           />
-        ))}
-        {secs.length === 0 && (
-          <p className="text-temo-warm-gray/50 text-sm py-8 text-center border border-dashed border-white/10 rounded-sm">
-            還沒有任何區塊，點「新增區塊」開始。
-          </p>
         )}
-      </div>
+      />
+      {secs.length === 0 && (
+        <p className="text-temo-warm-gray/50 text-sm py-8 text-center border border-dashed border-white/10 rounded-sm">
+          還沒有任何區塊，點「新增區塊」開始。
+        </p>
+      )}
     </div>
   )
 }
@@ -222,6 +263,7 @@ export function BriefManager({ sections }: { sections: BriefSectionRow[] }) {
 // ─────────────────────────────────────────────
 function SectionCard({
   row,
+  handle,
   questions,
   onChange,
   onRemove,
@@ -229,8 +271,11 @@ function SectionCard({
   onAddQuestion,
   onUpdateQuestion,
   onRemoveQuestion,
+  onReorderQuestions,
+  onCommitQuestions,
 }: {
   row: SectionState
+  handle: DragHandleProps
   questions: QuestionState[]
   onChange: (p: Partial<SectionState>) => void
   onRemove: () => void
@@ -238,6 +283,8 @@ function SectionCard({
   onAddQuestion: () => void
   onUpdateQuestion: (key: string, p: Partial<QuestionState>) => void
   onRemoveQuestion: (key: string) => void
+  onReorderQuestions: (next: QuestionState[]) => void
+  onCommitQuestions: (next: QuestionState[]) => void
 }) {
   const [pending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
@@ -283,7 +330,17 @@ function SectionCard({
 
   return (
     <div className="rounded-lg border border-temo-gold/20 bg-temo-gold/[0.03] p-4 space-y-3">
-      <p className={labelCls}>區塊設定</p>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-label="拖拉排序區塊"
+          className="text-temo-warm-gray/40 hover:text-temo-warm-gray active:cursor-grabbing shrink-0"
+          {...handle}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+        <p className={labelCls}>區塊設定</p>
+      </div>
       <div className="grid sm:grid-cols-2 gap-3">
         <label className="space-y-1">
           <span className={labelCls}>區塊標題（中）</span>
@@ -335,11 +392,6 @@ function SectionCard({
         </div>
       </div>
 
-      <label className="space-y-1 block w-32">
-        <span className={labelCls}>排序</span>
-        <input type="number" className={inputCls} value={row.sort} onChange={(e) => dirty({ sort: Number(e.target.value) })} />
-      </label>
-
       {error && <p className="text-xs text-red-400/90">{error}</p>}
       <div className="flex items-center gap-3">
         <SaveButton pending={pending} saved={saved} onClick={save} label="儲存區塊" />
@@ -371,16 +423,21 @@ function SectionCard({
         {!row.savedToDb && (
           <p className="text-[11px] text-temo-gold/70 mb-3">↑ 這個區塊還沒儲存，先按上方「儲存區塊」，才能加題目。</p>
         )}
-        <div className="space-y-3">
-          {questions.map((q) => (
-            <QuestionCard key={q.key} row={q} onChange={(p) => onUpdateQuestion(q.key, p)} onRemove={() => onRemoveQuestion(q.key)} />
-          ))}
-          {questions.length === 0 && (
-            <p className="text-temo-warm-gray/50 text-xs py-4 text-center border border-dashed border-white/10 rounded-sm">
-              這個區塊還沒有題目。
-            </p>
+        <SortableList
+          items={questions}
+          getKey={(q) => q.key}
+          onReorder={onReorderQuestions}
+          onCommit={onCommitQuestions}
+          className="space-y-3"
+          renderItem={(q, qHandle) => (
+            <QuestionCard row={q} handle={qHandle} onChange={(p) => onUpdateQuestion(q.key, p)} onRemove={() => onRemoveQuestion(q.key)} />
           )}
-        </div>
+        />
+        {questions.length === 0 && (
+          <p className="text-temo-warm-gray/50 text-xs py-4 text-center border border-dashed border-white/10 rounded-sm">
+            這個區塊還沒有題目。
+          </p>
+        )}
       </div>
     </div>
   )
@@ -391,10 +448,12 @@ function SectionCard({
 // ─────────────────────────────────────────────
 function QuestionCard({
   row,
+  handle,
   onChange,
   onRemove,
 }: {
   row: QuestionState
+  handle: DragHandleProps
   onChange: (p: Partial<QuestionState>) => void
   onRemove: () => void
 }) {
@@ -452,6 +511,14 @@ function QuestionCard({
 
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3 space-y-3">
+      <button
+        type="button"
+        aria-label="拖拉排序題目"
+        className="text-temo-warm-gray/40 hover:text-temo-warm-gray active:cursor-grabbing"
+        {...handle}
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
       <div className="grid sm:grid-cols-2 gap-3">
         <label className="space-y-1">
           <span className={labelCls}>題目文字</span>
@@ -463,7 +530,7 @@ function QuestionCard({
         </label>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <label className="space-y-1 col-span-2 sm:col-span-1">
           <span className={labelCls}>題型</span>
           <select className={inputCls} value={row.type} onChange={(e) => dirty({ type: e.target.value })}>
@@ -473,10 +540,6 @@ function QuestionCard({
               </option>
             ))}
           </select>
-        </label>
-        <label className="space-y-1">
-          <span className={labelCls}>排序</span>
-          <input type="number" className={inputCls} value={row.sort} onChange={(e) => dirty({ sort: Number(e.target.value) })} />
         </label>
         <label className="inline-flex items-center gap-2 text-xs text-temo-warm-gray cursor-pointer self-end pb-2.5">
           <input type="checkbox" className="accent-temo-gold w-4 h-4" checked={row.required} onChange={(e) => dirty({ required: e.target.checked })} />

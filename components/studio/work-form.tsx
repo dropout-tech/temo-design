@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, Upload, Trash2, ArrowLeft, X } from "lucide-react"
+import { Loader2, Upload, Trash2, ArrowLeft, X, GripVertical } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { downscaleImage } from "@/lib/downscale-image"
 import { isVideoUrl } from "@/lib/video"
 import { cn } from "@/lib/utils"
+import { SortableList, type DragHandleProps } from "@/components/studio/sortable-list"
 import { saveWork, deleteWork, type WorkInput } from "@/app/studio/(app)/works/actions"
 import type { WorkBlockRow } from "@/lib/studio/works"
 
@@ -451,21 +452,29 @@ export function WorkForm({
         </p>
 
         {blocks.length > 0 && (
-          <div className="space-y-3">
-            {blocks.map((b, i) => (
-              <BlockCard
-                key={b.key}
-                block={b}
-                index={i}
-                total={blocks.length}
-                uploading={uploading}
-                onMove={(dir) => moveBlock(i, dir)}
-                onRemove={() => removeBlock(i)}
-                onChange={(patch) => updateBlock(i, patch)}
-                onUploadImage={(slot, e) => onBlockImage(i, slot, e)}
-              />
-            ))}
-          </div>
+          <SortableList
+            items={blocks}
+            getKey={(b) => b.key}
+            onReorder={(next) => setBlocks(next)}
+            onCommit={(next) => setBlocks(next)}
+            className="space-y-3"
+            renderItem={(b, handle) => {
+              const i = blocks.findIndex((x) => x.key === b.key)
+              return (
+                <BlockCard
+                  block={b}
+                  index={i}
+                  total={blocks.length}
+                  uploading={uploading}
+                  dragHandle={handle}
+                  onMove={(dir) => moveBlock(i, dir)}
+                  onRemove={() => removeBlock(i)}
+                  onChange={(patch) => updateBlock(i, patch)}
+                  onUploadImage={(slot, e) => onBlockImage(i, slot, e)}
+                />
+              )
+            }}
+          />
         )}
 
         <div className="flex items-center gap-2 flex-wrap">
@@ -555,6 +564,7 @@ function BlockCard({
   index,
   total,
   uploading,
+  dragHandle,
   onMove,
   onRemove,
   onChange,
@@ -564,6 +574,7 @@ function BlockCard({
   index: number
   total: number
   uploading: boolean
+  dragHandle: DragHandleProps
   onMove: (dir: -1 | 1) => void
   onRemove: () => void
   onChange: (patch: Partial<FormBlock>) => void
@@ -572,7 +583,15 @@ function BlockCard({
   return (
     <div className="p-4 rounded-lg border border-white/10 bg-white/[0.02] space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] tracking-[0.2em] text-temo-gold/80 uppercase">
+        <span className="flex items-center gap-2 text-[11px] tracking-[0.2em] text-temo-gold/80 uppercase">
+          <button
+            type="button"
+            aria-label="拖拉排序"
+            className="text-temo-warm-gray/40 hover:text-temo-warm-gray active:cursor-grabbing shrink-0"
+            {...dragHandle}
+          >
+            <GripVertical className="w-4 h-4" />
+          </button>
           {index + 1}. {blockTypeLabel(block)}
         </span>
         <div className="flex items-center gap-2 text-xs">

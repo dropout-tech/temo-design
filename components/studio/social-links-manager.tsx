@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Loader2, Plus, Trash2, Check } from "lucide-react"
-import { saveSocialLink, deleteSocialLink } from "@/app/studio/(app)/settings/social-actions"
+import { Loader2, Plus, Trash2, Check, GripVertical } from "lucide-react"
+import { saveSocialLink, deleteSocialLink, reorderSocialLinks } from "@/app/studio/(app)/settings/social-actions"
 import { SOCIAL_PLATFORMS, SocialIcon } from "@/components/social-icons"
+import { SortableList, type DragHandleProps } from "@/components/studio/sortable-list"
 
 const inputCls =
   "w-full px-3 py-2.5 bg-white/[0.03] border border-white/10 text-temo-white text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:outline-none transition-all rounded-sm"
@@ -27,6 +28,7 @@ export function SocialLinksManager({ rows: initialRows }: { rows: SocialLinkRow[
   const [rows, setRows] = useState<ClientRow[]>(
     initialRows.map((r) => ({ ...r, key: r.id ?? randomKey() }))
   )
+  const [orderPending, startOrder] = useTransition()
 
   function addRow() {
     const usedPlatforms = new Set(rows.map((r) => r.platform))
@@ -47,7 +49,13 @@ export function SocialLinksManager({ rows: initialRows }: { rows: SocialLinkRow[
     setRows((p) => p.map((r) => (r.key === key ? { ...r, id } : r)))
   }
 
-  const sortedRows = rows.slice().sort((a, b) => a.sort - b.sort)
+  function reorderCommit(next: ClientRow[]) {
+    setRows(next)
+    const ids = next.filter((r) => r.id).map((r) => r.id!)
+    startOrder(async () => {
+      await reorderSocialLinks(ids)
+    })
+  }
 
   return (
     <div className="px-6 md:px-10 py-10 md:py-14 max-w-4xl">
@@ -64,36 +72,48 @@ export function SocialLinksManager({ rows: initialRows }: { rows: SocialLinkRow[
         </button>
       </div>
       <p className="text-temo-warm-gray/60 text-sm mt-1 mb-6">
-        勾選「在頁尾顯示」且有填連結的才會出現在網站頁尾；可自由新增其他平台。
+        勾選「在頁尾顯示」且有填連結的才會出現在網站頁尾；可自由新增其他平台，用<span className="text-temo-warm-gray/80"> ⠿ 把手拖拉排序</span>。
+        {orderPending && (
+          <span className="inline-flex items-center gap-1.5 ml-2 text-temo-warm-gray/50">
+            <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
+          </span>
+        )}
       </p>
 
-      <div className="space-y-3">
-        {sortedRows.map((row) => (
+      <SortableList
+        items={rows}
+        getKey={(r) => r.key}
+        onReorder={setRows}
+        onCommit={reorderCommit}
+        className="space-y-3"
+        renderItem={(row, handle) => (
           <SocialLinkCard
-            key={row.key}
             row={row}
+            handle={handle}
             onChange={(p) => updateRow(row.key, p)}
             onRemove={() => removeRow(row.key)}
             onSaved={(id) => setId(row.key, id)}
           />
-        ))}
-        {sortedRows.length === 0 && (
-          <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
-            還沒有任何社群連結，點「新增」開始。
-          </p>
         )}
-      </div>
+      />
+      {rows.length === 0 && (
+        <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
+          還沒有任何社群連結，點「新增」開始。
+        </p>
+      )}
     </div>
   )
 }
 
 function SocialLinkCard({
   row,
+  handle,
   onChange,
   onRemove,
   onSaved,
 }: {
   row: ClientRow
+  handle: DragHandleProps
   onChange: (p: Partial<ClientRow>) => void
   onRemove: () => void
   onSaved: (id: string) => void
@@ -146,6 +166,14 @@ function SocialLinkCard({
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
       <div className="flex flex-wrap items-end gap-3">
+        <button
+          type="button"
+          aria-label="拖拉排序"
+          className="text-temo-warm-gray/40 hover:text-temo-warm-gray active:cursor-grabbing shrink-0 pb-2.5"
+          {...handle}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
         <div className="w-11 h-11 shrink-0 rounded-sm bg-white/[0.04] border border-white/10 flex items-center justify-center text-temo-gold">
           <SocialIcon platform={row.platform} className="w-5 h-5" />
         </div>
@@ -170,15 +198,6 @@ function SocialLinkCard({
             value={row.href}
             onChange={(e) => dirty({ href: e.target.value })}
             placeholder="https://..."
-          />
-        </label>
-        <label className="space-y-1 w-24">
-          <span className={labelCls}>排序</span>
-          <input
-            type="number"
-            className={inputCls}
-            value={row.sort}
-            onChange={(e) => dirty({ sort: Number(e.target.value) })}
           />
         </label>
         <label className="flex items-center gap-2 pb-2.5 cursor-pointer select-none">

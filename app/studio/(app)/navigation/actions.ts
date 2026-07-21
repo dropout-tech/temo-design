@@ -52,3 +52,15 @@ export async function deleteNavLink(id: string): Promise<{ error?: string }> {
   revalidate()
   return {}
 }
+
+/** 拖拉排序後把某一組（header/menu/footer）新順序寫回（依陣列索引重寫 sort） */
+export async function reorderNavLinks(ids: string[]): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const results = await Promise.all(
+    ids.map((id, i) => supabase.from("nav_links").update({ sort: i }).eq("id", id))
+  )
+  const failed = results.find((r) => r.error)
+  if (failed?.error) return { error: failed.error.message }
+  revalidate()
+  return {}
+}

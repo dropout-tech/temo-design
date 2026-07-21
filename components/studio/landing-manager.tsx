@@ -190,7 +190,7 @@ function LandingCard({
           </label>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-4 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-end">
           <label className="space-y-1 block">
             <span className={labelCls}>作品預設篩選（執行項目）</span>
             <select
@@ -215,16 +215,6 @@ function LandingCard({
               className="w-4 h-4 accent-temo-gold"
             />
             <span className="text-sm text-temo-warm-gray/70">隱藏作品篩選列</span>
-          </label>
-
-          <label className="space-y-1 block w-24">
-            <span className={labelCls}>排序</span>
-            <input
-              type="number"
-              className={inputCls}
-              value={row.sort}
-              onChange={(e) => dirty({ sort: Number(e.target.value) })}
-            />
           </label>
         </div>
       </div>

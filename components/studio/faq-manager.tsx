@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Loader2, Plus, Trash2, Check } from "lucide-react"
-import { saveFaq, deleteFaq } from "@/app/studio/(app)/faqs/actions"
+import { Loader2, Plus, Trash2, Check, GripVertical } from "lucide-react"
+import { saveFaq, deleteFaq, reorderFaqs } from "@/app/studio/(app)/faqs/actions"
+import { SortableList, type DragHandleProps } from "@/components/studio/sortable-list"
 
 const inputCls =
   "w-full px-3 py-2.5 bg-white/[0.03] border border-white/10 text-temo-white text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:outline-none transition-all rounded-sm"
@@ -20,6 +21,7 @@ const CATEGORIES = ["服務相關", "合作流程", "價格和預算", "設計�
 
 export function FaqManager({ initial }: { initial: Row[] }) {
   const [rows, setRows] = useState<Row[]>(initial)
+  const [orderPending, startOrder] = useTransition()
   let keyCounter = 0
 
   function addRow() {
@@ -38,13 +40,28 @@ export function FaqManager({ initial }: { initial: Row[] }) {
     setRows((p) => p.filter((r) => r.key !== key))
   }
 
+  function reorderCommit(next: Row[]) {
+    setRows(next)
+    const ids = next.filter((r) => r.id).map((r) => r.id!)
+    startOrder(async () => {
+      await reorderFaqs(ids)
+    })
+  }
+
   return (
     <div className="px-6 md:px-10 py-10 md:py-14 max-w-3xl">
       <div className="flex items-end justify-between mb-8 gap-4">
         <div>
           <p className="text-[10px] tracking-[0.5em] text-temo-gold uppercase mb-2">FAQ</p>
           <h1 className="text-3xl md:text-4xl font-bold text-temo-white">常見問答</h1>
-          <p className="text-temo-warm-gray/60 text-sm mt-1">共 {rows.length} 題</p>
+          <p className="text-temo-warm-gray/60 text-sm mt-1">
+            共 {rows.length} 題 · 可用<span className="text-temo-warm-gray/80"> ⠿ 把手拖拉排序</span>
+            {orderPending && (
+              <span className="inline-flex items-center gap-1.5 ml-2 text-temo-warm-gray/50">
+                <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
+              </span>
+            )}
+          </p>
         </div>
         <button
           onClick={addRow}
@@ -54,17 +71,32 @@ export function FaqManager({ initial }: { initial: Row[] }) {
         </button>
       </div>
 
-      <div className="space-y-4">
-        {rows.map((r) => (
-          <FaqCard key={r.key} row={r} onChange={(patch) => update(r.key, patch)} onRemove={() => removeRow(r.key)} />
-        ))}
-        {rows.length === 0 && <p className="text-temo-warm-gray/50 text-sm py-8 text-center">還沒有問答，點右上「新增一題」。</p>}
-      </div>
+      <SortableList
+        items={rows}
+        getKey={(r) => r.key}
+        onReorder={setRows}
+        onCommit={reorderCommit}
+        className="space-y-4"
+        renderItem={(r, handle) => (
+          <FaqCard row={r} handle={handle} onChange={(patch) => update(r.key, patch)} onRemove={() => removeRow(r.key)} />
+        )}
+      />
+      {rows.length === 0 && <p className="text-temo-warm-gray/50 text-sm py-8 text-center">還沒有問答，點右上「新增一題」。</p>}
     </div>
   )
 }
 
-function FaqCard({ row, onChange, onRemove }: { row: Row; onChange: (p: Partial<Row>) => void; onRemove: () => void }) {
+function FaqCard({
+  row,
+  handle,
+  onChange,
+  onRemove,
+}: {
+  row: Row
+  handle: DragHandleProps
+  onChange: (p: Partial<Row>) => void
+  onRemove: () => void
+}) {
   const [pending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState("")
@@ -97,20 +129,21 @@ function FaqCard({ row, onChange, onRemove }: { row: Row; onChange: (p: Partial<
 
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4 space-y-3">
-      <div className="flex gap-3">
+      <div className="flex gap-3 items-center">
+        <button
+          type="button"
+          aria-label="拖拉排序"
+          className="text-temo-warm-gray/40 hover:text-temo-warm-gray active:cursor-grabbing shrink-0"
+          {...handle}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
         <input
           list="faq-cats"
           className={inputCls + " flex-1"}
           value={row.category}
           onChange={(e) => { onChange({ category: e.target.value }); setSaved(false) }}
           placeholder="分類"
-        />
-        <input
-          type="number"
-          className={inputCls + " w-20"}
-          value={row.sort}
-          onChange={(e) => { onChange({ sort: Number(e.target.value) }); setSaved(false) }}
-          title="排序"
         />
       </div>
       <input

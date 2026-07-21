@@ -96,3 +96,27 @@ export async function deleteQuestion(id: string): Promise<{ error?: string }> {
   revalidate()
   return {}
 }
+
+/** 拖拉排序「問卷區塊」後寫回新順序 */
+export async function reorderBriefSections(ids: string[]): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const results = await Promise.all(
+    ids.map((id, i) => supabase.from("brief_sections").update({ sort: i }).eq("id", id))
+  )
+  const failed = results.find((r) => r.error)
+  if (failed?.error) return { error: failed.error.message }
+  revalidate()
+  return {}
+}
+
+/** 拖拉排序「區塊內題目」後寫回新順序（同一區塊內） */
+export async function reorderBriefQuestions(ids: string[]): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const results = await Promise.all(
+    ids.map((id, i) => supabase.from("brief_questions").update({ sort: i }).eq("id", id))
+  )
+  const failed = results.find((r) => r.error)
+  if (failed?.error) return { error: failed.error.message }
+  revalidate()
+  return {}
+}

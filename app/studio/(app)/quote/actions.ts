@@ -51,6 +51,18 @@ export async function deleteCategory(id: string): Promise<{ error?: string }> {
   return {}
 }
 
+/** 拖拉排序「服務類別」後寫回新順序 */
+export async function reorderQuoteCategories(ids: string[]): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const results = await Promise.all(
+    ids.map((id, i) => supabase.from("quote_categories").update({ sort: i }).eq("id", id))
+  )
+  const failed = results.find((r) => r.error)
+  if (failed?.error) return { error: failed.error.message }
+  revalidate()
+  return {}
+}
+
 // ── 方案 ──────────────────────────────────────────────
 export type PackageInput = {
   categoryId: string
@@ -109,6 +121,18 @@ export async function deletePackage(id: string): Promise<{ error?: string }> {
   return {}
 }
 
+/** 拖拉排序「類別內方案」後寫回新順序（同一類別內） */
+export async function reorderQuotePackages(ids: string[]): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const results = await Promise.all(
+    ids.map((id, i) => supabase.from("quote_packages").update({ sort: i }).eq("id", id))
+  )
+  const failed = results.find((r) => r.error)
+  if (failed?.error) return { error: failed.error.message }
+  revalidate()
+  return {}
+}
+
 // ── 加購項 ────────────────────────────────────────────
 export type AddonInput = { label: string; price: number; sort: number }
 
@@ -143,6 +167,18 @@ export async function deleteAddon(id: string): Promise<{ error?: string }> {
   return {}
 }
 
+/** 拖拉排序「共用加購池」後寫回新順序 */
+export async function reorderQuoteAddons(ids: string[]): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const results = await Promise.all(
+    ids.map((id, i) => supabase.from("quote_addons").update({ sort: i }).eq("id", id))
+  )
+  const failed = results.find((r) => r.error)
+  if (failed?.error) return { error: failed.error.message }
+  revalidate()
+  return {}
+}
+
 // ── 內容元件（重疊自動扣抵）─────────────────────────────
 export type ComponentInput = { name: string; deductValue: number; sort: number }
 
@@ -173,6 +209,18 @@ export async function deleteComponent(id: string): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { error } = await supabase.from("quote_components").delete().eq("id", id)
   if (error) return { error: error.message }
+  revalidate()
+  return {}
+}
+
+/** 拖拉排序「內容元件」後寫回新順序 */
+export async function reorderQuoteComponents(ids: string[]): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const results = await Promise.all(
+    ids.map((id, i) => supabase.from("quote_components").update({ sort: i }).eq("id", id))
+  )
+  const failed = results.find((r) => r.error)
+  if (failed?.error) return { error: failed.error.message }
   revalidate()
   return {}
 }

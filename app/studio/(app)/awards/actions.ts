@@ -44,3 +44,15 @@ export async function deleteAwardLogo(id: string): Promise<{ error?: string }> {
   revalidatePath("/about")
   return {}
 }
+
+/** 拖拉排序後把新順序寫回（依陣列索引重寫 sort） */
+export async function reorderAwardLogos(ids: string[]): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const results = await Promise.all(
+    ids.map((id, i) => supabase.from("award_logos").update({ sort: i }).eq("id", id))
+  )
+  const failed = results.find((r) => r.error)
+  if (failed?.error) return { error: failed.error.message }
+  revalidatePath("/about")
+  return {}
+}

@@ -1,17 +1,17 @@
 "use client"
 
-import { useState, useTransition } from "react"
-import { Loader2, Plus, Trash2, Check } from "lucide-react"
+import { useEffect, useRef, useState, useTransition } from "react"
+import { GripVertical, Plus, Trash2, Check, X, Loader2 } from "lucide-react"
 import {
   saveCategoryGroup,
   deleteCategoryGroup,
+  reorderCategoryGroups,
   saveIndustry,
   deleteIndustry,
+  reorderIndustries,
 } from "@/app/studio/(app)/categories/actions"
-
-const inputCls =
-  "w-full px-3 py-2.5 bg-white/[0.03] border border-white/10 text-temo-white text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:outline-none transition-all rounded-sm"
-const labelCls = "text-[11px] tracking-wider text-temo-warm-gray/60 uppercase"
+import { SortableList, type DragHandleProps } from "@/components/studio/sortable-list"
+import { cn } from "@/lib/utils"
 
 type FacetRow = { value: string; label: string; sort: number }
 
@@ -29,107 +29,158 @@ export function CategoryManager({
   const [groups, setGroups] = useState<FacetRow[]>(categoryGroups)
   const [inds, setInds] = useState<FacetRow[]>(industries)
 
-  function addGroup() {
-    const maxSort = groups.reduce((m, g) => Math.max(m, g.sort), -1)
-    setGroups((p) => [...p, { value: randomValue("cat"), label: "", sort: maxSort + 1 }])
-  }
-  function updateGroup(value: string, patch: Partial<FacetRow>) {
-    setGroups((p) => p.map((g) => (g.value === value ? { ...g, ...patch } : g)))
-  }
   function removeGroup(value: string) {
     setGroups((p) => p.filter((g) => g.value !== value))
-  }
-
-  function addIndustry() {
-    const maxSort = inds.reduce((m, i) => Math.max(m, i.sort), -1)
-    setInds((p) => [...p, { value: randomValue("ind"), label: "", sort: maxSort + 1 }])
-  }
-  function updateIndustry(value: string, patch: Partial<FacetRow>) {
-    setInds((p) => p.map((i) => (i.value === value ? { ...i, ...patch } : i)))
   }
   function removeIndustry(value: string) {
     setInds((p) => p.filter((i) => i.value !== value))
   }
 
+  async function addGroup(label: string): Promise<string | undefined> {
+    const maxSort = groups.reduce((m, g) => Math.max(m, g.sort), -1)
+    const value = randomValue("cat")
+    const res = await saveCategoryGroup({ value, label, sort: maxSort + 1 })
+    if (res.error) return res.error
+    setGroups((p) => [...p, { value, label, sort: maxSort + 1 }])
+  }
+
+  async function addIndustry(label: string): Promise<string | undefined> {
+    const maxSort = inds.reduce((m, i) => Math.max(m, i.sort), -1)
+    const value = randomValue("ind")
+    const res = await saveIndustry({ value, label, sort: maxSort + 1 })
+    if (res.error) return res.error
+    setInds((p) => [...p, { value, label, sort: maxSort + 1 }])
+  }
+
   return (
-    <div className="px-6 md:px-10 py-10 md:py-14 max-w-4xl">
+    <div className="px-6 md:px-10 py-10 md:py-14 max-w-2xl">
       <div className="mb-8">
         <p className="text-[10px] tracking-[0.5em] text-temo-gold uppercase mb-2">Taxonomy</p>
         <h1 className="text-3xl md:text-4xl font-bold text-temo-white">作品分類</h1>
         <p className="text-temo-warm-gray/60 text-sm mt-1">
-          這裡改的分類會同步到前台作品篩選與作品後台的下拉選單。
+          這裡改的分類會同步到前台作品篩選與作品後台的下拉選單。拖曳
+          <span className="text-temo-warm-gray/80"> ⠿ 把手 </span>
+          可調整順序，點名稱可直接改名。
         </p>
       </div>
 
-      {/* 執行項目 */}
-      <div className="flex items-center justify-between mt-2 mb-3">
-        <h2 className="text-sm font-bold text-temo-white tracking-wide">
-          執行項目（單選）
-          <span className="text-temo-warm-gray/50 font-normal ml-2">共 {groups.length} 項</span>
-        </h2>
-        <button
-          onClick={addGroup}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:brightness-110 transition-all"
-        >
-          <Plus className="w-4 h-4" /> 新增
-        </button>
+      <FacetSection
+        title="執行項目"
+        description="作品的單選主分類，每件作品只能選一個。"
+        addButtonLabel="新增執行項目"
+        addPlaceholder="例：品牌企劃"
+        accent
+        rows={groups}
+        setRows={setGroups}
+        persistOrder={(values) => reorderCategoryGroups(values)}
+        onAdd={addGroup}
+        onRemove={removeGroup}
+        save={saveCategoryGroup}
+        del={deleteCategoryGroup}
+        deleteConfirmMessage="確定刪除這個執行項目分類？刪除後，使用此分類的作品會失去這個分類標籤。"
+      />
+
+      <div className="mt-10 pt-8 border-t border-white/10">
+        <FacetSection
+          title="行業分類"
+          description="作品可複選的行業標籤，用來做多維度篩選。"
+          addButtonLabel="新增行業分類"
+          addPlaceholder="例：餐飲業"
+          rows={inds}
+          setRows={setInds}
+          persistOrder={(values) => reorderIndustries(values)}
+          onAdd={addIndustry}
+          onRemove={removeIndustry}
+          save={saveIndustry}
+          del={deleteIndustry}
+          deleteConfirmMessage="確定刪除這個行業分類？刪除後，使用此分類的作品會失去這個分類標籤。"
+        />
       </div>
-      <div className="space-y-3">
-        {groups
-          .slice()
-          .sort((a, b) => a.sort - b.sort)
-          .map((g) => (
-            <FacetCard
-              key={g.value}
-              row={g}
-              onChange={(p) => updateGroup(g.value, p)}
-              onRemove={() => removeGroup(g.value)}
-              save={saveCategoryGroup}
-              del={deleteCategoryGroup}
-              deleteConfirmMessage="確定刪除這個執行項目分類？刪除後，使用此分類的作品會失去這個分類標籤。"
-            />
-          ))}
-        {groups.length === 0 && (
-          <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
-            還沒有任何執行項目，點「新增」開始。
-          </p>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// 單一分類清單區塊（執行項目 / 行業分類共用）
+// ─────────────────────────────────────────────
+function FacetSection({
+  title,
+  description,
+  addButtonLabel,
+  addPlaceholder,
+  accent,
+  rows,
+  setRows,
+  persistOrder,
+  onAdd,
+  onRemove,
+  save,
+  del,
+  deleteConfirmMessage,
+}: {
+  title: string
+  description: string
+  addButtonLabel: string
+  addPlaceholder: string
+  accent?: boolean
+  rows: FacetRow[]
+  setRows: React.Dispatch<React.SetStateAction<FacetRow[]>>
+  persistOrder: (values: string[]) => Promise<{ error?: string } | void>
+  onAdd: (label: string) => Promise<string | undefined>
+  onRemove: (value: string) => void
+  save: (input: FacetRow) => Promise<{ ok?: true; error?: string }>
+  del: (value: string) => Promise<{ error?: string }>
+  deleteConfirmMessage: string
+}) {
+  const [orderPending, startOrder] = useTransition()
+
+  return (
+    <div>
+      <div className="flex items-baseline gap-3 mb-1">
+        <h2 className="text-sm font-bold text-temo-white tracking-wide">{title}</h2>
+        <span className="text-[11px] text-temo-warm-gray/50">共 {rows.length} 項</span>
+        {orderPending && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-temo-warm-gray/40">
+            <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
+          </span>
         )}
       </div>
+      <p className="text-xs text-temo-warm-gray/50 mb-3">{description}</p>
 
-      {/* 行業分類 */}
-      <div className="mt-14 pt-8 border-t border-white/10">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-temo-white tracking-wide">
-            行業分類（複選）
-            <span className="text-temo-warm-gray/50 font-normal ml-2">共 {inds.length} 項</span>
-          </h2>
-          <button
-            onClick={addIndustry}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/[0.06] text-temo-white text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:bg-white/[0.1] transition-all"
-          >
-            <Plus className="w-4 h-4" /> 新增
-          </button>
-        </div>
-        <div className="space-y-3">
-          {inds
-            .slice()
-            .sort((a, b) => a.sort - b.sort)
-            .map((i) => (
-              <FacetCard
-                key={i.value}
-                row={i}
-                onChange={(p) => updateIndustry(i.value, p)}
-                onRemove={() => removeIndustry(i.value)}
-                save={saveIndustry}
-                del={deleteIndustry}
-                deleteConfirmMessage="確定刪除這個行業分類？刪除後，使用此分類的作品會失去這個分類標籤。"
+      <div className="rounded-lg border border-white/10 bg-white/[0.02] overflow-hidden">
+        {rows.length > 0 ? (
+          <SortableList
+            items={rows}
+            getKey={(r) => r.value}
+            className="divide-y divide-white/[0.06]"
+            onReorder={(next) => setRows(next)}
+            onCommit={(next) => {
+              setRows(next)
+              startOrder(async () => {
+                await persistOrder(next.map((r) => r.value))
+              })
+            }}
+            renderItem={(row, handle) => (
+              <FacetItem
+                row={row}
+                handle={handle}
+                onLabelChange={(label) =>
+                  setRows((p) => p.map((r) => (r.value === row.value ? { ...r, label } : r)))
+                }
+                onRemove={() => onRemove(row.value)}
+                save={save}
+                del={del}
+                deleteConfirmMessage={deleteConfirmMessage}
               />
-            ))}
-          {inds.length === 0 && (
-            <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
-              還沒有任何行業分類，點「新增」開始。
-            </p>
-          )}
+            )}
+          />
+        ) : (
+          <p className="text-temo-warm-gray/50 text-sm py-6 text-center">
+            還沒有任何{title}，在下方新增。
+          </p>
+        )}
+        <div className={rows.length > 0 ? "border-t border-white/[0.06]" : undefined}>
+          <AddRow onAdd={onAdd} placeholder={addPlaceholder} label={addButtonLabel} accent={accent} />
         </div>
       </div>
     </div>
@@ -137,37 +188,60 @@ export function CategoryManager({
 }
 
 // ─────────────────────────────────────────────
-// 單列分類卡（執行項目 / 行業分類共用）
+// 單列分類（拖曳把手 + inline 改名 + 代碼 badge + 刪除）
 // ─────────────────────────────────────────────
-function FacetCard({
+function FacetItem({
   row,
-  onChange,
+  handle,
+  onLabelChange,
   onRemove,
   save,
   del,
   deleteConfirmMessage,
 }: {
   row: FacetRow
-  onChange: (p: Partial<FacetRow>) => void
+  handle: DragHandleProps
+  onLabelChange: (label: string) => void
   onRemove: () => void
   save: (input: FacetRow) => Promise<{ ok?: true; error?: string }>
   del: (value: string) => Promise<{ error?: string }>
   deleteConfirmMessage: string
 }) {
   const [pending, startTransition] = useTransition()
-  const [saved, setSaved] = useState(false)
+  const [savedState, setSavedState] = useState<"idle" | "visible" | "fading">("idle")
   const [error, setError] = useState("")
-  const dirty = (p: Partial<FacetRow>) => {
-    onChange(p)
-    setSaved(false)
+  const committed = useRef(row.label)
+  const timeouts = useRef<ReturnType<typeof setTimeout>[]>([])
+
+  useEffect(() => {
+    return () => timeouts.current.forEach(clearTimeout)
+  }, [])
+
+  function flashSaved() {
+    setSavedState("visible")
+    timeouts.current.push(
+      setTimeout(() => setSavedState("fading"), 1200),
+      setTimeout(() => setSavedState("idle"), 1700)
+    )
   }
 
-  function handleSave() {
+  function handleBlur() {
+    const label = row.label.trim()
+    if (!label) {
+      onLabelChange(committed.current)
+      return
+    }
+    if (label === committed.current) return
     setError("")
     startTransition(async () => {
-      const res = await save({ value: row.value, label: row.label, sort: row.sort })
-      if (res.error) setError(res.error)
-      else setSaved(true)
+      const res = await save({ value: row.value, label, sort: row.sort })
+      if (res.error) {
+        setError(res.error)
+        onLabelChange(committed.current)
+      } else {
+        committed.current = label
+        flashSaved()
+      }
     })
   }
 
@@ -184,66 +258,150 @@ function FacetCard({
   }
 
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="space-y-1 flex-1 min-w-[180px]">
-          <span className={labelCls}>顯示名稱</span>
-          <input
-            className={inputCls}
-            value={row.label}
-            onChange={(e) => dirty({ label: e.target.value })}
-            placeholder="例：品牌企劃"
-          />
-        </label>
-        <label className="space-y-1 w-24">
-          <span className={labelCls}>排序</span>
-          <input
-            type="number"
-            className={inputCls}
-            value={row.sort}
-            onChange={(e) => dirty({ sort: Number(e.target.value) })}
-          />
-        </label>
-      </div>
-      <p className="text-[11px] text-temo-warm-gray/40 mt-2">代碼：{row.value}</p>
-      {error && <p className="text-xs text-red-400/90 mt-2">{error}</p>}
-      <div className="flex items-center gap-3 mt-3">
-        <SaveButton pending={pending} saved={saved} onClick={handleSave} label="儲存" />
-        <button
-          onClick={handleDelete}
-          disabled={pending}
-          className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60"
+    <div className="flex items-center gap-2 px-3 py-2.5 bg-transparent">
+      <button
+        type="button"
+        aria-label="拖拉排序"
+        className="text-temo-warm-gray/30 hover:text-temo-warm-gray/70 active:cursor-grabbing shrink-0"
+        {...handle}
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+      <input
+        className="flex-1 min-w-0 bg-transparent border border-transparent px-2 py-1.5 rounded-sm text-sm text-temo-white hover:bg-white/[0.03] focus:bg-white/[0.03] focus:border-temo-gold/50 focus:outline-none transition-colors"
+        value={row.label}
+        onChange={(e) => onLabelChange(e.target.value)}
+        onBlur={handleBlur}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur()
+        }}
+        disabled={pending}
+      />
+      <span className="text-[10px] text-white/25 font-mono px-1.5 py-0.5 rounded bg-white/[0.03] shrink-0">
+        {row.value}
+      </span>
+      {pending && <Loader2 className="w-3.5 h-3.5 text-temo-warm-gray/40 animate-spin shrink-0" />}
+      {savedState !== "idle" && !pending && (
+        <span
+          className={cn(
+            "text-[11px] text-temo-gold/80 shrink-0 transition-opacity duration-500",
+            savedState === "fading" ? "opacity-0" : "opacity-100"
+          )}
         >
-          <Trash2 className="w-3.5 h-3.5" /> 刪除
-        </button>
-      </div>
+          已儲存
+        </span>
+      )}
+      {error && <span className="text-[11px] text-red-400/90 shrink-0">{error}</span>}
+      <button
+        type="button"
+        onClick={handleDelete}
+        disabled={pending}
+        aria-label="刪除"
+        className="text-red-400/50 hover:text-red-400 shrink-0 p-1 disabled:opacity-50 transition-colors"
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
     </div>
   )
 }
 
-function SaveButton({
-  pending,
-  saved,
-  onClick,
+// ─────────────────────────────────────────────
+// 清單底部「＋新增」列：點了變 inline input，Enter 或按確認新增
+// ─────────────────────────────────────────────
+function AddRow({
+  onAdd,
+  placeholder,
   label,
+  accent,
 }: {
-  pending: boolean
-  saved: boolean
-  onClick: () => void
+  onAdd: (label: string) => Promise<string | undefined>
+  placeholder: string
   label: string
+  accent?: boolean
 }) {
+  const [active, setActive] = useState(false)
+  const [value, setValue] = useState("")
+  const [error, setError] = useState("")
+  const [pending, startTransition] = useTransition()
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (active) inputRef.current?.focus()
+  }, [active])
+
+  function cancel() {
+    setActive(false)
+    setValue("")
+    setError("")
+  }
+
+  function commit() {
+    const trimmed = value.trim()
+    if (!trimmed) return
+    setError("")
+    startTransition(async () => {
+      const err = await onAdd(trimmed)
+      if (err) {
+        setError(err)
+        return
+      }
+      setValue("")
+      setActive(false)
+    })
+  }
+
+  if (!active) {
+    return (
+      <button
+        type="button"
+        onClick={() => setActive(true)}
+        className={cn(
+          "w-full flex items-center gap-2 px-3 py-2.5 text-xs tracking-wider transition-colors",
+          accent
+            ? "text-temo-gold hover:bg-temo-gold/[0.06]"
+            : "text-temo-warm-gray/60 hover:bg-white/[0.03] hover:text-temo-white"
+        )}
+      >
+        <Plus className="w-3.5 h-3.5" /> {label}
+      </button>
+    )
+  }
+
   return (
-    <button
-      onClick={onClick}
-      disabled={pending}
-      className="inline-flex items-center gap-1.5 px-4 py-2 bg-temo-gold/90 text-temo-black text-xs font-bold tracking-wider rounded-sm hover:brightness-110 disabled:opacity-60 transition-all"
-    >
-      {pending ? (
-        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-      ) : saved ? (
-        <Check className="w-3.5 h-3.5" />
-      ) : null}
-      {saved ? "已儲存" : label}
-    </button>
+    <div className="px-3 py-2.5">
+      <div className="flex items-center gap-2">
+        <input
+          ref={inputRef}
+          className="flex-1 min-w-0 px-2 py-1.5 bg-white/[0.03] border border-temo-gold/40 text-temo-white text-sm rounded-sm focus:outline-none focus:border-temo-gold/70"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={placeholder}
+          disabled={pending}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit()
+            if (e.key === "Escape") cancel()
+          }}
+        />
+        <button
+          type="button"
+          onClick={commit}
+          disabled={pending || !value.trim()}
+          aria-label="確定新增"
+          className="text-temo-gold hover:brightness-125 disabled:opacity-40 shrink-0 p-1.5 transition-opacity"
+        >
+          {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+        </button>
+        <button
+          type="button"
+          onClick={cancel}
+          disabled={pending}
+          aria-label="取消"
+          className="text-temo-warm-gray/50 hover:text-temo-white shrink-0 p-1.5 disabled:opacity-40 transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      {error && <p className="text-[11px] text-red-400/90 mt-1.5">{error}</p>}
+    </div>
   )
 }
