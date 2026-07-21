@@ -12,6 +12,8 @@ export type WorkInput = {
   year: string
   client_id: string
   cover_url: string
+  /** 內頁首圖，選填，留空＝沿用封面圖 */
+  hero_url: string
   video_url: string
   size: "large" | "medium" | "small"
   description: string
@@ -26,7 +28,20 @@ export type WorkInput = {
   published: boolean
   industryValues: string[]
   designerIds: string[]
-  gallery: { src: string; alt: string; caption: string }[]
+  blocks: {
+    type: "image" | "video" | "text"
+    src: string
+    alt: string
+    width: number | null
+    height: number | null
+    src2: string
+    alt2: string
+    width2: number | null
+    height2: number | null
+    text_content: string
+    video_url: string
+    caption: string
+  }[]
 }
 
 function toRow(input: WorkInput) {
@@ -38,6 +53,7 @@ function toRow(input: WorkInput) {
     year: input.year.trim() || null,
     client_id: input.client_id || null,
     cover_url: input.cover_url.trim() || null,
+    hero_url: input.hero_url.trim() || null,
     video_url: input.video_url.trim() || null,
     size: input.size,
     description: input.description.trim() || null,
@@ -98,15 +114,26 @@ export async function saveWork(
     if (error) return { error: error.message }
   }
 
-  // 重建 作品圖片（gallery，多張）
-  await supabase.from("work_gallery").delete().eq("work_id", workId!)
-  if (input.gallery.length > 0) {
-    const { error } = await supabase.from("work_gallery").insert(
-      input.gallery.map((g, i) => ({
+  // 重建 內容區塊（work_blocks，取代 work_gallery 成為作品內容的唯一來源）
+  // 注意：migration 0015 尚未套用到 DB 時，work_blocks 表不存在，這裡會回傳錯誤並讓 saveWork 失敗——
+  // 這是預期行為（資料層就緒前不假裝存檔成功），不吞掉錯誤。
+  await supabase.from("work_blocks").delete().eq("work_id", workId!)
+  if (input.blocks.length > 0) {
+    const { error } = await supabase.from("work_blocks").insert(
+      input.blocks.map((b, i) => ({
         work_id: workId!,
-        src: g.src,
-        alt: g.alt.trim() || null,
-        caption: g.caption.trim() || null,
+        type: b.type,
+        src: b.src.trim() || null,
+        alt: b.alt.trim() || null,
+        width: b.width,
+        height: b.height,
+        src2: b.src2.trim() || null,
+        alt2: b.alt2.trim() || null,
+        width2: b.width2,
+        height2: b.height2,
+        text_content: b.text_content.trim() || null,
+        video_url: b.video_url.trim() || null,
+        caption: b.caption.trim() || null,
         sort: i,
       }))
     )

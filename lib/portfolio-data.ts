@@ -153,7 +153,11 @@ export type Work = {
   industries: IndustryValue[]            // 行業分類（複選）
   year: string
   clientSlug: string
+  /** 客戶顯示名稱（DB 來源才有；本地 demo 資料走 CLIENT_MAP 對照） */
+  clientName?: string
   designerSlugs: string[]
+  /** 設計師顯示名稱，與 designerSlugs 同序（DB 來源才有） */
+  designerNames?: string[]
   cover: string
   /** 作品影片連結（YouTube / Vimeo，選填）。有值時：列表卡片顯示 ▶ 標記、詳情頁嵌入播放器。 */
   videoUrl?: string

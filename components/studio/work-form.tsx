@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, Upload, Trash2, ArrowLeft } from "lucide-react"
+import { Loader2, Upload, Trash2, ArrowLeft, X } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { downscaleImage } from "@/lib/downscale-image"
+import { isVideoUrl } from "@/lib/video"
 import { cn } from "@/lib/utils"
 import { saveWork, deleteWork, type WorkInput } from "@/app/studio/(app)/works/actions"
+import type { WorkBlockRow } from "@/lib/studio/works"
 
 type Options = {
   categories: { value: string; label: string }[]
@@ -23,6 +25,8 @@ export type WorkFormInitial = {
   year: string
   client_id: string
   cover_url: string
+  /** 內頁首圖，選填，留空＝沿用封面圖 */
+  hero_url?: string
   video_url: string
   size: "large" | "medium" | "small"
   description: string
@@ -37,15 +41,105 @@ export type WorkFormInitial = {
   published: boolean
   industryValues: string[]
   designerIds: string[]
+  /** 舊資料：僅用於表單初始化時的一次性 fallback，不再被編輯或送出 */
   gallery: { src: string; alt?: string; caption?: string }[]
+  /** 內容區塊（新系統），有值時以此為準 */
+  blocks?: WorkBlockRow[]
 }
 
 const EMPTY: WorkFormInitial = {
   slug: "", title: "", subtitle: "", category_group: "", year: "", client_id: "",
-  cover_url: "", video_url: "", size: "medium", description: "", services: "",
+  cover_url: "", hero_url: "", video_url: "", size: "medium", description: "", services: "",
   deliverables: "", challenge: "", approach: "", result: "", quote_text: "",
   quote_author: "", awards: "", published: true, industryValues: [], designerIds: [],
-  gallery: [],
+  gallery: [], blocks: [],
+}
+
+// ── 內容區塊：表單內部工作形狀。用本地 key 給 React list，送出時才轉成 WorkInput 的 blocks。──
+type BlockType = "image" | "video" | "text"
+
+type FormBlock = {
+  key: string
+  type: BlockType
+  /** UI 專用旗標：image 類型是否顯示第二張上傳格（DB 沒有這欄，由 src2 是否有值反推形狀） */
+  dual: boolean
+  src: string
+  alt: string
+  width?: number
+  height?: number
+  src2: string
+  alt2: string
+  width2?: number
+  height2?: number
+  text_content: string
+  video_url: string
+  caption: string
+}
+
+function newKey() {
+  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
+}
+
+function emptyBlock(type: BlockType, dual = false): FormBlock {
+  return {
+    key: newKey(), type, dual, src: "", alt: "", width: undefined, height: undefined,
+    src2: "", alt2: "", width2: undefined, height2: undefined,
+    text_content: "", video_url: "", caption: "",
+  }
+}
+
+function blockRowToForm(b: WorkBlockRow): FormBlock {
+  return {
+    key: b.id || newKey(),
+    type: b.type,
+    dual: b.type === "image" && !!b.src2,
+    src: b.src ?? "",
+    alt: b.alt ?? "",
+    width: b.width ?? undefined,
+    height: b.height ?? undefined,
+    src2: b.src2 ?? "",
+    alt2: b.alt2 ?? "",
+    width2: b.width2 ?? undefined,
+    height2: b.height2 ?? undefined,
+    text_content: b.text_content ?? "",
+    video_url: b.video_url ?? "",
+    caption: b.caption ?? "",
+  }
+}
+
+/** 表單初始內容區塊：有 blocks 就用 blocks；沒有但舊 gallery 有圖，轉成單圖區塊無痛接軌。 */
+function initialBlocksFrom(initial?: WorkFormInitial): FormBlock[] {
+  if (initial?.blocks && initial.blocks.length > 0) {
+    return initial.blocks.map(blockRowToForm)
+  }
+  if (initial?.gallery && initial.gallery.length > 0) {
+    return initial.gallery.map((g) => ({
+      key: newKey(),
+      type: "image" as const,
+      dual: false,
+      src: g.src,
+      alt: g.alt ?? "",
+      width: undefined,
+      height: undefined,
+      src2: "",
+      alt2: "",
+      width2: undefined,
+      height2: undefined,
+      text_content: "",
+      video_url: "",
+      caption: g.caption ?? "",
+    }))
+  }
+  return []
+}
+
+function measureImage(url: string): Promise<{ width: number; height: number } | null> {
+  return new Promise((resolve) => {
+    const img = new window.Image()
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight })
+    img.onerror = () => resolve(null)
+    img.src = url
+  })
 }
 
 const inputCls =
@@ -76,6 +170,8 @@ export function WorkForm({
 }) {
   const router = useRouter()
   const [f, setF] = useState<WorkFormInitial>(initial ?? EMPTY)
+  const [heroUrl, setHeroUrl] = useState(initial?.hero_url ?? "")
+  const [blocks, setBlocks] = useState<FormBlock[]>(() => initialBlocksFrom(initial))
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
   const [pending, startTransition] = useTransition()
@@ -114,42 +210,61 @@ export function WorkForm({
     e.target.value = ""
   }
 
-  async function onAddGalleryImages(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? [])
-    if (files.length === 0) return
+  async function onHeroFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
     setUploading(true)
     setError("")
-    const uploaded: { src: string; caption?: string }[] = []
-    for (const file of files) {
-      const url = await uploadToStorage(file)
-      if (url) uploaded.push({ src: url })
-    }
-    if (uploaded.length > 0) {
-      setF((prev) => ({ ...prev, gallery: [...prev.gallery, ...uploaded] }))
-    }
+    const url = await uploadToStorage(file)
+    if (url) setHeroUrl(url)
     setUploading(false)
     e.target.value = ""
   }
 
-  function removeGalleryImage(idx: number) {
-    setF((prev) => ({ ...prev, gallery: prev.gallery.filter((_, i) => i !== idx) }))
+  function clearHero() {
+    setHeroUrl("")
   }
 
-  function moveGalleryImage(idx: number, dir: -1 | 1) {
-    setF((prev) => {
-      const next = [...prev.gallery]
+  function addBlock(type: BlockType) {
+    setBlocks((prev) => [...prev, emptyBlock(type)])
+  }
+
+  function removeBlock(idx: number) {
+    setBlocks((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  function moveBlock(idx: number, dir: -1 | 1) {
+    setBlocks((prev) => {
+      const next = [...prev]
       const j = idx + dir
       if (j < 0 || j >= next.length) return prev
       ;[next[idx], next[j]] = [next[j], next[idx]]
-      return { ...prev, gallery: next }
+      return next
     })
   }
 
-  function setGalleryCaption(idx: number, caption: string) {
-    setF((prev) => ({
-      ...prev,
-      gallery: prev.gallery.map((g, i) => (i === idx ? { ...g, caption } : g)),
-    }))
+  function updateBlock(idx: number, patch: Partial<FormBlock>) {
+    setBlocks((prev) => prev.map((b, i) => (i === idx ? { ...b, ...patch } : b)))
+  }
+
+  /** 區塊圖片上傳：slot 1＝主圖（單圖／雙圖第一張），slot 2＝雙圖第二張；上傳完量出實際像素尺寸存起來，前台靠它做形狀自適應。 */
+  async function onBlockImage(idx: number, slot: 1 | 2, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setError("")
+    const url = await uploadToStorage(file)
+    if (url) {
+      const dim = await measureImage(url)
+      updateBlock(
+        idx,
+        slot === 1
+          ? { src: url, width: dim?.width, height: dim?.height }
+          : { src2: url, width2: dim?.width, height2: dim?.height }
+      )
+    }
+    setUploading(false)
+    e.target.value = ""
   }
 
   function submit(e: React.FormEvent) {
@@ -158,13 +273,26 @@ export function WorkForm({
     const input: WorkInput = {
       slug: f.slug, title: f.title, subtitle: f.subtitle,
       category_group: f.category_group, year: f.year, client_id: f.client_id,
-      cover_url: f.cover_url, video_url: f.video_url, size: f.size,
+      cover_url: f.cover_url, hero_url: heroUrl, video_url: f.video_url, size: f.size,
       description: f.description, services: toLines(f.services),
       deliverables: toLines(f.deliverables), challenge: f.challenge,
       approach: f.approach, result: f.result, quote_text: f.quote_text,
       quote_author: f.quote_author, awards: toLines(f.awards),
       published: f.published, industryValues: f.industryValues, designerIds: f.designerIds,
-      gallery: f.gallery.map((g) => ({ src: g.src, alt: g.alt ?? "", caption: g.caption ?? "" })),
+      blocks: blocks.map((b) => ({
+        type: b.type,
+        src: b.src,
+        alt: b.alt,
+        width: b.width ?? null,
+        height: b.height ?? null,
+        src2: b.src2,
+        alt2: b.alt2,
+        width2: b.width2 ?? null,
+        height2: b.height2 ?? null,
+        text_content: b.text_content,
+        video_url: b.video_url,
+        caption: b.caption,
+      })),
     }
     startTransition(async () => {
       const res = await saveWork(input, workId)
@@ -282,49 +410,71 @@ export function WorkForm({
             </div>
           </div>
         </Field>
-        <Field label="影片連結（YouTube / Vimeo，選填）" hint="貼上後詳情頁會自動嵌入播放器">
+        <Field label="內頁首圖（選填）" hint="留空＝沿用封面圖；作品內頁最上方顯示的大圖">
+          <div className="flex items-start gap-4">
+            <div className="w-32 h-32 rounded-lg overflow-hidden bg-white/[0.04] border border-white/10 shrink-0">
+              {heroUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={heroUrl} alt="內頁首圖預覽" className="w-full h-full object-cover" />
+              )}
+            </div>
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <label className={cn("inline-flex items-center gap-2 px-4 py-2.5 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
+                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  {uploading ? "上傳中…" : "上傳圖片"}
+                  <input type="file" accept="image/*" className="hidden" onChange={onHeroFile} disabled={uploading} />
+                </label>
+                {heroUrl && (
+                  <button type="button" onClick={clearHero} className="inline-flex items-center gap-1 px-3 py-2.5 text-red-400/70 hover:text-red-400 text-xs tracking-wider transition-colors">
+                    <X className="w-3.5 h-3.5" /> 清除，改用封面圖
+                  </button>
+                )}
+              </div>
+              <input className={inputCls} value={heroUrl} onChange={(e) => setHeroUrl(e.target.value)} placeholder="或直接貼圖片網址（留空則沿用封面圖）" />
+            </div>
+          </div>
+        </Field>
+        <Field label="首圖影片（YouTube / Vimeo 連結，選填）" hint="有值時內頁最上方以影片呈現，取代首圖">
           <input className={inputCls} value={f.video_url} onChange={(e) => set("video_url", e.target.value)} placeholder="https://youtu.be/..." />
+          {f.video_url.trim() && !isVideoUrl(f.video_url) && (
+            <p className="text-[11px] text-red-400/80 mt-1.5">看起來不是支援的 YouTube / Vimeo 連結</p>
+          )}
         </Field>
       </section>
 
-      {/* 作品圖片（多張 gallery） */}
+      {/* 內容區塊：Adobe Portfolio 式彈性內頁編排 */}
       <section className="space-y-5">
-        <SectionTitle>作品圖片（多張）</SectionTitle>
+        <SectionTitle>內容區塊</SectionTitle>
         <p className="text-xs text-temo-warm-gray/50 -mt-2">
-          除了封面之外，可再上傳多張圖片，會顯示在作品詳情頁下方的圖庫。可一次選多張。
+          自由編排作品內頁的內容，由上而下依序呈現。可新增單圖、雙圖並排、文字段落、影片區塊，並用上移／下移調整順序。
         </p>
 
-        {f.gallery.length > 0 && (
+        {blocks.length > 0 && (
           <div className="space-y-3">
-            {f.gallery.map((g, i) => (
-              <div key={i} className="flex items-start gap-3 p-3 rounded-lg border border-white/10 bg-white/[0.02]">
-                <div className="w-20 h-20 rounded-md overflow-hidden bg-white/[0.04] shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={g.src} alt="" className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1 min-w-0 space-y-2">
-                  <input
-                    className={inputCls}
-                    value={g.caption ?? ""}
-                    onChange={(e) => setGalleryCaption(i, e.target.value)}
-                    placeholder="圖片說明（選填）"
-                  />
-                  <div className="flex items-center gap-2 text-xs">
-                    <button type="button" onClick={() => moveGalleryImage(i, -1)} disabled={i === 0} className="px-2 py-1 text-temo-warm-gray/60 hover:text-temo-white disabled:opacity-30 transition-colors">↑ 上移</button>
-                    <button type="button" onClick={() => moveGalleryImage(i, 1)} disabled={i === f.gallery.length - 1} className="px-2 py-1 text-temo-warm-gray/60 hover:text-temo-white disabled:opacity-30 transition-colors">↓ 下移</button>
-                    <button type="button" onClick={() => removeGalleryImage(i)} className="ml-auto px-2 py-1 text-red-400/70 hover:text-red-400 transition-colors">移除</button>
-                  </div>
-                </div>
-              </div>
+            {blocks.map((b, i) => (
+              <BlockCard
+                key={b.key}
+                block={b}
+                index={i}
+                total={blocks.length}
+                uploading={uploading}
+                onMove={(dir) => moveBlock(i, dir)}
+                onRemove={() => removeBlock(i)}
+                onChange={(patch) => updateBlock(i, patch)}
+                onUploadImage={(slot, e) => onBlockImage(i, slot, e)}
+              />
             ))}
           </div>
         )}
 
-        <label className={cn("inline-flex items-center gap-2 px-4 py-2.5 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
-          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-          {uploading ? "上傳中…" : "新增圖片（可多選）"}
-          <input type="file" accept="image/*" multiple className="hidden" onChange={onAddGalleryImages} disabled={uploading} />
-        </label>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] tracking-[0.2em] text-temo-warm-gray/60 uppercase mr-1">新增區塊</span>
+          <button type="button" onClick={() => setBlocks((prev) => [...prev, emptyBlock("image", false)])} className="px-3 py-2 text-xs border border-white/15 text-temo-white rounded-sm hover:border-temo-gold/50 transition-colors">+ 單圖</button>
+          <button type="button" onClick={() => setBlocks((prev) => [...prev, emptyBlock("image", true)])} className="px-3 py-2 text-xs border border-white/15 text-temo-white rounded-sm hover:border-temo-gold/50 transition-colors">+ 雙圖</button>
+          <button type="button" onClick={() => addBlock("text")} className="px-3 py-2 text-xs border border-white/15 text-temo-white rounded-sm hover:border-temo-gold/50 transition-colors">+ 文字</button>
+          <button type="button" onClick={() => addBlock("video")} className="px-3 py-2 text-xs border border-white/15 text-temo-white rounded-sm hover:border-temo-gold/50 transition-colors">+ 影片</button>
+        </div>
       </section>
 
       {/* 案例內容 */}
@@ -395,6 +545,123 @@ export function WorkForm({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <p className="text-[10px] tracking-[0.4em] text-temo-gold uppercase pb-2 border-b border-white/[0.06]">{children}</p>
+}
+
+const blockTypeLabel = (b: { type: "image" | "video" | "text"; dual: boolean }) =>
+  b.type === "image" ? (b.dual ? "雙圖" : "單圖") : b.type === "video" ? "影片" : "文字"
+
+function BlockCard({
+  block,
+  index,
+  total,
+  uploading,
+  onMove,
+  onRemove,
+  onChange,
+  onUploadImage,
+}: {
+  block: FormBlock
+  index: number
+  total: number
+  uploading: boolean
+  onMove: (dir: -1 | 1) => void
+  onRemove: () => void
+  onChange: (patch: Partial<FormBlock>) => void
+  onUploadImage: (slot: 1 | 2, e: React.ChangeEvent<HTMLInputElement>) => void
+}) {
+  return (
+    <div className="p-4 rounded-lg border border-white/10 bg-white/[0.02] space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] tracking-[0.2em] text-temo-gold/80 uppercase">
+          {index + 1}. {blockTypeLabel(block)}
+        </span>
+        <div className="flex items-center gap-2 text-xs">
+          <button type="button" onClick={() => onMove(-1)} disabled={index === 0} className="px-2 py-1 text-temo-warm-gray/60 hover:text-temo-white disabled:opacity-30 transition-colors">↑ 上移</button>
+          <button type="button" onClick={() => onMove(1)} disabled={index === total - 1} className="px-2 py-1 text-temo-warm-gray/60 hover:text-temo-white disabled:opacity-30 transition-colors">↓ 下移</button>
+          <button type="button" onClick={onRemove} className="px-2 py-1 text-red-400/70 hover:text-red-400 transition-colors">✕ 刪除</button>
+        </div>
+      </div>
+
+      {block.type === "image" && !block.dual && (
+        <div className="flex items-start gap-3">
+          <div className="w-24 h-24 rounded-md overflow-hidden bg-white/[0.04] shrink-0 border border-white/10">
+            {block.src && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={block.src} alt="" className="w-full h-full object-cover" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0 space-y-2">
+            <label className={cn("inline-flex items-center gap-2 px-3 py-2 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              {block.src ? "更換圖片" : "上傳圖片"}
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => onUploadImage(1, e)} disabled={uploading} />
+            </label>
+            <input className={inputCls} value={block.alt} onChange={(e) => onChange({ alt: e.target.value })} placeholder="圖片替代文字 alt（選填）" />
+            <input className={inputCls} value={block.caption} onChange={(e) => onChange({ caption: e.target.value })} placeholder="圖片說明（選填）" />
+          </div>
+        </div>
+      )}
+
+      {block.type === "image" && block.dual && (
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-3">
+            {[1, 2].map((slot) => {
+              const src = slot === 1 ? block.src : block.src2
+              const alt = slot === 1 ? block.alt : block.alt2
+              return (
+                <div key={slot} className="space-y-2">
+                  <div className="w-full aspect-square rounded-md overflow-hidden bg-white/[0.04] border border-white/10">
+                    {src && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={src} alt="" className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                  <label className={cn("inline-flex items-center gap-2 px-3 py-2 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors w-full justify-center", uploading && "opacity-60 pointer-events-none")}>
+                    {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    {src ? `更換第${slot}張` : `上傳第${slot}張`}
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => onUploadImage(slot as 1 | 2, e)} disabled={uploading} />
+                  </label>
+                  <input
+                    className={inputCls}
+                    value={alt}
+                    onChange={(e) => onChange(slot === 1 ? { alt: e.target.value } : { alt2: e.target.value })}
+                    placeholder={`第${slot}張 alt（選填）`}
+                  />
+                </div>
+              )
+            })}
+          </div>
+          <input className={inputCls} value={block.caption} onChange={(e) => onChange({ caption: e.target.value })} placeholder="共用說明文字（選填）" />
+        </div>
+      )}
+
+      {block.type === "text" && (
+        <div className="space-y-2">
+          <textarea
+            className={cn(inputCls, "min-h-28 resize-y")}
+            value={block.text_content}
+            onChange={(e) => onChange({ text_content: e.target.value })}
+            placeholder="輸入段落文字，會以文字段落呈現在作品內頁"
+          />
+        </div>
+      )}
+
+      {block.type === "video" && (
+        <div className="space-y-2">
+          <input
+            className={inputCls}
+            value={block.video_url}
+            onChange={(e) => onChange({ video_url: e.target.value })}
+            placeholder="https://youtu.be/... 或 Vimeo 連結"
+          />
+          {block.video_url.trim() && !isVideoUrl(block.video_url) && (
+            <p className="text-[11px] text-red-400/80">看起來不是支援的 YouTube / Vimeo 連結</p>
+          )}
+          <input className={inputCls} value={block.caption} onChange={(e) => onChange({ caption: e.target.value })} placeholder="影片說明（選填）" />
+        </div>
+      )}
+    </div>
+  )
 }
 
 function ChipGroup({

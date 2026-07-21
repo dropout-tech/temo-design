@@ -12,11 +12,8 @@ import {
   WORKS as DEMO_WORKS,
   CATEGORY_GROUPS,
   INDUSTRIES,
-  DESIGNERS,
-  CLIENTS,
   CLIENT_MAP,
   DESIGNER_MAP,
-  getAllYears,
   getCategoryLabel,
   getIndustryLabel,
   proxyImage,
@@ -37,6 +34,45 @@ function makeCatLabel(groups?: Facet[]) {
 function makeIndLabel(inds?: Facet[]) {
   const map = new Map((inds ?? INDUSTRIES).map((i) => [i.value, i.label]))
   return (v: string) => map.get(v) ?? getIndustryLabel(v)
+}
+
+// 客戶／設計師／年份三顆下拉的選項改由「實際作品資料」動態推導，不再用寫死的
+// DESIGNERS/CLIENTS/getAllYears 靜態清單 —— 這樣選單必與後台資料庫連動，且選項
+// 一定篩得到東西。名稱優先用既有的 CLIENT_MAP/DESIGNER_MAP 對照，對照不到（例如
+// 後台剛新增、map 尚未同步）就退回顯示 slug 本身，不讓選單開天窗。
+function deriveClientOptions(works: Work[]): Facet[] {
+  const seen = new Map<string, string>()
+  works.forEach((w) => {
+    const slug = w.clientSlug?.trim()
+    if (!slug || seen.has(slug)) return
+    seen.set(slug, w.clientName || CLIENT_MAP[slug]?.name || slug)
+  })
+  return Array.from(seen, ([value, label]) => ({ value, label })).sort((a, b) =>
+    a.label.localeCompare(b.label, "zh-Hant")
+  )
+}
+
+function deriveDesignerOptions(works: Work[]): Facet[] {
+  const seen = new Map<string, string>()
+  works.forEach((w) => {
+    ;(w.designerSlugs ?? []).forEach((slug, i) => {
+      const s = slug?.trim()
+      if (!s || seen.has(s)) return
+      seen.set(s, w.designerNames?.[i] || DESIGNER_MAP[s]?.name || s)
+    })
+  })
+  return Array.from(seen, ([value, label]) => ({ value, label })).sort((a, b) =>
+    a.label.localeCompare(b.label, "zh-Hant")
+  )
+}
+
+function deriveYearOptions(works: Work[]): string[] {
+  const years = new Set<string>()
+  works.forEach((w) => {
+    const y = w.year?.trim()
+    if (y) years.add(y)
+  })
+  return Array.from(years).sort((a, b) => b.localeCompare(a))
 }
 
 
@@ -104,7 +140,9 @@ function FilterBar({
   categoryGroups?: Facet[]
   industries?: Facet[]
 }) {
-  const years = useMemo(() => getAllYears(), [])
+  const years = useMemo(() => deriveYearOptions(works), [works])
+  const clientOptions = useMemo(() => deriveClientOptions(works), [works])
+  const designerOptions = useMemo(() => deriveDesignerOptions(works), [works])
   const groups = categoryGroups ?? CATEGORY_GROUPS
   const inds = industries ?? INDUSTRIES
   const catLabel = useMemo(() => makeCatLabel(categoryGroups), [categoryGroups])
@@ -160,7 +198,7 @@ function FilterBar({
             fullWidth
             options={[
               { value: "all", label: "全部客戶" },
-              ...CLIENTS.map((c) => ({ value: c.slug, label: c.name })),
+              ...clientOptions,
             ]}
           />
           <FilterSelect
@@ -170,7 +208,7 @@ function FilterBar({
             fullWidth
             options={[
               { value: "all", label: "全部設計師" },
-              ...DESIGNERS.map((d) => ({ value: d.slug, label: d.name })),
+              ...designerOptions,
             ]}
           />
           <FilterSelect
@@ -755,12 +793,12 @@ export function PortfolioPageClient({
     }
 
     const clientParam = searchParams?.get("client")
-    if (clientParam && CLIENTS.some((c) => c.slug === clientParam)) {
+    if (clientParam && effectiveWorks.some((w) => w.clientSlug === clientParam)) {
       next.client = clientParam
     }
 
     const designerParam = searchParams?.get("designer")
-    if (designerParam && DESIGNERS.some((d) => d.slug === designerParam)) {
+    if (designerParam && effectiveWorks.some((w) => w.designerSlugs.includes(designerParam))) {
       next.designer = designerParam
     }
 

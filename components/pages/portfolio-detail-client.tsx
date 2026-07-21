@@ -10,6 +10,7 @@ import { Footer } from "@/components/footer"
 import { VideoEmbed } from "@/components/video-embed"
 import { isVideoUrl } from "@/lib/video"
 import { proxyImage } from "@/lib/portfolio-data"
+import type { WorkBlock } from "@/lib/portfolio-supabase"
 
 export type DetailDesigner = {
   slug: string
@@ -58,6 +59,25 @@ export type DetailProject = {
   awards?: string[]
   designers: DetailDesigner[]
   related: DetailRelated[]
+  /** 內頁首圖，未提供時退回 cover（本地 demo fallback 資料無此欄位） */
+  hero?: string
+  /** Adobe Portfolio 式內容區塊，未提供時由 gallery 轉換而來（見元件內 buildBlocksFromGallery） */
+  blocks?: WorkBlock[]
+}
+
+/** 舊資料 fallback：把單欄 gallery 轉成 image 型別的 blocks，尺寸資料留空（渲染時退回自然比例） */
+function buildBlocksFromGallery(
+  gallery: DetailProject["gallery"]
+): WorkBlock[] {
+  return (gallery ?? []).map((g, i) => ({
+    id: `legacy-gallery-${i}`,
+    type: "image" as const,
+    src: g.src,
+    alt: g.alt ?? null,
+    width: null,
+    height: null,
+    caption: g.caption ?? null,
+  }))
 }
 
 interface PortfolioDetailClientProps {
@@ -94,6 +114,15 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
     project.deliverables?.length ||
     project.designers.length ||
     project.clientName
+
+  // 內頁首圖：優先用後台設定的 hero，沒有就退回封面
+  const heroSrc = project.hero || project.cover
+  // 內容區塊：優先用 blocks（Supabase 已把舊 gallery 轉好），本地 demo fallback 資料沒有
+  // blocks 欄位時，在這裡即時把既有 gallery 轉成單欄 image blocks
+  const blocks: WorkBlock[] =
+    project.blocks && project.blocks.length > 0
+      ? project.blocks
+      : buildBlocksFromGallery(project.gallery)
 
   return (
     <>
@@ -155,7 +184,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
             >
               <VideoEmbed
                 url={project.videoUrl!}
-                poster={project.cover}
+                poster={heroSrc}
                 title={project.title}
               />
             </div>
@@ -168,7 +197,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
               }}
             >
               <Image
-                src={proxyImage(project.cover)}
+                src={proxyImage(heroSrc)}
                 alt={project.title}
                 fill
                 priority
@@ -337,36 +366,9 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
           </div>
         </section>
 
-        {/* ─── Gallery（有資料才顯示） ──────────────────────────────── */}
-        {project.gallery && project.gallery.length > 0 && (
-          <section className="pb-20 md:pb-28">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-              <p className="text-[10px] tracking-[0.4em] text-temo-gold uppercase mb-8">
-                Gallery
-              </p>
-              <div className="space-y-6 md:space-y-10">
-                {project.gallery.map((g, i) => (
-                  <figure key={i} className="space-y-3">
-                    <div className="relative w-full aspect-video overflow-hidden bg-temo-warm-gray/5">
-                      <Image
-                        src={proxyImage(g.src)}
-                        alt={g.alt ?? `${project.title} ${i + 1}`}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 1280px) 100vw, 1280px"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-                    {g.caption && (
-                      <figcaption className="text-xs text-temo-warm-gray/60 tracking-wider">
-                        {g.caption}
-                      </figcaption>
-                    )}
-                  </figure>
-                ))}
-              </div>
-            </div>
-          </section>
+        {/* ─── 內容區塊（有資料才顯示）：圖片依原比例、可同列雙圖、文字、影片 ─── */}
+        {blocks.length > 0 && (
+          <BlocksSection blocks={blocks} projectTitle={project.title} />
         )}
 
         {/* ─── Related ─────────────────────────────────────────────── */}
@@ -472,6 +474,165 @@ function NarrativeBlock({
         ))}
       </div>
     </div>
+  )
+}
+
+// ─── 內容區塊渲染器（Adobe Portfolio 式：圖片依原比例／同列雙圖／文字／影片） ──────
+function BlocksSection({
+  blocks,
+  projectTitle,
+}: {
+  blocks: WorkBlock[]
+  projectTitle: string
+}) {
+  const { ref, isInView } = useInView<HTMLDivElement>({ once: true, amount: 0.05 })
+
+  return (
+    <section className="pb-20 md:pb-28">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <p className="text-[10px] tracking-[0.4em] text-temo-gold uppercase mb-8">
+          Gallery
+        </p>
+        <div
+          ref={ref}
+          className="space-y-8 md:space-y-12"
+          style={{
+            transition: "opacity 0.9s ease, transform 0.9s ease",
+            opacity: isInView ? 1 : 0,
+            transform: isInView ? "translateY(0)" : "translateY(28px)",
+          }}
+        >
+          {blocks.map((block, i) => (
+            <BlockItem key={block.id ?? i} block={block} index={i} projectTitle={projectTitle} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function BlockItem({
+  block,
+  index,
+  projectTitle,
+}: {
+  block: WorkBlock
+  index: number
+  projectTitle: string
+}) {
+  const caption = block.caption
+
+  if (block.type === "text") {
+    if (!block.text) return null
+    return (
+      <figure className="space-y-3">
+        <div className="max-w-3xl mx-auto space-y-5">
+          {block.text.split("\n\n").map((p, i) => (
+            <p
+              key={i}
+              className="text-base md:text-lg text-temo-warm-gray leading-relaxed whitespace-pre-line"
+            >
+              {p}
+            </p>
+          ))}
+        </div>
+        {caption && (
+          <figcaption className="text-xs text-temo-warm-gray/60 tracking-wider text-center">
+            {caption}
+          </figcaption>
+        )}
+      </figure>
+    )
+  }
+
+  if (block.type === "video") {
+    if (!block.videoUrl) return null
+    return (
+      <figure className="space-y-3">
+        <VideoEmbed url={block.videoUrl} title={projectTitle} />
+        {caption && (
+          <figcaption className="text-xs text-temo-warm-gray/60 tracking-wider">
+            {caption}
+          </figcaption>
+        )}
+      </figure>
+    )
+  }
+
+  // image：預設情境；src2 有值＝同列雙圖（桌面並排、手機堆疊，頂部對齊、不強制等高）
+  if (!block.src) return null
+  const hasSecond = Boolean(block.src2)
+
+  return (
+    <figure className="space-y-3">
+      {hasSecond ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 items-start">
+          <BlockImage
+            src={block.src}
+            alt={block.alt || `${projectTitle} ${index + 1}`}
+            width={block.width}
+            height={block.height}
+          />
+          <BlockImage
+            src={block.src2!}
+            alt={block.alt2 || `${projectTitle} ${index + 1}-2`}
+            width={block.width2}
+            height={block.height2}
+          />
+        </div>
+      ) : (
+        <BlockImage
+          src={block.src}
+          alt={block.alt || `${projectTitle} ${index + 1}`}
+          width={block.width}
+          height={block.height}
+        />
+      )}
+      {caption && (
+        <figcaption className="text-xs text-temo-warm-gray/60 tracking-wider">
+          {caption}
+        </figcaption>
+      )}
+    </figure>
+  )
+}
+
+/** 單張圖片：有原始尺寸就用 next/image 帶 width/height（自然比例、無版面跳動）；
+ *  舊資料沒存尺寸時退回原生 img 的 w-full h-auto，一樣不裁切。 */
+function BlockImage({
+  src,
+  alt,
+  width,
+  height,
+}: {
+  src: string
+  alt: string
+  width?: number | null
+  height?: number | null
+}) {
+  if (width && height) {
+    return (
+      <Image
+        src={proxyImage(src)}
+        alt={alt}
+        width={width}
+        height={height}
+        className="w-full h-auto"
+        sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 640px"
+        referrerPolicy="no-referrer"
+      />
+    )
+  }
+  return (
+    // 沒有原始尺寸資料（舊資料）：用原生 img 讓瀏覽器依圖片本身比例呈現，不裁切
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={proxyImage(src)}
+      alt={alt}
+      className="w-full h-auto"
+      loading="lazy"
+      referrerPolicy="no-referrer"
+    />
   )
 }
 

@@ -4,8 +4,35 @@ import { createPublicClient } from "@/lib/supabase/public"
 import type { DetailProject } from "@/components/pages/portfolio-detail-client"
 import type { Work, Designer } from "@/lib/portfolio-data"
 
+// ─── 作品內容區塊（Adobe Portfolio 式：圖片/文字/YouTube 影片，可同列雙圖） ─────
+// 這是後台表單與前台渲染共用的合約型別，欄位形狀不得隨意更動。
+export type WorkBlock = {
+  id: string
+  type: "image" | "video" | "text"
+  src?: string | null
+  alt?: string | null
+  width?: number | null
+  height?: number | null
+  src2?: string | null
+  alt2?: string | null
+  width2?: number | null
+  height2?: number | null
+  text?: string | null // 對應 DB 欄 text_content
+  videoUrl?: string | null // 對應 DB 欄 video_url
+  caption?: string | null
+}
+
+// getWorkDetail 在 DetailProject 之上疊加 hero / blocks（都是選填，向下相容既有呼叫端）。
+export type WorkDetailWithBlocks = DetailProject & {
+  hero?: string
+  blocks?: WorkBlock[]
+}
+
+// 注意：hero_url 刻意不放進這個主查詢——migration 0015 套用前 works 表沒有這個欄位，
+// 若混進同一個 select 會讓 PostgREST 連整筆查詢一起失敗。hero_url 改用獨立查詢（見下方），
+// 查不到就 fallback 到 cover_url，行為與 migration 套用前完全一致。
 const DETAIL_SELECT = `
-  slug, title, subtitle, year, cover_url, video_url, size, description,
+  id, slug, title, subtitle, year, cover_url, video_url, size, description,
   services, deliverables, challenge, approach, result, quote_text, quote_author, awards,
   category_group,
   category_groups ( value, label ),
@@ -73,9 +100,9 @@ export async function getAllWorks(): Promise<Work[]> {
     .from("works")
     .select(
       `slug, title, subtitle, year, cover_url, video_url, size, description, category_group,
-       clients ( slug ),
+       clients ( slug, name ),
        work_industries ( industry_value ),
-       work_designers ( sort, designers ( slug ) )`
+       work_designers ( sort, designers ( slug, name, name_zh ) )`
     )
     .eq("published", true)
     .order("sort")
@@ -89,10 +116,15 @@ export async function getAllWorks(): Promise<Work[]> {
     industries: (w.work_industries ?? []).map((r: any) => r.industry_value),
     year: w.year ?? "",
     clientSlug: w.clients?.slug ?? "",
+    clientName: w.clients?.name ?? undefined,
     designerSlugs: (w.work_designers ?? [])
       .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
       .map((r: any) => r.designers?.slug)
       .filter(Boolean),
+    designerNames: (w.work_designers ?? [])
+      .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
+      .filter((r: any) => r.designers?.slug)
+      .map((r: any) => r.designers?.name_zh || r.designers?.name || r.designers?.slug),
     cover: w.cover_url ?? "/placeholder.jpg",
     videoUrl: w.video_url ?? undefined,
     size: w.size ?? "medium",
@@ -100,8 +132,8 @@ export async function getAllWorks(): Promise<Work[]> {
   })) as Work[]
 }
 
-/** 給詳情頁：單一作品完整資料，映射成 DetailProject */
-export async function getWorkDetail(slug: string): Promise<DetailProject | null> {
+/** 給詳情頁：單一作品完整資料，映射成 DetailProject（+ hero / blocks） */
+export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks | null> {
   const supa = createPublicClient()
   const { data, error } = await supa
     .from("works")
@@ -156,6 +188,69 @@ export async function getWorkDetail(slug: string): Promise<DetailProject | null>
     .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
     .map((g: any) => ({ src: g.src, alt: g.alt ?? undefined, caption: g.caption ?? undefined }))
 
+  // ── hero_url：獨立查詢，欄位不存在（migration 未套用）時安靜 fallback 到 cover ──
+  let heroUrl: string | null = null
+  try {
+    const { data: heroRow, error: heroErr } = await supa
+      .from("works")
+      .select("hero_url")
+      .eq("slug", slug)
+      .maybeSingle()
+    if (!heroErr) heroUrl = (heroRow as any)?.hero_url ?? null
+  } catch {
+    heroUrl = null
+  }
+  const cover = w.cover_url ?? "/placeholder.jpg"
+  const hero = heroUrl || cover
+
+  // ── blocks：獨立查詢 work_blocks（migration 未套用/表不存在/查詢失敗/空陣列 → fallback 成 gallery 轉的 image blocks）──
+  let blocks: WorkBlock[] = []
+  try {
+    const { data: blockRows, error: blockErr } = await supa
+      .from("work_blocks")
+      .select(
+        "id, type, src, alt, width, height, src2, alt2, width2, height2, text_content, video_url, caption, sort"
+      )
+      .eq("work_id", w.id)
+      .order("sort")
+    if (!blockErr && Array.isArray(blockRows)) {
+      blocks = blockRows.map((b: any) => ({
+        id: b.id,
+        type: b.type,
+        src: b.src ?? null,
+        alt: b.alt ?? null,
+        width: b.width ?? null,
+        height: b.height ?? null,
+        src2: b.src2 ?? null,
+        alt2: b.alt2 ?? null,
+        width2: b.width2 ?? null,
+        height2: b.height2 ?? null,
+        text: b.text_content ?? null,
+        videoUrl: b.video_url ?? null,
+        caption: b.caption ?? null,
+      }))
+    }
+  } catch {
+    blocks = []
+  }
+  if (blocks.length === 0 && gallery.length > 0) {
+    blocks = gallery.map((g: any, idx: number) => ({
+      id: `gallery-${idx}`,
+      type: "image" as const,
+      src: g.src,
+      alt: g.alt ?? null,
+      width: null,
+      height: null,
+      src2: null,
+      alt2: null,
+      width2: null,
+      height2: null,
+      text: null,
+      videoUrl: null,
+      caption: g.caption ?? null,
+    }))
+  }
+
   return {
     slug: w.slug,
     title: w.title,
@@ -169,7 +264,8 @@ export async function getWorkDetail(slug: string): Promise<DetailProject | null>
     clientSlug: w.clients?.slug ?? undefined,
     clientBrief: w.clients?.brief ?? undefined,
     description: w.description ?? "",
-    cover: w.cover_url ?? "/placeholder.jpg",
+    cover,
+    hero,
     videoUrl: w.video_url ?? undefined,
     services: w.services ?? [],
     deliverables: w.deliverables ?? [],
@@ -181,5 +277,6 @@ export async function getWorkDetail(slug: string): Promise<DetailProject | null>
     awards: w.awards ?? [],
     designers,
     related,
+    blocks,
   }
 }
