@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { ContactPageClient } from "@/components/pages/contact-page-client"
-import { getSiteSettings } from "@/lib/content-supabase"
+import { getSiteSettings, getQuotePricing } from "@/lib/content-supabase"
 
 export const metadata: Metadata = {
   title: "聯絡我們 | TEMO DESIGN",
@@ -28,7 +28,7 @@ function parseHours(raw?: string | null): { label: string; value: string }[] {
 }
 
 export default async function ContactPage() {
-  const s = await getSiteSettings()
+  const [s, pricing] = await Promise.all([getSiteSettings(), getQuotePricing()])
   return (
     <ContactPageClient
       contact={{
@@ -39,6 +39,8 @@ export default async function ContactPage() {
         lineUrl: s?.line_url ?? "",
         lineQrUrl: s?.line_qr_url ?? "",
       }}
+      quoteCategories={pricing.categories}
+      quoteComponents={pricing.components}
     />
   )
 }

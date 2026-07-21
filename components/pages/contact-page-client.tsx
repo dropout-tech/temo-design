@@ -8,6 +8,7 @@ import { QuoteCalculator } from "@/components/quote/quote-calculator"
 import { QuoteBriefForm } from "@/components/quote/quote-brief-form"
 import { Mail, Phone, MapPin, MessageSquare, Calculator, FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
+import type { QuoteCategory, QuoteComponent } from "@/lib/content-supabase"
 
 type Tab = "contact" | "quote" | "brief"
 
@@ -22,8 +23,12 @@ type ContactInfo = {
 
 export function ContactPageClient({
   contact,
+  quoteCategories,
+  quoteComponents,
 }: {
   contact?: ContactInfo
+  quoteCategories?: QuoteCategory[]
+  quoteComponents?: QuoteComponent[]
 } = {}) {
   const info: ContactInfo = contact ?? {
     email: "temo.design0531@gmail.com",
@@ -127,45 +132,31 @@ export function ContactPageClient({
         </section>
 
         {/* ── Tab Switcher ── */}
-        <div className="bg-temo-black border-y border-white/5 sticky top-[68px] z-40">
-          <div className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-10">
-            <div className="flex overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <button
-                onClick={() => setActiveTab("contact")}
-                className={cn(
-                  "flex shrink-0 items-center gap-2.5 px-4 sm:px-6 py-4 text-xs tracking-[0.12em] sm:tracking-[0.25em] font-medium border-b-2 whitespace-nowrap transition-all duration-300",
-                  activeTab === "contact"
-                    ? "border-temo-gold text-temo-gold"
-                    : "border-transparent text-temo-warm-gray hover:text-white"
-                )}
-              >
-                <MessageSquare className="w-4 h-4" />
-                傳送訊息
-              </button>
-              <button
-                onClick={() => setActiveTab("quote")}
-                className={cn(
-                  "flex shrink-0 items-center gap-2.5 px-4 sm:px-6 py-4 text-xs tracking-[0.12em] sm:tracking-[0.25em] font-medium border-b-2 whitespace-nowrap transition-all duration-300",
-                  activeTab === "quote"
-                    ? "border-temo-gold text-temo-gold"
-                    : "border-transparent text-temo-warm-gray hover:text-white"
-                )}
-              >
-                <Calculator className="w-4 h-4" />
-                即時報價試算
-              </button>
-              <button
-                onClick={() => setActiveTab("brief")}
-                className={cn(
-                  "flex shrink-0 items-center gap-2.5 px-4 sm:px-6 py-4 text-xs tracking-[0.12em] sm:tracking-[0.25em] font-medium border-b-2 whitespace-nowrap transition-all duration-300",
-                  activeTab === "brief"
-                    ? "border-temo-gold text-temo-gold"
-                    : "border-transparent text-temo-warm-gray hover:text-white"
-                )}
-              >
-                <FileText className="w-4 h-4" />
-                設計需求單
-              </button>
+        <div className="bg-temo-black border-y border-white/8 sticky top-[68px] z-40">
+          <div className="mx-auto max-w-7xl px-4 sm:px-8 lg:px-10">
+            <div className="flex gap-2 sm:gap-3 py-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {([
+                { id: "contact", icon: MessageSquare, label: "傳送訊息" },
+                { id: "quote", icon: Calculator, label: "即時報價試算" },
+                { id: "brief", icon: FileText, label: "設計需求單" },
+              ] as { id: Tab; icon: typeof MessageSquare; label: string }[]).map(({ id, icon: Icon, label }) => {
+                const active = activeTab === id
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setActiveTab(id)}
+                    className={cn(
+                      "flex flex-1 sm:flex-initial shrink-0 items-center justify-center gap-2.5 px-5 sm:px-8 py-3.5 sm:py-4 text-sm tracking-[0.08em] sm:tracking-[0.14em] font-semibold whitespace-nowrap rounded-full border transition-all duration-300",
+                      active
+                        ? "border-temo-gold bg-temo-gold text-temo-black shadow-[0_0_20px_rgba(205,169,109,0.25)]"
+                        : "border-white/15 bg-white/[0.03] text-temo-warm-gray hover:text-white hover:border-white/35 hover:bg-white/[0.06]"
+                    )}
+                  >
+                    <Icon className={cn("w-5 h-5 shrink-0", active ? "text-temo-black" : "text-temo-gold")} />
+                    {label}
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>
@@ -421,7 +412,10 @@ export function ContactPageClient({
             display: activeTab === "quote" ? "block" : "none",
           }}
         >
-          <QuoteCalculator />
+          <QuoteCalculator
+            {...(quoteCategories && quoteCategories.length > 0 ? { categories: quoteCategories } : {})}
+            components={quoteComponents ?? []}
+          />
         </div>
 
         {/* ── Brief Tab ── */}

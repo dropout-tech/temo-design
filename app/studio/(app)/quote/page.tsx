@@ -5,6 +5,6 @@ export const dynamic = "force-dynamic"
 export const metadata = { title: "報價試算 — TEMO Studio" }
 
 export default async function StudioQuotePage() {
-  const { categories, addons } = await getQuotePricing()
-  return <QuoteManager categories={categories} addons={addons} />
+  const { categories, addons, components } = await getQuotePricing()
+  return <QuoteManager categories={categories} addons={addons} components={components} />
 }

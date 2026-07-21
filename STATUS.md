@@ -2,9 +2,87 @@
 
 > 會變的狀態放這裡（不變的事實放 CLAUDE.md）。開場先讀。
 
-## 目前進度（2026-07-10）
+## 目前進度（2026-07-21）
 
-### 本次完成：作品集篩選區改下拉式選單（手機 557223e＋桌面 96c3779，皆已部署已驗）
+### 本次完成：報價「重疊內容自動扣抵」＋聯絡頁分頁放大＋聯絡頁報價改讀 DB（尚未 commit / 尚未套 migration）
+
+**需求（使用者原話）**：(1) 聯絡我們的即時報價：品牌包套會往上加，但重疊內容要自動扣掉
+（例：已選單獨 LOGO，又選到內含 LOGO 的包套 → 自動扣一份，不重複計價），且邏輯要能在後台管理。
+(2) 即時報價／傳送訊息那三個 tab 放大一點，讓客人知道可以點。
+
+**做法**：
+- **內容元件扣抵制**（新概念）：後台可建「內容元件」清單（LOGO/名片/社群背景…），每個元件設一個
+  「抵扣值」（通常＝單獨買的價格）；每個方案勾選它內含哪些元件。前台計算規則：同一元件被 N(≥2)
+  個已選方案包含 → 扣 (N-1) 份抵扣值。同時把計算機改成「同大類可複選多個方案」（使用者選定）。
+- 檔案：`supabase/migrations/0014_quote_overlap_components.sql`（新表 quote_components＋
+  quote_packages.component_ids，含 seed＋自動掛載既有方案）；`lib/content-supabase.ts`（容錯讀取，
+  migration 未套用也不會壞）；`components/quote/quote-calculator.tsx`（複選＋扣抵計算＋明細顯示）；
+  `components/studio/quote-manager.tsx`＋`app/studio/(app)/quote/actions.ts`（後台元件 CRUD＋方案勾元件）；
+  `app/quote/page.tsx`、`app/contact/page.tsx`＋`components/pages/contact-page-client.tsx`（傳 components）。
+- **順手修的既有問題**：`/contact` 的即時報價 tab 原本用寫死的 fallback、完全沒讀後台價目，
+  已改成 fetch getQuotePricing → 後台改價現在 /contact 也會生效。
+- **分頁放大**：`contact-page-client.tsx` 三顆 tab 改成藥丸狀（金色實心作用中、灰框可點閒置），
+  高度 40px→50px、字 xs→sm、icon w-4→w-5。
+
+**驗證**：`npx tsc --noEmit` 全專案 0 錯誤；扣抵數學用確定性腳本 8/8 通過
+（scratchpad/dedup-test.mjs，含使用者原話場景：單獨LOGO5萬+含LOGO包套5.7萬→顯示5.7萬）；
+Playwright 實測 /contact（agent 判讀截圖）：tab 高 50px 藥丸狀可點、三分頁切換正常、
+複選生效（LOGO 5萬→加名片 5.68萬→toggle 關回 6,800）、手機 390px 不破版。截圖在 scratchpad/。
+⚠️ **扣抵功能的「實際顯示」尚未在線上驗**：因為 quote_components 資料要等 migration 0014 套進
+正式 Supabase 才有；程式已容錯（未套用前計算機照常運作、只是不扣抵）。
+
+**下一步（等使用者點頭）**：① 套 migration 0014 到正式 Supabase（動正式 DB，需授權）
+② commit＋push（Vercel 自動部署）③ 線上實測一次真正的扣抵顯示。
+
+**地雷**：抵扣值設定原則＝寧可少扣（少扣＝照原價，多扣＝少收錢）；後台已寫這句提醒。
+社群背景無單獨售價，seed 給 placeholder 3000，請使用者自行調整或設 0。
+
+---
+
+### 本次完成（作品系統 session）：作品內容區塊系統（仿 Adobe Portfolio）＋篩選連動修復（已上線：migration 0015 已套用＋已 push ed0b660）
+
+**需求（使用者原話重點）**：(1) 作品探索的設計師/年份標籤跟後台沒連動；(2) 作品封面與內頁首圖
+要能分開設定（也可相同）、首圖可放影片；(3) 新增作品要像 Adobe Portfolio 一樣彈性——圖片下方可加
+文字、可嵌 YouTube 影片、直式橫式依圖片形狀自適應、同一橫列可放兩張、順序自由調整。
+
+**做法**：
+- **篩選連動修復**：`components/pages/portfolio-page-client.tsx`——設計師/年份/客戶三顆下拉
+  改從 DB 真實作品動態推導（原本讀 lib/portfolio-data.ts 寫死陣列）；`lib/portfolio-supabase.ts`
+  getAllWorks 加抓 clients.name／designers.name_zh，選單顯示正式名稱不再靠寫死對照表。
+- **內容區塊系統**：新表 `work_blocks`（migration 0015：type image/video/text、src2=同列雙圖、
+  width/height 存原始尺寸供自適應）＋ works.hero_url（內頁首圖，留空＝沿用封面）。
+  後台 `components/studio/work-form.tsx`：gallery 編輯區整個換成「內容區塊」編輯器（單圖/雙圖/
+  文字/影片四種、↑↓排序、✕刪除、上傳自動記錄圖片尺寸）＋「內頁首圖」欄位；`works/actions.ts`
+  改存 work_blocks（不再寫 work_gallery，舊資料 migration 會自動搬）。
+  前台 `components/pages/portfolio-detail-client.tsx`：blocks 渲染器——圖片依原始比例呈現不硬裁、
+  雙圖桌面並排手機堆疊、文字段落、VideoEmbed；首圖改用 hero（fallback cover）。
+- **防禦設計**：migration 0015 未套用前，前台一切照舊（gallery 自動轉 image blocks、hero=cover），
+  已實測不壞站；但**後台存作品會失敗**（work_blocks 表不存在），所以 push 要等 migration 套完。
+
+**驗證**：`npx tsc --noEmit` 0 錯誤；`npm run build` ✓；確定性 Playwright 腳本 10/10 通過
+（5 顆下拉存在、選真實設計師/客戶/年份能篩到作品、內頁 13 張區塊圖全部依原始比例顯示零偏差、
+手機 375px 兩頁無橫向溢出、無 console 錯誤；scratchpad/verify-blocks.js）；截圖 4 張經 agent
+判讀通過（scratchpad/verify-*.png）。⚠️ 後台表單的實際存檔流程需 migration＋登入才能測，未測。
+
+**上線紀錄**：使用者 2026-07-21 授權「套用並上線」→ migration 0015 已套進正式 Supabase
+（16 張舊 gallery 圖已搬入 work_blocks、hero_url 欄位確認存在）→ push ed0b660 → Vercel 已部署。
+**線上已驗**（防護解除後補跑，2026-07-21）：temo-design.vercel.app 確定性腳本 4/4 通過——
+5 顆篩選下拉、設計師/年份下拉有 DB 真實選項、內頁 13 張區塊圖依原始比例零偏差。
+（過程插曲：部署後 15 秒間隔輪詢觸發 Vercel Security Checkpoint 擋了本機 IP 約 10 分鐘，
+真實訪客不受影響，已入全域 lessons。）
+
+**下一步**：使用者登入 /studio 用新「內容區塊」編輯器實際建/改一筆作品驗收
+（存檔流程需登入，我測不到）。
+
+**地雷**：本 repo 同時有另一 session 在做報價扣抵（migration 0014/0016 是他們的）；
+commit 時已嚴格只提交作品系統的 8 個檔案。work_gallery 表保留未刪（穩定後可清理）。
+教訓：偵測 Vercel 部署完成不要用 15 秒間隔 curl 輪詢（會觸發 bot 防護）——改用 ≥60 秒間隔。
+
+---
+
+## 前次進度（2026-07-10）
+
+### 完成：作品集篩選區改下拉式選單（手機 557223e＋桌面 96c3779，皆已部署已驗）
 
 **需求**：使用者截圖反映篩選區 11+1 顆執行項目 chip＋7 顆行業 chip 太佔空間太醜，要改下拉選單；
 先做手機版，使用者看過後追加「桌面也改」→ chip 牆全面退役。

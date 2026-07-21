@@ -13,12 +13,12 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic"
 
 export default async function QuotePage() {
-  const { categories } = await getQuotePricing()
+  const { categories, components } = await getQuotePricing()
   return (
     <>
       <Navbar />
       <main className="pt-20 bg-temo-black min-h-screen">
-        <QuoteCalculator categories={categories} />
+        <QuoteCalculator categories={categories} components={components} />
       </main>
       <Footer />
     </>

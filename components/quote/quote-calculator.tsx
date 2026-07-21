@@ -12,6 +12,9 @@ import { cn } from "@/lib/utils"
 
 type Addon = { id: string; label: string; price: number }
 
+// 內容元件：多個已選方案若同時包含同一元件，重疊部分自動扣抵
+type QuoteComponent = { id: string; name: string; deductValue: number; sort: number }
+
 type Package = {
   id: string
   name: string
@@ -21,6 +24,7 @@ type Package = {
   originalPrice?: number
   features: string[]
   recommended?: boolean
+  componentIds?: string[]
   addons?: Addon[]
 }
 
@@ -446,52 +450,74 @@ function PackageCard({
 
 export function QuoteCalculator({
   categories = DEFAULT_CATEGORIES,
+  components = [],
 }: {
   categories?: ServiceCategory[]
+  components?: QuoteComponent[]
 }) {
   const { ref: sectionRef, isInView } = useInView<HTMLElement>({ once: true, amount: 0.08 })
   const safeCategories = categories.length > 0 ? categories : DEFAULT_CATEGORIES
   const [activeCategoryId, setActiveCategoryId] = useState(safeCategories[0].id)
-  const [selections, setSelections] = useState<Record<string, { packageId: string; addons: Record<string, number> }>>({})
+  // 可複選：以「方案 id」為 key，存在即代表被選；value 是該方案的加購項
+  const [selections, setSelections] = useState<Record<string, { addons: Record<string, number> }>>({})
 
   const activeCategory = safeCategories.find((c) => c.id === activeCategoryId) ?? safeCategories[0]
 
-  function selectPackage(pkg: Package) {
-    setSelections((prev) => ({
-      ...prev,
-      [activeCategoryId]: {
-        packageId: pkg.id,
-        addons: prev[activeCategoryId]?.packageId === pkg.id ? prev[activeCategoryId].addons : {},
-      },
-    }))
+  function togglePackage(pkg: Package) {
+    setSelections((prev) => {
+      const next = { ...prev }
+      if (next[pkg.id]) delete next[pkg.id]
+      else next[pkg.id] = { addons: {} }
+      return next
+    })
   }
 
-  function toggleAddon(addonId: string, price: number) {
+  function toggleAddon(packageId: string, addonId: string, price: number) {
     setSelections((prev) => {
-      const current = prev[activeCategoryId]
+      const current = prev[packageId]
       if (!current) return prev
       const addonsCopy = { ...current.addons }
       if (addonsCopy[addonId]) { delete addonsCopy[addonId] }
       else { addonsCopy[addonId] = price }
-      return { ...prev, [activeCategoryId]: { ...current, addons: addonsCopy } }
+      return { ...prev, [packageId]: { ...current, addons: addonsCopy } }
     })
   }
 
   const summary = useMemo(() => {
     const lines: { category: ServiceCategory; pkg: Package; addonList: { label: string; price: number }[]; subtotal: number }[] = []
     for (const cat of safeCategories) {
-      const sel = selections[cat.id]
-      if (!sel) continue
-      const pkg = cat.packages.find((p) => p.id === sel.packageId)
-      if (!pkg) continue
-      const addonList = Object.entries(sel.addons).map(([id, price]) => ({
-        label: pkg.addons?.find((a) => a.id === id)?.label ?? id,
-        price,
-      }))
-      lines.push({ category: cat, pkg, addonList, subtotal: pkg.basePrice + addonList.reduce((s, a) => s + a.price, 0) })
+      for (const pkg of cat.packages) {
+        const sel = selections[pkg.id]
+        if (!sel) continue
+        const addonList = Object.entries(sel.addons).map(([id, price]) => ({
+          label: pkg.addons?.find((a) => a.id === id)?.label ?? id,
+          price,
+        }))
+        lines.push({ category: cat, pkg, addonList, subtotal: pkg.basePrice + addonList.reduce((s, a) => s + a.price, 0) })
+      }
     }
-    return { lines, total: lines.reduce((s, l) => s + l.subtotal, 0) }
-  }, [selections, safeCategories])
+    const gross = lines.reduce((s, l) => s + l.subtotal, 0)
+
+    // 重疊自動扣抵：同一內容元件被 N(≥2) 個已選方案包含 → 扣 (N-1) 份抵扣值
+    const compById = new Map(components.map((c) => [c.id, c]))
+    const counts = new Map<string, number>()
+    for (const l of lines) {
+      for (const cid of l.pkg.componentIds ?? []) {
+        counts.set(cid, (counts.get(cid) ?? 0) + 1)
+      }
+    }
+    const deductions: { name: string; times: number; amount: number }[] = []
+    for (const [cid, count] of counts) {
+      const comp = compById.get(cid)
+      if (!comp || count < 2 || comp.deductValue <= 0) continue
+      const times = count - 1
+      deductions.push({ name: comp.name, times, amount: comp.deductValue * times })
+    }
+    deductions.sort((a, b) => b.amount - a.amount)
+    const deductTotal = deductions.reduce((s, d) => s + d.amount, 0)
+
+    return { lines, gross, deductions, deductTotal, total: Math.max(0, gross - deductTotal) }
+  }, [selections, safeCategories, components])
 
   const headerFade = {
     transition: "opacity 0.8s ease, transform 0.8s ease",
@@ -549,15 +575,15 @@ export function QuoteCalculator({
             {/* Package Cards */}
             <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
               {activeCategory.packages.map((pkg) => {
-                const sel = selections[activeCategoryId]
+                const sel = selections[pkg.id]
                 return (
                   <PackageCard
                     key={pkg.id}
                     pkg={pkg}
-                    selected={sel?.packageId === pkg.id}
-                    onSelect={() => selectPackage(pkg)}
-                    selectedAddons={sel?.packageId === pkg.id ? Object.keys(sel.addons) : []}
-                    onToggleAddon={toggleAddon}
+                    selected={!!sel}
+                    onSelect={() => togglePackage(pkg)}
+                    selectedAddons={sel ? Object.keys(sel.addons) : []}
+                    onToggleAddon={(addonId, price) => toggleAddon(pkg.id, addonId, price)}
                   />
                 )
               })}
@@ -610,8 +636,26 @@ export function QuoteCalculator({
                   </div>
                 )}
 
+                {/* 重疊自動扣抵 */}
+                {summary.deductions.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-white/8 space-y-1">
+                    <p className="text-[10px] tracking-[0.2em] text-temo-gold/70 uppercase mb-1.5">重疊內容自動扣抵</p>
+                    {summary.deductions.map((d) => (
+                      <div key={d.name} className="flex justify-between text-[10px] text-temo-gold/80">
+                        <span>− 重複的{d.name}{d.times > 1 ? ` ×${d.times}` : ""}</span>
+                        <span>−{formatPrice(d.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* Total */}
                 <div className="mt-4 pt-4 border-t border-white/10">
+                  {summary.deductTotal > 0 && (
+                    <div className="flex items-baseline justify-between mb-1.5 text-[10px] text-temo-warm-gray/50">
+                      <span>小計 {formatPrice(summary.gross)}　已扣抵 −{formatPrice(summary.deductTotal)}</span>
+                    </div>
+                  )}
                   <div className="flex items-baseline justify-between mb-1">
                     <span className="text-[10px] tracking-[0.25em] text-temo-warm-gray/60 uppercase">參考總價</span>
                     <span className="text-2xl font-bold text-temo-gold">

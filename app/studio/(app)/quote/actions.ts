@@ -62,6 +62,7 @@ export type PackageInput = {
   features: string[]
   recommended: boolean
   showAddons: boolean
+  componentIds: string[]
   sort: number
 }
 
@@ -85,6 +86,7 @@ export async function savePackage(
     features: input.features.map((f) => f.trim()).filter(Boolean),
     recommended: input.recommended,
     show_addons: input.showAddons,
+    component_ids: Array.isArray(input.componentIds) ? input.componentIds : [],
     sort: input.sort,
   }
   if (id) {
@@ -136,6 +138,40 @@ export async function saveAddon(
 export async function deleteAddon(id: string): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { error } = await supabase.from("quote_addons").delete().eq("id", id)
+  if (error) return { error: error.message }
+  revalidate()
+  return {}
+}
+
+// ── 內容元件（重疊自動扣抵）─────────────────────────────
+export type ComponentInput = { name: string; deductValue: number; sort: number }
+
+export async function saveComponent(
+  input: ComponentInput,
+  id?: string
+): Promise<{ id?: string; error?: string }> {
+  const supabase = await createClient()
+  if (!input.name.trim()) return { error: "元件名稱為必填" }
+  const row = {
+    name: input.name.trim(),
+    deduct_value: Number.isFinite(input.deductValue) ? Math.max(0, input.deductValue) : 0,
+    sort: input.sort,
+  }
+  if (id) {
+    const { error } = await supabase.from("quote_components").update(row).eq("id", id)
+    if (error) return { error: error.message }
+    revalidate()
+    return { id }
+  }
+  const { data, error } = await supabase.from("quote_components").insert(row).select("id").single()
+  if (error) return { error: error.message }
+  revalidate()
+  return { id: data.id }
+}
+
+export async function deleteComponent(id: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { error } = await supabase.from("quote_components").delete().eq("id", id)
   if (error) return { error: error.message }
   revalidate()
   return {}

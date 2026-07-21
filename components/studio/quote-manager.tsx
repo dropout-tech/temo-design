@@ -9,8 +9,10 @@ import {
   deletePackage,
   saveAddon,
   deleteAddon,
+  saveComponent,
+  deleteComponent,
 } from "@/app/studio/(app)/quote/actions"
-import type { QuoteCategory, QuoteAddon } from "@/lib/content-supabase"
+import type { QuoteCategory, QuoteAddon, QuoteComponent } from "@/lib/content-supabase"
 import { cn } from "@/lib/utils"
 
 const inputCls =
@@ -39,17 +41,22 @@ type PkgRow = {
   features: string // 一行一項，方便 textarea 編輯
   recommended: boolean
   showAddons: boolean
+  componentIds: string[]
   sort: number
 }
 
 type AddonRow = { key: string; id?: string; label: string; price: number; sort: number }
 
+type CompRow = { key: string; id?: string; name: string; deductValue: number; sort: number }
+
 export function QuoteManager({
   categories,
   addons,
+  components,
 }: {
   categories: QuoteCategory[]
   addons: QuoteAddon[]
+  components: QuoteComponent[]
 }) {
   const counter = useRef(0)
   const newKey = () => `new-${counter.current++}`
@@ -79,12 +86,16 @@ export function QuoteManager({
         features: p.features.join("\n"),
         recommended: !!p.recommended,
         showAddons: p.showAddons,
+        componentIds: p.componentIds ?? [],
         sort: p.sort,
       }))
     )
   )
   const [addonRows, setAddonRows] = useState<AddonRow[]>(
     addons.map((a) => ({ key: a.id, id: a.id, label: a.label, price: a.price, sort: a.sort }))
+  )
+  const [compRows, setCompRows] = useState<CompRow[]>(
+    components.map((c) => ({ key: c.id, id: c.id, name: c.name, deductValue: c.deductValue, sort: c.sort }))
   )
 
   const [activeKey, setActiveKey] = useState<string>(cats[0]?.key ?? "")
@@ -127,6 +138,7 @@ export function QuoteManager({
         features: "",
         recommended: false,
         showAddons: false,
+        componentIds: [],
         sort: maxSort + 1,
       },
     ])
@@ -149,6 +161,20 @@ export function QuoteManager({
   function removeAddon(key: string) {
     setAddonRows((p) => p.filter((a) => a.key !== key))
   }
+
+  // ── 內容元件 ──
+  function addComponent() {
+    const maxSort = compRows.reduce((m, c) => Math.max(m, c.sort), -1)
+    setCompRows((p) => [...p, { key: newKey(), name: "", deductValue: 0, sort: maxSort + 1 }])
+  }
+  function updateComponent(key: string, patch: Partial<CompRow>) {
+    setCompRows((p) => p.map((c) => (c.key === key ? { ...c, ...patch } : c)))
+  }
+  function removeComponent(key: string) {
+    setCompRows((p) => p.filter((c) => c.key !== key))
+  }
+  // 只有「已儲存（有 id）」的元件才能掛到方案上
+  const savedComponents = compRows.filter((c): c is CompRow & { id: string } => !!c.id)
 
   const activePkgs = activeCat?.id
     ? pkgs.filter((p) => p.categoryId === activeCat.id).sort((a, b) => a.sort - b.sort)
@@ -213,7 +239,13 @@ export function QuoteManager({
 
           <div className="space-y-4">
             {activePkgs.map((r) => (
-              <PackageCard key={r.key} row={r} onChange={(p) => updatePkg(r.key, p)} onRemove={() => removePkg(r.key)} />
+              <PackageCard
+                key={r.key}
+                row={r}
+                components={savedComponents}
+                onChange={(p) => updatePkg(r.key, p)}
+                onRemove={() => removePkg(r.key)}
+              />
             ))}
             {activeCat.id && activePkgs.length === 0 && (
               <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
@@ -250,6 +282,37 @@ export function QuoteManager({
           {addonRows.length === 0 && (
             <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
               還沒有加購項。
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* 內容元件（重疊自動扣抵）*/}
+      <div className="mt-14 pt-8 border-t border-white/10">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-sm font-bold text-temo-white tracking-wide">
+            內容元件（重疊自動扣抵）
+            <span className="text-temo-warm-gray/50 font-normal ml-2">共 {compRows.length} 項</span>
+          </h2>
+          <button
+            onClick={addComponent}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/[0.06] text-temo-white text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:bg-white/[0.1] transition-all"
+          >
+            <Plus className="w-4 h-4" /> 新增元件
+          </button>
+        </div>
+        <p className="text-[11px] text-temo-warm-gray/50 mb-4 leading-relaxed">
+          內容元件＝方案「內含的東西」（例：LOGO、名片、社群背景）。<strong className="text-temo-warm-gray/80">抵扣值</strong>通常填該品項單獨購買的價格。
+          當客人同時選到兩個都含同一元件的方案時，系統會自動扣掉重複那份的抵扣值，不重複計價。<br />
+          設好元件後，回上方每個「方案」卡片勾選它包含哪些元件即可生效。<span className="text-temo-gold/70">建議抵扣值寧可少填一點，避免多扣＝少收錢。</span>
+        </p>
+        <div className="space-y-3">
+          {compRows.map((c) => (
+            <ComponentCard key={c.key} row={c} onChange={(p) => updateComponent(c.key, p)} onRemove={() => removeComponent(c.key)} />
+          ))}
+          {compRows.length === 0 && (
+            <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
+              還沒有內容元件。想啟用「重疊自動扣抵」，先新增元件（如 LOGO），再到方案卡勾選。
             </p>
           )}
         </div>
@@ -333,11 +396,28 @@ function CategoryCard({ row, onChange, onRemove }: { row: CatRow; onChange: (p: 
 // ─────────────────────────────────────────────
 // 方案卡
 // ─────────────────────────────────────────────
-function PackageCard({ row, onChange, onRemove }: { row: PkgRow; onChange: (p: Partial<PkgRow>) => void; onRemove: () => void }) {
+function PackageCard({
+  row,
+  components,
+  onChange,
+  onRemove,
+}: {
+  row: PkgRow
+  components: (CompRow & { id: string })[]
+  onChange: (p: Partial<PkgRow>) => void
+  onRemove: () => void
+}) {
   const [pending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState("")
   const dirty = (p: Partial<PkgRow>) => { onChange(p); setSaved(false) }
+
+  function toggleComponent(id: string) {
+    const next = row.componentIds.includes(id)
+      ? row.componentIds.filter((c) => c !== id)
+      : [...row.componentIds, id]
+    dirty({ componentIds: next })
+  }
 
   function save() {
     setError("")
@@ -353,6 +433,7 @@ function PackageCard({ row, onChange, onRemove }: { row: PkgRow; onChange: (p: P
           features: row.features.split("\n"),
           recommended: row.recommended,
           showAddons: row.showAddons,
+          componentIds: row.componentIds,
           sort: row.sort,
         },
         row.id
@@ -435,6 +516,38 @@ function PackageCard({ row, onChange, onRemove }: { row: PkgRow; onChange: (p: P
         </label>
       </div>
 
+      {/* 內含內容元件（用於重疊自動扣抵）*/}
+      <div className="border-t border-white/8 pt-3">
+        <p className={labelCls + " mb-2"}>內含內容元件（重疊時自動扣抵）</p>
+        {components.length === 0 ? (
+          <p className="text-[11px] text-temo-warm-gray/50">
+            尚未建立任何內容元件。到頁面最下方「內容元件」區新增（如 LOGO、名片），再回這裡勾選。
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {components.map((c) => {
+              const checked = row.componentIds.includes(c.id)
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => toggleComponent(c.id)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs transition-all",
+                    checked
+                      ? "border-temo-gold/50 bg-temo-gold/10 text-temo-gold"
+                      : "border-white/12 text-temo-warm-gray hover:border-white/30 hover:text-white"
+                  )}
+                >
+                  {checked && <Check className="w-3 h-3" />}
+                  {c.name || "（未命名元件）"}
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
       {error && <p className="text-xs text-red-400/90">{error}</p>}
       <div className="flex items-center gap-3">
         <SaveButton pending={pending} saved={saved} onClick={save} label="儲存" />
@@ -493,6 +606,65 @@ function AddonCard({ row, onChange, onRemove }: { row: AddonRow; onChange: (p: P
           <input type="number" className={inputCls} value={row.sort} onChange={(e) => dirty({ sort: Number(e.target.value) })} />
         </label>
       </div>
+      {error && <p className="text-xs text-red-400/90 mt-2">{error}</p>}
+      <div className="flex items-center gap-3 mt-3">
+        <SaveButton pending={pending} saved={saved} onClick={save} label="儲存" />
+        <button onClick={del} disabled={pending} className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60">
+          <Trash2 className="w-3.5 h-3.5" /> 刪除
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// 內容元件卡
+// ─────────────────────────────────────────────
+function ComponentCard({ row, onChange, onRemove }: { row: CompRow; onChange: (p: Partial<CompRow>) => void; onRemove: () => void }) {
+  const [pending, startTransition] = useTransition()
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState("")
+  const dirty = (p: Partial<CompRow>) => { onChange(p); setSaved(false) }
+
+  function save() {
+    setError("")
+    startTransition(async () => {
+      const res = await saveComponent({ name: row.name, deductValue: row.deductValue, sort: row.sort }, row.id)
+      if (res.error) setError(res.error)
+      else {
+        if (res.id && !row.id) onChange({ id: res.id })
+        setSaved(true)
+      }
+    })
+  }
+  function del() {
+    if (row.id && !confirm("確定刪除這個內容元件？已勾選它的方案會失去這個重疊扣抵標記。")) return
+    startTransition(async () => {
+      if (row.id) {
+        const res = await deleteComponent(row.id)
+        if (res.error) { setError(res.error); return }
+      }
+      onRemove()
+    })
+  }
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="space-y-1 flex-1 min-w-[180px]">
+          <span className={labelCls}>元件名稱</span>
+          <input className={inputCls} value={row.name} onChange={(e) => dirty({ name: e.target.value })} placeholder="LOGO 商標" />
+        </label>
+        <label className="space-y-1 w-32">
+          <span className={labelCls}>抵扣值 NT$</span>
+          <input type="number" className={inputCls} value={row.deductValue} onChange={(e) => dirty({ deductValue: Number(e.target.value) })} />
+        </label>
+        <label className="space-y-1 w-20">
+          <span className={labelCls}>排序</span>
+          <input type="number" className={inputCls} value={row.sort} onChange={(e) => dirty({ sort: Number(e.target.value) })} />
+        </label>
+      </div>
+      {!row.id && <p className="text-[11px] text-temo-gold/70 mt-2">↑ 先按「儲存」，這個元件才會出現在方案卡的可勾選清單裡。</p>}
       {error && <p className="text-xs text-red-400/90 mt-2">{error}</p>}
       <div className="flex items-center gap-3 mt-3">
         <SaveButton pending={pending} saved={saved} onClick={save} label="儲存" />

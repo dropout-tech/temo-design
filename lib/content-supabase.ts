@@ -214,6 +214,9 @@ export async function getSiteSettings(): Promise<SiteSettings | null> {
 // ── 即時報價試算（/quote 前台 + /studio/quote 後台共用）──────────────────────
 export type QuoteAddon = { id: string; label: string; price: number; sort: number }
 
+// 內容元件：多個方案若同時包含同一元件，重疊部分自動扣抵（不重複計價）
+export type QuoteComponent = { id: string; name: string; deductValue: number; sort: number }
+
 export type QuotePackage = {
   id: string
   name: string
@@ -224,6 +227,7 @@ export type QuotePackage = {
   features: string[]
   recommended?: boolean
   showAddons: boolean
+  componentIds: string[]
   sort: number
   addons?: QuoteAddon[]
 }
@@ -238,7 +242,7 @@ export type QuoteCategory = {
   packages: QuotePackage[]
 }
 
-export type QuotePricing = { categories: QuoteCategory[]; addons: QuoteAddon[] }
+export type QuotePricing = { categories: QuoteCategory[]; addons: QuoteAddon[]; components: QuoteComponent[] }
 
 /**
  * 前台計算機 + 後台管理共用的報價資料。
@@ -246,13 +250,18 @@ export type QuotePricing = { categories: QuoteCategory[]; addons: QuoteAddon[] }
  */
 export async function getQuotePricing(): Promise<QuotePricing> {
   const supa = createPublicClient()
-  const [catsRes, pkgsRes, addonsRes] = await Promise.all([
+  // 注意：component_ids 欄位與 quote_components 表由 migration 0014 新增。為了讓「migration 尚未
+  // 套用」時前台計算機仍能正常運作（不因缺欄位整包查詢失敗），把「重疊扣抵」相關資料獨立成
+  // 兩個容錯查詢——查不到就當作沒有此功能（componentIds=[]、components=[]），主查詢絕不受影響。
+  const [catsRes, pkgsRes, addonsRes, pkgComponentsRes, componentsRes] = await Promise.all([
     supa.from("quote_categories").select("id, title, title_en, description, icon, sort").order("sort"),
     supa
       .from("quote_packages")
       .select("id, category_id, name, name_en, base_price, original_price, price_note, features, recommended, show_addons, sort")
       .order("sort"),
     supa.from("quote_addons").select("id, label, price, sort").order("sort"),
+    supa.from("quote_packages").select("id, component_ids"),
+    supa.from("quote_components").select("id, name, deduct_value, sort").order("sort"),
   ])
 
   const addons: QuoteAddon[] = (addonsRes.data ?? []).map((a) => ({
@@ -261,6 +270,23 @@ export async function getQuotePricing(): Promise<QuotePricing> {
     price: a.price as number,
     sort: a.sort as number,
   }))
+
+  const components: QuoteComponent[] = (componentsRes.data ?? []).map((c) => ({
+    id: c.id as string,
+    name: c.name as string,
+    deductValue: c.deduct_value as number,
+    sort: c.sort as number,
+  }))
+
+  // 方案 id → 內含元件 id 陣列（migration 未套用時此查詢會失敗 → 空 map → 全部當作 []）
+  const componentIdsByPkg = new Map<string, string[]>(
+    (pkgComponentsRes.data ?? []).map((r) => [
+      r.id as string,
+      Array.isArray((r as { component_ids?: unknown }).component_ids)
+        ? ((r as { component_ids: unknown[] }).component_ids as string[])
+        : [],
+    ])
+  )
 
   const pkgRows = (pkgsRes.data ?? []) as {
     id: string
@@ -302,12 +328,13 @@ export async function getQuotePricing(): Promise<QuotePricing> {
         features: Array.isArray(p.features) ? (p.features as string[]) : [],
         recommended: p.recommended || undefined,
         showAddons: p.show_addons,
+        componentIds: componentIdsByPkg.get(p.id) ?? [],
         sort: p.sort,
         addons: p.show_addons ? addons : undefined,
       })),
   }))
 
-  return { categories, addons }
+  return { categories, addons, components }
 }
 
 // ── 團隊 / 設計師（關於頁團隊區 + /studio/designers 共用）──────────────────────
