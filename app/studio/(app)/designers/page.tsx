@@ -1,12 +1,14 @@
 import { DesignerManager } from "@/components/studio/designer-manager"
-import { getTeamForStudio } from "@/lib/content-supabase"
+import { getTeamForStudio, getTeamCategories } from "@/lib/content-supabase"
 
 export const dynamic = "force-dynamic"
 export const metadata = { title: "團隊成員 — TEMO Studio" }
 
 export default async function StudioDesignersPage() {
-  const rows = await getTeamForStudio()
-  const categories = Array.from(new Set(rows.map((r) => r.category)))
+  const [rows, categories] = await Promise.all([
+    getTeamForStudio(),
+    getTeamCategories(),
+  ])
   return (
     <DesignerManager
       categories={categories}
@@ -20,6 +22,12 @@ export default async function StudioDesignersPage() {
         category: r.category,
         photo_url: r.photo_url ?? "",
         instagram: r.instagram ?? "",
+        facebook: r.facebook ?? "",
+        website: r.website ?? "",
+        phone: r.phone ?? "",
+        address: r.address ?? "",
+        email: r.email ?? "",
+        show_contact: r.show_contact ?? false,
         bio: (r.bio ?? []).join("\n"),
         achievements: (r.achievements ?? []).join("\n"),
         tags: (r.tags ?? []).join("\n"),

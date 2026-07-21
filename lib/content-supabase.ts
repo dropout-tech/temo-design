@@ -321,6 +321,12 @@ export type TeamMemberRow = {
   category: string
   photo_url: string | null
   instagram: string | null
+  facebook: string | null
+  website: string | null
+  phone: string | null
+  address: string | null
+  email: string | null
+  show_contact: boolean
   bio: string[]
   achievements: string[]
   tags: string[]
@@ -335,6 +341,12 @@ export type TeamMember = {
   role: string
   image: string
   instagram?: string
+  facebook?: string
+  website?: string
+  /** 只有 showContact=true 時才帶值（前台據此決定是否公開顯示個人聯絡） */
+  phone?: string
+  address?: string
+  email?: string
   bio?: string[]
   achievements?: string[]
   tags?: string[]
@@ -342,28 +354,43 @@ export type TeamMember = {
 
 export type TeamGroup = { category: string; members: TeamMember[] }
 
+/** 分類大項目（team_categories 登錄表；含 id 供後台編輯，依 sort） */
+export type TeamCategory = { id: string; name: string; sort: number }
+
+const TEAM_SELECT =
+  "id, slug, name, name_zh, role, category, photo_url, instagram, facebook, website, phone, address, email, show_contact, bio, achievements, tags, has_page, sort"
+
 /** 後台：所有團隊成員（含全部欄位，依 sort） */
 export async function getTeamForStudio(): Promise<TeamMemberRow[]> {
   const supa = createPublicClient()
-  const { data } = await supa
-    .from("designers")
-    .select(
-      "id, slug, name, name_zh, role, category, photo_url, instagram, bio, achievements, tags, has_page, sort"
-    )
-    .order("sort")
+  const { data } = await supa.from("designers").select(TEAM_SELECT).order("sort")
   return (data as TeamMemberRow[]) ?? []
 }
 
-/** 前台：依 category 分組（分類順序＝各分類第一次出現的 sort 順序） */
+/** 分類大項目清單（依 sort）；表不存在時容錯回空陣列 */
+export async function getTeamCategories(): Promise<TeamCategory[]> {
+  const supa = createPublicClient()
+  const { data, error } = await supa
+    .from("team_categories")
+    .select("id, name, sort")
+    .order("sort")
+  if (error) return []
+  return (data as TeamCategory[]) ?? []
+}
+
+/** 前台：依 category 分組。分類順序改讀 team_categories.sort；
+ *  沒被登錄到 team_categories 的舊分類，接在後面（沿用成員 sort 出現序）。 */
 export async function getTeamGrouped(): Promise<TeamGroup[]> {
-  const rows = await getTeamForStudio()
+  const [rows, cats] = await Promise.all([getTeamForStudio(), getTeamCategories()])
   const order: string[] = []
   const map = new Map<string, TeamMember[]>()
+  // 先鋪好已登錄分類的順序（即使暫時沒有成員也保留空位由下方過濾）
+  for (const c of cats) if (!map.has(c.name)) map.set(c.name, [])
   for (const r of rows) {
     const cat = r.category || "DESIGNER"
     if (!map.has(cat)) {
       map.set(cat, [])
-      order.push(cat)
+      order.push(cat) // 未登錄的舊分類，記在後面
     }
     map.get(cat)!.push({
       name: r.name,
@@ -371,10 +398,21 @@ export async function getTeamGrouped(): Promise<TeamGroup[]> {
       role: r.role ?? "",
       image: r.photo_url ?? "",
       instagram: r.instagram ?? undefined,
+      facebook: r.facebook ?? undefined,
+      website: r.website ?? undefined,
+      phone: r.show_contact ? r.phone ?? undefined : undefined,
+      address: r.show_contact ? r.address ?? undefined : undefined,
+      email: r.show_contact ? r.email ?? undefined : undefined,
       bio: r.bio ?? [],
       achievements: r.achievements ?? [],
       tags: r.tags ?? [],
     })
   }
-  return order.map((category) => ({ category, members: map.get(category)! }))
+  // 最終順序：team_categories 的登錄序在前，未登錄分類在後；空分類不輸出
+  const finalOrder = [...cats.map((c) => c.name), ...order]
+  const seen = new Set<string>()
+  return finalOrder
+    .filter((c) => (seen.has(c) ? false : (seen.add(c), true)))
+    .map((category) => ({ category, members: map.get(category) ?? [] }))
+    .filter((g) => g.members.length > 0)
 }

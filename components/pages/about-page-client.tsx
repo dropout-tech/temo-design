@@ -7,7 +7,7 @@ import { Footer } from "@/components/footer"
 import { LogoMeaningSection } from "@/components/sections/logo-meaning-section"
 import { StatsSection } from "@/components/sections/stats-section"
 import { ClientsHonorsSection, type ClientLogoItem, type PressLinkItem } from "@/components/sections/clients-honors-section"
-import { ArrowUpRight, ChevronDown, Instagram, X } from "lucide-react"
+import { ArrowUpRight, ChevronDown, Instagram, Facebook, Globe, Phone, Mail, MapPin, X } from "lucide-react"
 import Link from "next/link"
 
 type Person = {
@@ -16,6 +16,11 @@ type Person = {
   role: string
   image: string
   instagram?: string
+  facebook?: string
+  website?: string
+  phone?: string
+  address?: string
+  email?: string
   bio?: string[]
   achievements?: string[]
   tags?: string[]
@@ -414,16 +419,50 @@ function DesignerDetailPanel({
                   {person.role}
                 </p>
 
-                {person.instagram && (
-                  <a
-                    href={person.instagram}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label="Instagram"
-                    className="inline-flex w-11 h-11 rounded-full border border-white/20 items-center justify-center text-white/70 hover:text-white hover:border-white/60 hover:bg-white/5 transition"
-                  >
-                    <Instagram className="w-4 h-4" />
-                  </a>
+                {(person.instagram || person.facebook || person.website) && (
+                  <div className="flex flex-wrap gap-3">
+                    {[
+                      { href: person.instagram, label: "Instagram", Icon: Instagram },
+                      { href: person.facebook, label: "Facebook", Icon: Facebook },
+                      { href: person.website, label: "個人網站", Icon: Globe },
+                    ]
+                      .filter((s) => s.href)
+                      .map(({ href, label, Icon }) => (
+                        <a
+                          key={label}
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={label}
+                          className="inline-flex w-11 h-11 rounded-full border border-white/20 items-center justify-center text-white/70 hover:text-white hover:border-white/60 hover:bg-white/5 transition"
+                        >
+                          <Icon className="w-4 h-4" />
+                        </a>
+                      ))}
+                  </div>
+                )}
+
+                {(person.phone || person.email || person.address) && (
+                  <div className="flex flex-col gap-2.5 text-sm text-white/70 mt-1">
+                    {person.phone && (
+                      <a href={`tel:${person.phone}`} className="inline-flex items-center gap-2.5 hover:text-white transition">
+                        <Phone className="w-4 h-4 text-white/40 shrink-0" />
+                        <span>{person.phone}</span>
+                      </a>
+                    )}
+                    {person.email && (
+                      <a href={`mailto:${person.email}`} className="inline-flex items-center gap-2.5 hover:text-white transition break-all">
+                        <Mail className="w-4 h-4 text-white/40 shrink-0" />
+                        <span>{person.email}</span>
+                      </a>
+                    )}
+                    {person.address && (
+                      <span className="inline-flex items-center gap-2.5">
+                        <MapPin className="w-4 h-4 text-white/40 shrink-0" />
+                        <span>{person.address}</span>
+                      </span>
+                    )}
+                  </div>
                 )}
 
                 {person.bio && person.bio.length > 0 && (
