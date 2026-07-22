@@ -109,6 +109,15 @@ designers/actions.ts 既有模式）。無 DB schema 變更、無新套件。
 commit 時已嚴格只提交作品系統的 8 個檔案。work_gallery 表保留未刪（穩定後可清理）。
 教訓：偵測 Vercel 部署完成不要用 15 秒間隔 curl 輪詢（會觸發 bot 防護）——改用 ≥60 秒間隔。
 
+**wrap-up 收尾（2026-07-22，commit d43a187）**：/wrap-up 全流程走完——multi-agent code review
+（3 視角＋11 信心評分員）找到 3 個確認發現並全數修復（詳 REVIEW.md）：①【Critical】拖曳排序後
+編輯任一筆會把舊 sort 寫回 DB 弄亂順序（10 個 manager 的 commit 同步 state sort 修復，複核通過）
+②【Critical】migration 0015 policy 缺重跑防護（已包 if not exists）③【Warning】拖曳落庫失敗
+UI 靜默（已接 orderError 顯示，Playwright 實測生效）。報告在
+docs/reports/2026-07-21-portfolio-blocks-and-studio-drag-sort.md；CMS_BLUEPRINT 已註記
+work_gallery→work_blocks。低於門檻未修的觀察（social 連結無 protocol 白名單、reorder 無交易等）
+見 review 過程紀錄，均屬既有慣例延續、非本次引入。
+
 ---
 
 ## 前次進度（2026-07-10）
