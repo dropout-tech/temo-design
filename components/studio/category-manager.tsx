@@ -133,6 +133,7 @@ function FacetSection({
   deleteConfirmMessage: string
 }) {
   const [orderPending, startOrder] = useTransition()
+  const [orderError, setOrderError] = useState("")
 
   return (
     <div>
@@ -142,6 +143,11 @@ function FacetSection({
         {orderPending && (
           <span className="inline-flex items-center gap-1 text-[11px] text-temo-warm-gray/40">
             <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
+          </span>
+        )}
+        {orderError && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-red-400/90">
+            排序儲存失敗：{orderError}
           </span>
         )}
       </div>
@@ -155,9 +161,14 @@ function FacetSection({
             className="divide-y divide-white/[0.06]"
             onReorder={(next) => setRows(next)}
             onCommit={(next) => {
-              setRows(next)
+              const values = next.map((r) => r.value)
+              // 同步每列的 sort 為這次落庫序列中的 index，避免之後單列 save 把舊 sort 蓋回去（CR-01）
+              const synced = next.map((r, i) => ({ ...r, sort: i }))
+              setRows(synced)
+              setOrderError("")
               startOrder(async () => {
-                await persistOrder(next.map((r) => r.value))
+                const res = await persistOrder(values)
+                if (res?.error) setOrderError(res.error)
               })
             }}
             renderItem={(row, handle) => (

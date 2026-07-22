@@ -121,6 +121,10 @@
 - **`work_designers`**（作品↔設計師，多對多）：`work_id` FK、`designer_id` FK
 - **`work_industries`**（作品↔行業，多對多）：`work_id` FK、`industry_value` FK
 - **`work_gallery`**（作品畫廊圖，一對多）：`id`、`work_id` FK、`src`、`alt?`、`caption?`、`sort`
+  ⚠️ **2026-07-21 已由 `work_blocks` 取代**（作品內頁彈性內容區塊：`type` image/video/text、
+  單圖/雙圖（`src2`）/文字（`text_content`）/影片（`video_url`）、`width`/`height` 存原始尺寸
+  供前台自適應、`sort` 可拖曳排序；migration 0015）。同時 `works` 加了 `hero_url`
+  （內頁首圖，留空＝沿用 `cover_url`）。舊表保留未刪、已停用。
 
 ### 其他內容
 
@@ -149,7 +153,7 @@ category_groups ──(單選)──►  works  ◄──(多對一)── clien
                               │  ▲
       industries ──(多對多)───┘  └──(多對多)── designers
                                               (work_designers)
-      works ──(一對多)──► work_gallery
+      works ──(一對多)──► work_blocks（原 work_gallery，2026-07-21 起）
 ```
 
 ---

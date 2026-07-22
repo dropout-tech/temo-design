@@ -24,13 +24,18 @@ type Row = {
 export function PressLinkManager({ initial }: { initial: Row[] }) {
   const [rows, setRows] = useState<Row[]>(initial)
   const [orderPending, startOrder] = useTransition()
+  const [orderError, setOrderError] = useState("")
   let keyCounter = 0
 
   function commitOrder(next: Row[]) {
-    setRows(next)
     const ids = next.filter((r) => r.id).map((r) => r.id!)
+    // 同步每列的 sort 為這次落庫序列中的 index，避免之後單列 save 把舊 sort 蓋回去（CR-01）
+    const synced = next.map((r) => (r.id ? { ...r, sort: ids.indexOf(r.id) } : r))
+    setRows(synced)
+    setOrderError("")
     startOrder(async () => {
-      await reorderPressLinks(ids)
+      const res = await reorderPressLinks(ids)
+      if (res?.error) setOrderError(res.error)
     })
   }
 
@@ -68,6 +73,11 @@ export function PressLinkManager({ initial }: { initial: Row[] }) {
             {orderPending && (
               <span className="inline-flex items-center gap-1.5 text-[11px] text-temo-warm-gray/50 ml-2">
                 <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
+              </span>
+            )}
+            {orderError && (
+              <span className="inline-flex items-center gap-1.5 text-[11px] text-red-400/90 ml-2">
+                排序儲存失敗：{orderError}
               </span>
             )}
           </p>

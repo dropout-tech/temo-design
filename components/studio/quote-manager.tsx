@@ -106,6 +106,7 @@ export function QuoteManager({
   const [activeKey, setActiveKey] = useState<string>(cats[0]?.key ?? "")
   const activeCat = cats.find((c) => c.key === activeKey) ?? cats[0]
   const [orderPending, startOrder] = useTransition()
+  const [orderError, setOrderError] = useState("")
 
   // ── 類別 ──
   function addCategory() {
@@ -189,10 +190,14 @@ export function QuoteManager({
     setCats(next)
   }
   function reorderCatsCommit(next: CatRow[]) {
-    setCats(next)
     const ids = next.filter((c) => c.id).map((c) => c.id!)
+    // 同步每個類別的 sort 為這次落庫序列中的 index，避免之後單類別 save 把舊 sort 蓋回去（CR-01）
+    const synced = next.map((c) => (c.id ? { ...c, sort: ids.indexOf(c.id) } : c))
+    setCats(synced)
+    setOrderError("")
     startOrder(async () => {
-      await reorderQuoteCategories(ids)
+      const res = await reorderQuoteCategories(ids)
+      if (res?.error) setOrderError(res.error)
     })
   }
 
@@ -200,10 +205,14 @@ export function QuoteManager({
     setPkgs((prev) => [...prev.filter((p) => p.categoryId !== categoryId), ...nextGroup])
   }
   function reorderPkgsCommit(categoryId: string, nextGroup: PkgRow[]) {
-    reorderPkgsLive(categoryId, nextGroup)
     const ids = nextGroup.filter((p) => p.id).map((p) => p.id!)
+    // 同步該類別內每個方案的 sort 為這次落庫序列中的 index，避免之後單方案 save 把舊 sort 蓋回去（CR-01）
+    const syncedGroup = nextGroup.map((p) => (p.id ? { ...p, sort: ids.indexOf(p.id) } : p))
+    reorderPkgsLive(categoryId, syncedGroup)
+    setOrderError("")
     startOrder(async () => {
-      await reorderQuotePackages(ids)
+      const res = await reorderQuotePackages(ids)
+      if (res?.error) setOrderError(res.error)
     })
   }
 
@@ -211,10 +220,14 @@ export function QuoteManager({
     setAddonRows(next)
   }
   function reorderAddonsCommit(next: AddonRow[]) {
-    setAddonRows(next)
     const ids = next.filter((a) => a.id).map((a) => a.id!)
+    // 同步每個加購項的 sort 為這次落庫序列中的 index，避免之後單項 save 把舊 sort 蓋回去（CR-01）
+    const synced = next.map((a) => (a.id ? { ...a, sort: ids.indexOf(a.id) } : a))
+    setAddonRows(synced)
+    setOrderError("")
     startOrder(async () => {
-      await reorderQuoteAddons(ids)
+      const res = await reorderQuoteAddons(ids)
+      if (res?.error) setOrderError(res.error)
     })
   }
 
@@ -222,10 +235,14 @@ export function QuoteManager({
     setCompRows(next)
   }
   function reorderCompsCommit(next: CompRow[]) {
-    setCompRows(next)
     const ids = next.filter((c) => c.id).map((c) => c.id!)
+    // 同步每個內容元件的 sort 為這次落庫序列中的 index，避免之後單元件 save 把舊 sort 蓋回去（CR-01）
+    const synced = next.map((c) => (c.id ? { ...c, sort: ids.indexOf(c.id) } : c))
+    setCompRows(synced)
+    setOrderError("")
     startOrder(async () => {
-      await reorderQuoteComponents(ids)
+      const res = await reorderQuoteComponents(ids)
+      if (res?.error) setOrderError(res.error)
     })
   }
 
@@ -280,6 +297,11 @@ export function QuoteManager({
         {orderPending && (
           <span className="inline-flex items-center gap-1.5 text-[11px] text-temo-warm-gray/50">
             <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
+          </span>
+        )}
+        {orderError && (
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-red-400/90">
+            排序儲存失敗：{orderError}
           </span>
         )}
       </div>

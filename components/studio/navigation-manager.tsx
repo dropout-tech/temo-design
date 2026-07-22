@@ -55,6 +55,7 @@ export function NavigationManager({ links }: { links: NavLinkRow[] }) {
     links.map((l) => ({ ...l, key: l.id ?? randomKey() }))
   )
   const [orderPending, startOrder] = useTransition()
+  const [orderError, setOrderError] = useState("")
 
   function addRow(location: string) {
     const maxSort = rows
@@ -89,11 +90,16 @@ export function NavigationManager({ links }: { links: NavLinkRow[] }) {
   }
 
   function reorderSectionCommit(location: string, nextGroup: ClientRow[]) {
-    const next = rebuildRows(location, nextGroup)
+    const ids = nextGroup.filter((r) => r.id).map((r) => r.id!)
+    // 同步該 location 子集合內每列的 sort 為這次落庫序列中的 index，
+    // 避免之後單列 save 把舊 sort 蓋回去（CR-01）
+    const syncedGroup = nextGroup.map((r) => (r.id ? { ...r, sort: ids.indexOf(r.id) } : r))
+    const next = rebuildRows(location, syncedGroup)
     setRows(next)
-    const ids = next.filter((r) => r.location === location && r.id).map((r) => r.id!)
+    setOrderError("")
     startOrder(async () => {
-      await reorderNavLinks(ids)
+      const res = await reorderNavLinks(ids)
+      if (res?.error) setOrderError(res.error)
     })
   }
 
@@ -108,6 +114,11 @@ export function NavigationManager({ links }: { links: NavLinkRow[] }) {
         {orderPending && (
           <span className="inline-flex items-center gap-1.5 text-[11px] text-temo-warm-gray/50 mt-2">
             <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
+          </span>
+        )}
+        {orderError && (
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-red-400/90 mt-2">
+            排序儲存失敗：{orderError}
           </span>
         )}
       </div>

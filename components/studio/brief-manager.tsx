@@ -122,6 +122,7 @@ export function BriefManager({ sections }: { sections: BriefSectionRow[] }) {
   )
 
   const [orderPending, startOrder] = useTransition()
+  const [orderError, setOrderError] = useState("")
 
   function addSection() {
     const maxSort = secs.reduce((m, s) => Math.max(m, s.sort), -1)
@@ -178,10 +179,14 @@ export function BriefManager({ sections }: { sections: BriefSectionRow[] }) {
     setSecs(next)
   }
   function reorderSectionsCommit(next: SectionState[]) {
-    setSecs(next)
     const ids = next.filter((s) => s.savedToDb).map((s) => s.id)
+    // 同步每個區塊的 sort 為這次落庫序列中的 index，避免之後單區塊 save 把舊 sort 蓋回去（CR-01）
+    const synced = next.map((s) => (s.savedToDb ? { ...s, sort: ids.indexOf(s.id) } : s))
+    setSecs(synced)
+    setOrderError("")
     startOrder(async () => {
-      await reorderBriefSections(ids)
+      const res = await reorderBriefSections(ids)
+      if (res?.error) setOrderError(res.error)
     })
   }
 
@@ -190,10 +195,14 @@ export function BriefManager({ sections }: { sections: BriefSectionRow[] }) {
     setQs((prev) => [...prev.filter((q) => q.sectionId !== sectionId), ...nextGroup])
   }
   function reorderQuestionsCommit(sectionId: string, nextGroup: QuestionState[]) {
-    reorderQuestionsLive(sectionId, nextGroup)
     const ids = nextGroup.filter((q) => q.id).map((q) => q.id!)
+    // 同步該區塊內每題的 sort 為這次落庫序列中的 index，避免之後單題 save 把舊 sort 蓋回去（CR-01）
+    const syncedGroup = nextGroup.map((q) => (q.id ? { ...q, sort: ids.indexOf(q.id) } : q))
+    reorderQuestionsLive(sectionId, syncedGroup)
+    setOrderError("")
     startOrder(async () => {
-      await reorderBriefQuestions(ids)
+      const res = await reorderBriefQuestions(ids)
+      if (res?.error) setOrderError(res.error)
     })
   }
 
@@ -216,6 +225,11 @@ export function BriefManager({ sections }: { sections: BriefSectionRow[] }) {
           {orderPending && (
             <span className="inline-flex items-center gap-1.5 text-[11px] text-temo-warm-gray/50">
               <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
+            </span>
+          )}
+          {orderError && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-red-400/90">
+              排序儲存失敗：{orderError}
             </span>
           )}
           <button

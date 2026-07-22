@@ -69,6 +69,7 @@ export function DesignerManager({
   const [cats, setCats] = useState<Cat[]>(categories.map((c) => ({ id: c.id, name: c.name })))
   const [activeCat, setActiveCat] = useState<string>("全部")
   const [orderPending, startOrder] = useTransition()
+  const [orderError, setOrderError] = useState("")
   let keyCounter = 0
 
   // 顯示用分類順序：已登錄分類在前，未登錄的舊分類（成員身上有、但沒建大項目的）接在後面
@@ -129,10 +130,15 @@ export function DesignerManager({
 
   function reorderGroupCommit(cat: string, nextGroup: Row[]) {
     const next = rebuildRows(cat, nextGroup)
-    setRows(next)
     const ids = next.filter((r) => r.id).map((r) => r.id!)
+    // 設計師是全域排序（ids=全部列），同步每列的 sort 為全域 index，
+    // 避免之後單列 save 把舊 sort 蓋回去（CR-01）
+    const synced = next.map((r) => (r.id ? { ...r, sort: ids.indexOf(r.id) } : r))
+    setRows(synced)
+    setOrderError("")
     startOrder(async () => {
-      await reorderDesigners(ids)
+      const res = await reorderDesigners(ids)
+      if (res?.error) setOrderError(res.error)
     })
   }
 
@@ -187,6 +193,11 @@ export function DesignerManager({
         {orderPending && (
           <span className="inline-flex items-center gap-1.5 text-[11px] text-temo-warm-gray/50 ml-1">
             <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
+          </span>
+        )}
+        {orderError && (
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-red-400/90 ml-1">
+            排序儲存失敗：{orderError}
           </span>
         )}
       </div>
@@ -300,8 +311,10 @@ function CategoryManager({
 
   function commitOrder(next: Cat[]) {
     setCats(next)
+    setError("")
     startTransition(async () => {
-      await reorderTeamCategories(next.map((c) => c.id))
+      const res = await reorderTeamCategories(next.map((c) => c.id))
+      if (res.error) setError(res.error)
     })
   }
 

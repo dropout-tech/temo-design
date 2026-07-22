@@ -27,8 +27,15 @@ create table if not exists work_blocks (
 create index if not exists work_blocks_work_id_idx on work_blocks(work_id);
 
 alter table work_blocks enable row level security;
-create policy work_blocks_public_read on work_blocks for select using (true);
-create policy work_blocks_auth_all on work_blocks for all to authenticated using (true) with check (true);
+do $$
+begin
+  if not exists (select 1 from pg_policies where tablename = 'work_blocks' and policyname = 'work_blocks_public_read') then
+    create policy work_blocks_public_read on work_blocks for select using (true);
+  end if;
+  if not exists (select 1 from pg_policies where tablename = 'work_blocks' and policyname = 'work_blocks_auth_all') then
+    create policy work_blocks_auth_all on work_blocks for all to authenticated using (true) with check (true);
+  end if;
+end $$;
 
 -- 3) 既有 gallery 圖搬進 blocks（work_gallery 保留不刪，僅停用；確認穩定後可另行清理）
 insert into work_blocks (work_id, type, src, alt, caption, sort)

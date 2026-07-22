@@ -29,6 +29,7 @@ export function SocialLinksManager({ rows: initialRows }: { rows: SocialLinkRow[
     initialRows.map((r) => ({ ...r, key: r.id ?? randomKey() }))
   )
   const [orderPending, startOrder] = useTransition()
+  const [orderError, setOrderError] = useState("")
 
   function addRow() {
     const usedPlatforms = new Set(rows.map((r) => r.platform))
@@ -50,10 +51,14 @@ export function SocialLinksManager({ rows: initialRows }: { rows: SocialLinkRow[
   }
 
   function reorderCommit(next: ClientRow[]) {
-    setRows(next)
     const ids = next.filter((r) => r.id).map((r) => r.id!)
+    // 同步每列的 sort 為這次落庫序列中的 index，避免之後單列 save 把舊 sort 蓋回去（CR-01）
+    const synced = next.map((r) => (r.id ? { ...r, sort: ids.indexOf(r.id) } : r))
+    setRows(synced)
+    setOrderError("")
     startOrder(async () => {
-      await reorderSocialLinks(ids)
+      const res = await reorderSocialLinks(ids)
+      if (res?.error) setOrderError(res.error)
     })
   }
 
@@ -76,6 +81,11 @@ export function SocialLinksManager({ rows: initialRows }: { rows: SocialLinkRow[
         {orderPending && (
           <span className="inline-flex items-center gap-1.5 ml-2 text-temo-warm-gray/50">
             <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
+          </span>
+        )}
+        {orderError && (
+          <span className="inline-flex items-center gap-1.5 ml-2 text-red-400/90">
+            排序儲存失敗：{orderError}
           </span>
         )}
       </p>
