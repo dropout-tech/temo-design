@@ -6,7 +6,7 @@ import './globals.css'
 
 const notoSansTC = Noto_Sans_TC({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '700'],
+  weight: ['300', '400', '500', '700', '900'],
   variable: '--font-noto-sans-tc',
   display: 'swap',
   preload: true,

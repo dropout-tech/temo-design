@@ -59,7 +59,7 @@ function LandingHero({ landing }: { landing: CategoryLanding }) {
                   key={i}
                   className={cn(
                     "block",
-                    isAmpersand && "text-4xl md:text-6xl font-light text-white/30 my-1 md:my-2"
+                    isAmpersand && "text-4xl md:text-6xl my-1 md:my-2"
                   )}
                 >
                   {line}
