@@ -262,7 +262,7 @@ function TodayStage({
             fontSize: 150,
             lineHeight: 1,
             letterSpacing: "-0.01em",
-            color: "#F2F2F2",
+            color: "rgba(196, 196, 196, 0.8)",
           }}
         >
           TODAY
@@ -271,13 +271,13 @@ function TodayStage({
           className="absolute pointer-events-none"
           style={{
             left: 50,
-            top: 317,
+            top: 297,
             fontFamily: "'Barlow', sans-serif",
             fontWeight: 700,
             fontSize: 44,
             lineHeight: 1,
             letterSpacing: "0.09em",
-            color: "#F2F2F2",
+            color: "rgba(196, 196, 196, 0.8)",
           }}
         >
           SOMETHING MORE...
@@ -286,13 +286,13 @@ function TodayStage({
           className="absolute pointer-events-none"
           style={{
             left: 50,
-            top: 417,
+            top: 377,
             fontFamily: "'Noto Sans TC', sans-serif",
             fontWeight: 700,
             fontSize: 40,
             lineHeight: 1,
             letterSpacing: "0.25em",
-            color: "#F2F2F2",
+            color: "rgba(196, 196, 196, 0.8)",
           }}
         >
           今天我想來點...
@@ -301,14 +301,14 @@ function TodayStage({
           className="absolute pointer-events-none"
           style={{
             left: 49,
-            top: 518,
+            top: 458,
             width: 371,
             fontFamily: "'Barlow', sans-serif",
             fontWeight: 600,
             fontSize: 16,
             lineHeight: 1.13,
             letterSpacing: "0.04em",
-            color: "#F2F2F2",
+            color: "rgba(196, 196, 196, 0.8)",
           }}
         >
           <p>At TEMO, we believe that design is not merely about appearance—it is a form of healing and a solution.</p>
