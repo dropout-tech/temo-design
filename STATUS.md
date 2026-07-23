@@ -4,7 +4,28 @@
 
 ## 目前進度（2026-07-24）
 
-### 最新：服務落地頁「大分類」後台可新增與刪除（已 push 348fa6c，Vercel 自動部署）
+### 最新：分類落地頁手機/平板補搜尋框（已 push ef156ee，Vercel 自動部署）
+
+**需求（使用者原話）**：作品探索上方的 search 搜尋框好像不見了，做回來。
+
+**查明**：全站搜尋框其實都在、git 歷史也沒有任何搜尋框被移除過（線上實測：/portfolio
+大搜尋框桌機+手機✓、四個落地頁 navbar SEARCH 膠囊✓、漢堡選單搜尋框✓）。真相是
+navbar 的 SEARCH 膠囊從一開始就設成 lg（1024px）以上才顯示——使用者在**手機**上看
+分類落地頁（他稱「作品探索」），頂部自然沒有搜尋框，等於這功能在手機上一直缺席。
+
+**做法**：落地頁 hero 與作品列表之間補一個與 /portfolio 同款的 SearchBox（lg 以下顯示、
+桌機隱藏不重複），即時過濾本頁作品。改 2 檔 9 行：portfolio-page-client.tsx 匯出
+SearchBox、category-landing-client.tsx 引用。
+
+**驗證**：確定性 Playwright 14/14 全過（390/375px 搜尋框可見、高 54px≥44、字體 16px
+防 iOS 聚焦縮放、無橫向溢出、輸入關鍵字 8→0→8 即時過濾、無 page error；1440px 內容區
+搜尋框隱藏＋navbar 膠囊仍在）；截圖經 agent 判讀通過（scratchpad/landing-mobile-search-*.png）。
+tsc 僅 .next 既知假錯。
+
+**已知小事**：placeholder「搜尋作品、客戶、設計師、標籤…」在 375px 尾字被截半——
+/portfolio 手機版同款既有現象，非本次引入，要改再說。
+
+### 前次：服務落地頁「大分類」後台可新增與刪除（已 push 348fa6c，Vercel 自動部署）
 
 **需求（使用者原話＋截圖）**：作品分類的大項目（01 BRAND & GRAPHIC 那層）要可以自由新增，
 相關的也一起開放後台自行新增。
