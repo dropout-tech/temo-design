@@ -4,7 +4,28 @@
 
 ## 目前進度（2026-07-24）
 
-### 最新：/explore TODAY 區左欄文字改灰＋透明、間距收緊、E 加粗（已 push ab979bd＋753b92a，Vercel 自動部署）
+### 最新：後台作品表單「設計師（可複選）」選單空白修復（已 push defea97，Vercel 自動部署）
+
+**需求（使用者截圖）**：後台編輯作品時，「設計師（可複選）」底下一顆選項都沒有。
+
+**根因**：團隊分類自 migration 0006/0016 起改為後台自由命名字串（正式 DB 現值
+「DESIGNER 設計團隊」等 6 種），但 `lib/studio/works.ts` getWorkOptions 仍精準比對
+舊代號 `category === 'DESIGNER'` → 抓到 0 人（唯讀 psql 實查證實）。
+
+**修法**：改為「分類含 DESIGNER（不分大小寫）即列入」，全對不到時退回列出全部成員
+（選單永不空白）；designer-manager 的提示文字同步更新。既有作品已勾的設計師關聯
+（work_designers 存 id）不受分類字串影響，無資料損失。
+
+**驗證**：tsc 0 錯（僅 .next 既知假錯）；確定性腳本打正式 Supabase
+（scratchpad/verify-designer-options.mjs）——舊邏輯 0 人（重現病灶）、
+新邏輯 7 位設計團隊成員全列出，PASS。後台頁面需登入，實際點選待使用者驗收。
+
+**下一步（使用者）**：部署完成後登入 /studio → 作品 → 編輯任一筆，確認
+「設計師（可複選）」出現 7 顆人名選項、勾選存檔正常。
+
+---
+
+### 前次：/explore TODAY 區左欄文字改灰＋透明、間距收緊、E 加粗（已 push ab979bd＋753b92a，Vercel 自動部署）
 
 **需求（使用者原話，同輪三則）**：左側 TODAY 那邊所有文字灰一點、帶稍微透明感；
 上下行距變近一點；SOMETHING MORE... 的 E 要再更粗。
