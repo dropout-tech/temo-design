@@ -203,6 +203,19 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
   const cover = w.cover_url ?? "/placeholder.jpg"
   const hero = heroUrl || cover
 
+  // ── client_logo_url：獨立查詢，欄位不存在（migration 0017 未套用）時安靜回 null ──
+  let clientLogo: string | null = null
+  try {
+    const { data: logoRow, error: logoErr } = await supa
+      .from("works")
+      .select("client_logo_url")
+      .eq("slug", slug)
+      .maybeSingle()
+    if (!logoErr) clientLogo = (logoRow as any)?.client_logo_url ?? null
+  } catch {
+    clientLogo = null
+  }
+
   // ── blocks：獨立查詢 work_blocks（migration 未套用/表不存在/查詢失敗/空陣列 → fallback 成 gallery 轉的 image blocks）──
   let blocks: WorkBlock[] = []
   try {
@@ -263,6 +276,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     clientName: w.clients?.name ?? undefined,
     clientSlug: w.clients?.slug ?? undefined,
     clientBrief: w.clients?.brief ?? undefined,
+    clientLogo: clientLogo ?? undefined,
     description: w.description ?? "",
     cover,
     hero,

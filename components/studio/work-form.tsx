@@ -29,6 +29,8 @@ export type WorkFormInitial = {
   cover_url: string
   /** 內頁首圖，選填，留空＝沿用封面圖 */
   hero_url?: string
+  /** 客戶 LOGO，選填；顯示於作品內頁右側資訊欄最頂端 */
+  client_logo_url?: string
   video_url: string
   size: "large" | "medium" | "small"
   description: string
@@ -51,7 +53,7 @@ export type WorkFormInitial = {
 
 const EMPTY: WorkFormInitial = {
   slug: "", title: "", subtitle: "", category_group: "", year: "", client_id: "",
-  cover_url: "", hero_url: "", video_url: "", size: "medium", description: "", services: "",
+  cover_url: "", hero_url: "", client_logo_url: "", video_url: "", size: "medium", description: "", services: "",
   deliverables: "", challenge: "", approach: "", result: "", quote_text: "",
   quote_author: "", awards: "", published: true, industryValues: [], designerIds: [],
   gallery: [], blocks: [],
@@ -177,6 +179,7 @@ export function WorkForm({
   const router = useRouter()
   const [f, setF] = useState<WorkFormInitial>(initial ?? EMPTY)
   const [heroUrl, setHeroUrl] = useState(initial?.hero_url ?? "")
+  const [clientLogoUrl, setClientLogoUrl] = useState(initial?.client_logo_url ?? "")
   const [blocks, setBlocks] = useState<FormBlock[]>(() => initialBlocksFrom(initial))
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
@@ -231,6 +234,21 @@ export function WorkForm({
     setHeroUrl("")
   }
 
+  async function onClientLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setError("")
+    const url = await uploadToStorage(file)
+    if (url) setClientLogoUrl(url)
+    setUploading(false)
+    e.target.value = ""
+  }
+
+  function clearClientLogo() {
+    setClientLogoUrl("")
+  }
+
   function addBlock(type: BlockType) {
     setBlocks((prev) => [...prev, emptyBlock(type)])
   }
@@ -279,7 +297,7 @@ export function WorkForm({
     const input: WorkInput = {
       slug: f.slug, title: f.title, subtitle: f.subtitle,
       category_group: f.category_group, year: f.year, client_id: f.client_id,
-      cover_url: f.cover_url, hero_url: heroUrl, video_url: f.video_url, size: f.size,
+      cover_url: f.cover_url, hero_url: heroUrl, client_logo_url: clientLogoUrl, video_url: f.video_url, size: f.size,
       description: f.description, services: toLines(f.services),
       deliverables: toLines(f.deliverables), challenge: f.challenge,
       approach: f.approach, result: f.result, quote_text: f.quote_text,
@@ -438,6 +456,31 @@ export function WorkForm({
                 )}
               </div>
               <input className={inputCls} value={heroUrl} onChange={(e) => setHeroUrl(e.target.value)} placeholder="或直接貼圖片網址（留空則沿用封面圖）" />
+            </div>
+          </div>
+        </Field>
+        <Field label="客戶 LOGO（選填）" hint="顯示於作品內頁右上角資訊欄頂端；深色底網站，建議上傳白色或淺色版本">
+          <div className="flex items-start gap-4">
+            <div className="w-32 h-32 rounded-lg overflow-hidden bg-white/[0.04] border border-white/10 shrink-0 flex items-center justify-center">
+              {clientLogoUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={clientLogoUrl} alt="客戶 LOGO 預覽" className="max-w-full max-h-full object-contain" />
+              )}
+            </div>
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <label className={cn("inline-flex items-center gap-2 px-4 py-2.5 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
+                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  {uploading ? "上傳中…" : "上傳圖片"}
+                  <input type="file" accept="image/*" className="hidden" onChange={onClientLogoFile} disabled={uploading} />
+                </label>
+                {clientLogoUrl && (
+                  <button type="button" onClick={clearClientLogo} className="inline-flex items-center gap-1 px-3 py-2.5 text-red-400/70 hover:text-red-400 text-xs tracking-wider transition-colors">
+                    <X className="w-3.5 h-3.5" /> 清除，不顯示
+                  </button>
+                )}
+              </div>
+              <input className={inputCls} value={clientLogoUrl} onChange={(e) => setClientLogoUrl(e.target.value)} placeholder="或直接貼圖片網址（留空則不顯示）" />
             </div>
           </div>
         </Field>

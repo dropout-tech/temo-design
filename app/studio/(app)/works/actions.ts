@@ -15,6 +15,8 @@ export type WorkInput = {
   cover_url: string
   /** 內頁首圖，選填，留空＝沿用封面圖 */
   hero_url: string
+  /** 客戶 LOGO，選填；顯示於作品內頁右側資訊欄最頂端 */
+  client_logo_url: string
   video_url: string
   size: "large" | "medium" | "small"
   description: string
@@ -55,6 +57,7 @@ function toRow(input: WorkInput) {
     client_id: input.client_id || null,
     cover_url: input.cover_url.trim() || null,
     hero_url: input.hero_url.trim() || null,
+    client_logo_url: input.client_logo_url.trim() || null,
     video_url: input.video_url.trim() || null,
     size: input.size,
     description: input.description.trim() || null,

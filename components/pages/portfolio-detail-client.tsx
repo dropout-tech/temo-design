@@ -46,6 +46,8 @@ export type DetailProject = {
   clientName?: string
   clientSlug?: string
   clientBrief?: string
+  /** 客戶 LOGO，選填；顯示於作品內頁右側資訊欄最頂端 */
+  clientLogo?: string
   description: string
   cover: string
   videoUrl?: string
@@ -113,7 +115,8 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
     project.services?.length ||
     project.deliverables?.length ||
     project.designers.length ||
-    project.clientName
+    project.clientName ||
+    project.clientLogo
 
   // 內頁首圖：優先用後台設定的 hero，沒有就退回封面
   const heroSrc = project.hero || project.cover
@@ -276,6 +279,17 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
               {hasMeta && (
                 <aside className="lg:col-span-4">
                   <div className="lg:sticky lg:top-28 space-y-8 lg:border-l lg:border-temo-warm-gray/15 lg:pl-10">
+                    {project.clientLogo && (
+                      <div>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={proxyImage(project.clientLogo)}
+                          alt={`${project.clientName || project.title} logo`}
+                          className="h-16 w-auto max-w-full object-contain"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    )}
                     {project.clientName && (
                       <MetaItem label="客戶 Client">
                         {project.clientSlug ? (
@@ -467,7 +481,7 @@ function NarrativeBlock({
         {body.split("\n\n").map((p, i) => (
           <p
             key={i}
-            className="text-base md:text-lg text-temo-warm-gray leading-relaxed whitespace-pre-line"
+            className="text-base md:text-lg text-temo-warm-gray leading-relaxed whitespace-pre-line break-words"
           >
             {p}
           </p>
@@ -539,7 +553,7 @@ function BlockItem({
             {block.text.split("\n\n").map((p, i) => (
               <p
                 key={i}
-                className="text-base md:text-lg text-temo-warm-gray leading-relaxed whitespace-pre-line"
+                className="text-base md:text-lg text-temo-warm-gray leading-relaxed whitespace-pre-line break-words"
               >
                 {p}
               </p>

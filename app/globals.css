@@ -309,6 +309,10 @@ html {
 }
 
 /* ─── 前台作品內頁富文本渲染（存進 DB 的 HTML，資料在存檔時已消毒） ───────────────── */
+.rich-text {
+  /* 長網址等連續字串在手機窄欄要能斷行，否則會撐破版面 */
+  overflow-wrap: break-word;
+}
 .rich-text p + p {
   margin-top: 1.25em;
 }

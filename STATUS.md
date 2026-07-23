@@ -38,6 +38,35 @@ tsc 0 錯、build ✓；commit 單獨在 git worktree 檢出重 build ✓（39/3
 - Quill 內部格式：無序列表也輸出 `<ol>`＋`li[data-list="bullet"]`（非 `<ul>`），
   前台 CSS 兩種格式都支援。sanitize 白名單改動時記得跑 scratchpad/sanitize-test.ts。
 
+### 同日（客戶 LOGO session）：作品內頁「客戶 LOGO」欄位——程式完成＋本地驗證，**待使用者同意套 migration 0017 後才 commit/push**
+
+**需求（使用者原話）**：作品頂端右上角可放客戶 logo，該欄資訊順勢往下，後台要能管理。
+
+**做法**（完全比照 hero_url 既有模式，works 表加 `client_logo_url`）：
+- `supabase/migrations/0017_work_client_logo.sql`（新檔，if not exists 可安全重跑）
+- `lib/portfolio-supabase.ts`：fallback-safe 獨立查詢（migration 未套用時安靜回 null 不壞站）
+- `components/pages/portfolio-detail-client.tsx`：側欄 sticky 頂端渲染 logo（h-16 object-contain，
+  有值才渲染；沒值 DOM 與原本完全相同）
+- `components/studio/work-form.tsx`：「封面與影片」區新增「客戶 LOGO（選填）」上傳/預覽/清除，
+  提示深色底建議上傳白色/淺色版
+- `app/studio/(app)/works/actions.ts`＋`lib/studio/works.ts`：存檔映射＋編輯帶出
+
+**順手修（同次一起上）**：內頁文字長網址撐破手機版（ilo-2025 貼的華視新聞 URL →
+scrollWidth 495/375）——文字區塊兩處渲染加 `break-words`；富文本 `.rich-text`（globals.css）
+也補 `overflow-wrap: break-word` 預防同款 bug。此溢出正式站現在就看得到。
+
+**驗證**：tsc 乾淨（僅 .next 的 rte-harness 殘影兩個假錯，非真錯）；Playwright 確定性腳本——
+桌面 1440 全 PASS（logo 在資訊欄頂端、y 在「客戶 Client」之上、≤64px、無溢出）；
+手機 375 修 break-words 後 4/4 PASS（scrollWidth=375、無 logo 資料時 DOM 回原樣、無 page error）；
+4 張截圖 fresh agent 判讀通過（scratchpad/client-logo-*.png）。⚠️ 後台表單存檔流程需登入未測。
+
+**待辦（順序不能反）**：① 使用者同意 → psql 套 0017 到正式 Supabase → ② commit＋push。
+先 push 沒套 migration，後台存作品會直接失敗（toRow 會寫不存在的欄位）。
+
+**地雷**：工作區還留著兩個不明歸屬的未提交檔（app/layout.tsx 加字重 900、
+category-landing-client.tsx 改 & 符號樣式），非本 session 改的、富文本 session 也沒提交，
+commit 時勿夾帶。
+
 ---
 
 ## 前次進度（2026-07-21）

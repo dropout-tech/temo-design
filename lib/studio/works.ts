@@ -80,6 +80,7 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
 
   return {
     hero_url: w.hero_url ?? "",
+    client_logo_url: w.client_logo_url ?? "",
     blocks,
     slug: w.slug ?? "",
     title: w.title ?? "",
