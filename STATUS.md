@@ -4,7 +4,13 @@
 
 ## 目前進度（2026-07-24）
 
-### 最新：服務頁大標 & 符號改黑色粗體（已 push a7939b8，Vercel 自動部署）
+### 最新：關於頁品牌理念區 CTA 按鈕 hover 態對調（已 push 7dd0e9d，Vercel 自動部署）
+
+**需求（使用者截圖）**：「填寫設計報價表單」按鈕原本是透明底、hover 變黑底，方向相反；
+改成預設黑底白字、hover 才變透明底黑字（about-page-client.tsx 單行 class 對調）。
+依「小視覺微調直接改+push」慣例未跑 Playwright，部署後看 temo-design.vercel.app/about 即可確認。
+
+### 前次：服務頁大標 & 符號改黑色粗體（已 push a7939b8，Vercel 自動部署）
 
 **需求（使用者截圖）**：/services/brand-graphic 大標「BRAND & GRAPHIC」的 & 原是細字半透明白，
 要改成與 BRAND/GRAPHIC 一樣的黑色粗體。
