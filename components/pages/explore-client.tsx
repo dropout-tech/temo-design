@@ -280,7 +280,7 @@ function TodayStage({
             color: "rgba(196, 196, 196, 0.8)",
           }}
         >
-          SOMETHING MORE...
+          SOM<span style={{ fontWeight: 900 }}>E</span>THING MOR<span style={{ fontWeight: 900 }}>E</span>...
         </div>
         <div
           className="absolute pointer-events-none"
