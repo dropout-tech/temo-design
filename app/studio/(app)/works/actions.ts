@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { sanitizeRichText, richTextIsEmpty } from "@/lib/sanitize-rich-text"
 
 export type WorkInput = {
   slug: string
@@ -120,22 +121,26 @@ export async function saveWork(
   await supabase.from("work_blocks").delete().eq("work_id", workId!)
   if (input.blocks.length > 0) {
     const { error } = await supabase.from("work_blocks").insert(
-      input.blocks.map((b, i) => ({
-        work_id: workId!,
-        type: b.type,
-        src: b.src.trim() || null,
-        alt: b.alt.trim() || null,
-        width: b.width,
-        height: b.height,
-        src2: b.src2.trim() || null,
-        alt2: b.alt2.trim() || null,
-        width2: b.width2,
-        height2: b.height2,
-        text_content: b.text_content.trim() || null,
-        video_url: b.video_url.trim() || null,
-        caption: b.caption.trim() || null,
-        sort: i,
-      }))
+      input.blocks.map((b, i) => {
+        const cleanText = b.type === "text" ? sanitizeRichText(b.text_content) : b.text_content.trim()
+        return {
+          work_id: workId!,
+          type: b.type,
+          src: b.src.trim() || null,
+          alt: b.alt.trim() || null,
+          width: b.width,
+          height: b.height,
+          src2: b.src2.trim() || null,
+          alt2: b.alt2.trim() || null,
+          width2: b.width2,
+          height2: b.height2,
+          text_content:
+            b.type === "text" ? (richTextIsEmpty(cleanText) ? null : cleanText) : cleanText || null,
+          video_url: b.video_url.trim() || null,
+          caption: b.caption.trim() || null,
+          sort: i,
+        }
+      })
     )
     if (error) return { error: error.message }
   }

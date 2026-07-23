@@ -524,18 +524,28 @@ function BlockItem({
 
   if (block.type === "text") {
     if (!block.text) return null
+    // 新資料是後台 Quill 富文本編輯器存下的 HTML（存檔時已消毒過）；舊資料仍是純文字，
+    // 沿用原本的 "\n\n" 分段渲染，兩者向後相容並存。
+    const isHtml = /<[a-z][\s\S]*>/i.test(block.text)
     return (
       <figure className="space-y-3">
-        <div className="max-w-3xl mx-auto space-y-5">
-          {block.text.split("\n\n").map((p, i) => (
-            <p
-              key={i}
-              className="text-base md:text-lg text-temo-warm-gray leading-relaxed whitespace-pre-line"
-            >
-              {p}
-            </p>
-          ))}
-        </div>
+        {isHtml ? (
+          <div
+            className="rich-text max-w-3xl mx-auto text-base md:text-lg text-temo-warm-gray leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: block.text }}
+          />
+        ) : (
+          <div className="max-w-3xl mx-auto space-y-5">
+            {block.text.split("\n\n").map((p, i) => (
+              <p
+                key={i}
+                className="text-base md:text-lg text-temo-warm-gray leading-relaxed whitespace-pre-line"
+              >
+                {p}
+              </p>
+            ))}
+          </div>
+        )}
         {caption && (
           <figcaption className="text-xs text-temo-warm-gray/60 tracking-wider text-center">
             {caption}

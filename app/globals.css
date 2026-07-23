@@ -197,16 +197,166 @@ html {
   .animate-fadeUp {
     animation: fadeUp 0.8s ease-out forwards;
   }
-  
+
   .animate-slideInLeft {
     animation: slideInLeft 0.8s ease-out forwards;
   }
-  
+
   .animate-slideInRight {
     animation: slideInRight 0.8s ease-out forwards;
   }
-  
+
   .animate-scaleIn {
     animation: scaleIn 0.6s ease-out forwards;
   }
+}
+
+/* ─── 後台文字區塊富文本編輯器（Quill）深色主題覆寫，scope 在 .studio-rte 底下 ───────── */
+.studio-rte .ql-toolbar.ql-snow {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 0.125rem 0.125rem 0 0;
+}
+.studio-rte .ql-container.ql-snow {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 0 0 0.125rem 0.125rem;
+}
+.studio-rte .ql-editor {
+  min-height: 7rem;
+  color: var(--temo-white);
+  font-size: 0.875rem;
+}
+.studio-rte .ql-editor.ql-blank::before {
+  color: rgba(255, 255, 255, 0.3);
+  font-style: normal;
+}
+.studio-rte .ql-snow .ql-stroke {
+  stroke: rgba(255, 255, 255, 0.6);
+}
+.studio-rte .ql-snow .ql-fill,
+.studio-rte .ql-snow .ql-stroke.ql-fill {
+  fill: rgba(255, 255, 255, 0.6);
+}
+.studio-rte .ql-snow .ql-picker {
+  color: rgba(255, 255, 255, 0.6);
+}
+.studio-rte .ql-snow .ql-picker-options {
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.studio-rte .ql-snow .ql-picker-label {
+  border: none;
+}
+.studio-rte .ql-snow.ql-toolbar button:hover,
+.studio-rte .ql-snow .ql-toolbar button:hover,
+.studio-rte .ql-snow.ql-toolbar button.ql-active,
+.studio-rte .ql-snow .ql-toolbar button.ql-active,
+.studio-rte .ql-snow.ql-toolbar .ql-picker-label:hover,
+.studio-rte .ql-snow .ql-toolbar .ql-picker-label:hover,
+.studio-rte .ql-snow.ql-toolbar .ql-picker-label.ql-active,
+.studio-rte .ql-snow .ql-toolbar .ql-picker-label.ql-active,
+.studio-rte .ql-snow.ql-toolbar .ql-picker-item:hover,
+.studio-rte .ql-snow .ql-toolbar .ql-picker-item:hover {
+  color: var(--temo-gold);
+}
+.studio-rte .ql-snow.ql-toolbar button:hover .ql-stroke,
+.studio-rte .ql-snow .ql-toolbar button:hover .ql-stroke,
+.studio-rte .ql-snow.ql-toolbar button.ql-active .ql-stroke,
+.studio-rte .ql-snow .ql-toolbar button.ql-active .ql-stroke,
+.studio-rte .ql-snow.ql-toolbar button:hover .ql-stroke-miter,
+.studio-rte .ql-snow .ql-toolbar button:hover .ql-stroke-miter,
+.studio-rte .ql-snow.ql-toolbar button.ql-active .ql-stroke-miter,
+.studio-rte .ql-snow .ql-toolbar button.ql-active .ql-stroke-miter {
+  stroke: var(--temo-gold);
+}
+.studio-rte .ql-snow.ql-toolbar button:hover .ql-fill,
+.studio-rte .ql-snow .ql-toolbar button:hover .ql-fill,
+.studio-rte .ql-snow.ql-toolbar button.ql-active .ql-fill,
+.studio-rte .ql-snow .ql-toolbar button.ql-active .ql-fill {
+  fill: var(--temo-gold);
+}
+.studio-rte .ql-snow .ql-tooltip {
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--temo-white);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+.studio-rte .ql-snow .ql-tooltip input[type="text"] {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--temo-white);
+}
+.studio-rte .ql-snow .ql-tooltip a.ql-action::after {
+  color: var(--temo-black);
+}
+/* size picker 中文化 */
+.studio-rte .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="small"]::before,
+.studio-rte .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="small"]::before {
+  content: "小";
+}
+.studio-rte .ql-snow .ql-picker.ql-size .ql-picker-label:not([data-value])::before,
+.studio-rte .ql-snow .ql-picker.ql-size .ql-picker-item:not([data-value])::before {
+  content: "正常";
+}
+.studio-rte .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="large"]::before,
+.studio-rte .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="large"]::before {
+  content: "大";
+}
+.studio-rte .ql-snow .ql-picker.ql-size .ql-picker-label[data-value="huge"]::before,
+.studio-rte .ql-snow .ql-picker.ql-size .ql-picker-item[data-value="huge"]::before {
+  content: "特大";
+}
+
+/* ─── 前台作品內頁富文本渲染（存進 DB 的 HTML，資料在存檔時已消毒） ───────────────── */
+.rich-text p + p {
+  margin-top: 1.25em;
+}
+.rich-text a {
+  color: var(--temo-gold);
+  text-decoration: underline;
+}
+.rich-text a:hover {
+  filter: brightness(1.2);
+}
+.rich-text ol,
+.rich-text ul {
+  padding-left: 1.5em;
+}
+.rich-text ol {
+  list-style-type: decimal;
+}
+.rich-text ul {
+  list-style-type: disc;
+}
+.rich-text li + li {
+  margin-top: 0.4em;
+}
+/* Quill 內部格式：無序列表也輸出 <ol>，靠 li 的 data-list 區分 */
+.rich-text li[data-list="bullet"] {
+  list-style-type: disc;
+}
+.rich-text li[data-list="ordered"] {
+  list-style-type: decimal;
+}
+.rich-text .ql-size-small {
+  font-size: 0.78em;
+}
+.rich-text .ql-size-large {
+  font-size: 1.4em;
+}
+.rich-text .ql-size-huge {
+  font-size: 1.9em;
+}
+.rich-text .ql-align-center {
+  text-align: center;
+}
+.rich-text .ql-align-right {
+  text-align: right;
+}
+.rich-text .ql-align-justify {
+  text-align: justify;
+}
+.rich-text strong {
+  color: rgba(255, 255, 255, 0.92);
 }

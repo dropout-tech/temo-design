@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { SortableList, type DragHandleProps } from "@/components/studio/sortable-list"
 import { saveWork, deleteWork, type WorkInput } from "@/app/studio/(app)/works/actions"
 import type { WorkBlockRow } from "@/lib/studio/works"
+import { RichTextEditor, looksLikeHtml, plainTextToHtml } from "@/components/studio/rich-text-editor"
 
 type Options = {
   categories: { value: string; label: string }[]
@@ -102,7 +103,11 @@ function blockRowToForm(b: WorkBlockRow): FormBlock {
     alt2: b.alt2 ?? "",
     width2: b.width2 ?? undefined,
     height2: b.height2 ?? undefined,
-    text_content: b.text_content ?? "",
+    // 舊資料若還是純文字（非 HTML），開進編輯器前先轉成段落結構，無痛接軌既有內容。
+    text_content:
+      b.text_content && !looksLikeHtml(b.text_content)
+        ? plainTextToHtml(b.text_content)
+        : b.text_content ?? "",
     video_url: b.video_url ?? "",
     caption: b.caption ?? "",
   }
@@ -656,11 +661,10 @@ function BlockCard({
 
       {block.type === "text" && (
         <div className="space-y-2">
-          <textarea
-            className={cn(inputCls, "min-h-28 resize-y")}
+          <RichTextEditor
             value={block.text_content}
-            onChange={(e) => onChange({ text_content: e.target.value })}
-            placeholder="輸入段落文字，會以文字段落呈現在作品內頁"
+            onChange={(html) => onChange({ text_content: html })}
+            placeholder="輸入段落文字，支援粗體、顏色、列表等格式"
           />
         </div>
       )}
