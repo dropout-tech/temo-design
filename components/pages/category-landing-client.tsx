@@ -8,6 +8,7 @@ import { Footer } from "@/components/footer"
 import { cn } from "@/lib/utils"
 import {
   PortfolioGrid,
+  SearchBox,
   INITIAL_FILTERS,
   type FilterState,
 } from "@/components/pages/portfolio-page-client"
@@ -134,6 +135,13 @@ export function CategoryLandingClient({
       </div>
       <main className="pt-[68px]">
         <LandingHero landing={landing} />
+        {/* lg 以下 navbar 的 SEARCH 框會隱藏，改在內容區補位；行為同 /portfolio：即時過濾本頁作品 */}
+        <div className="lg:hidden mx-auto max-w-7xl px-4 sm:px-6">
+          <SearchBox
+            value={filters.query}
+            onChange={(q) => setFilters({ ...filters, query: q })}
+          />
+        </div>
         <PortfolioGrid
           works={works && works.length > 0 ? works : DEMO_WORKS}
           filters={filters}

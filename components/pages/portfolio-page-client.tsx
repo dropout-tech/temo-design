@@ -295,7 +295,7 @@ function FilterBar({
   )
 }
 
-function SearchBox({
+export function SearchBox({
   value,
   onChange,
 }: {
