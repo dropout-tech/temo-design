@@ -181,10 +181,22 @@ export async function getNavLinks(): Promise<NavLink[]> {
 }
 
 /** 作品分類選項（執行項目 / 行業分類），前台篩選與標籤共用 */
-export type Facet = { value: string; label: string }
+export type Facet = { value: string; label: string; landingSlug?: string | null }
 
 export async function getCategoryGroups(): Promise<Facet[]> {
   const supa = createPublicClient()
+  // migration 0018 未套用時 landing_slug 欄位不存在：先試含歸屬的查詢，失敗退回舊欄位（不壞站）
+  const withLanding = await supa
+    .from("category_groups")
+    .select("value, label, landing_slug")
+    .order("sort")
+  if (!withLanding.error && withLanding.data) {
+    return (withLanding.data as any[]).map((r) => ({
+      value: r.value,
+      label: r.label,
+      landingSlug: r.landing_slug ?? null,
+    }))
+  }
   const { data } = await supa
     .from("category_groups")
     .select("value, label")

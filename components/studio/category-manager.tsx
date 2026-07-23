@@ -13,7 +13,10 @@ import {
 import { SortableList, type DragHandleProps } from "@/components/studio/sortable-list"
 import { cn } from "@/lib/utils"
 
-type FacetRow = { value: string; label: string; sort: number }
+type FacetRow = { value: string; label: string; sort: number; landing_slug?: string | null }
+
+// 執行項目可歸屬的服務落地頁（/services/[slug]），決定作品出現在哪個作品探索分類頁
+type LandingOption = { value: string; label: string }
 
 function randomValue(prefix: string) {
   return `${prefix}-${Math.random().toString(36).slice(2, 8)}`
@@ -22,9 +25,11 @@ function randomValue(prefix: string) {
 export function CategoryManager({
   categoryGroups,
   industries,
+  landingOptions,
 }: {
   categoryGroups: FacetRow[]
   industries: FacetRow[]
+  landingOptions?: LandingOption[]
 }) {
   const [groups, setGroups] = useState<FacetRow[]>(categoryGroups)
   const [inds, setInds] = useState<FacetRow[]>(industries)
@@ -66,8 +71,9 @@ export function CategoryManager({
 
       <FacetSection
         title="執行項目"
-        description="作品的單選主分類，每件作品只能選一個。"
+        description="作品的單選主分類，每件作品只能選一個。右側「服務頁」決定這個分類的作品會出現在哪個作品探索分類頁。"
         addButtonLabel="新增執行項目"
+        landingOptions={landingOptions}
         addPlaceholder="例：品牌企劃"
         accent
         rows={groups}
@@ -117,6 +123,7 @@ function FacetSection({
   save,
   del,
   deleteConfirmMessage,
+  landingOptions,
 }: {
   title: string
   description: string
@@ -131,6 +138,8 @@ function FacetSection({
   save: (input: FacetRow) => Promise<{ ok?: true; error?: string }>
   del: (value: string) => Promise<{ error?: string }>
   deleteConfirmMessage: string
+  // 有傳（且非空）才顯示每列的「服務頁」歸屬選單（只有執行項目用得到）
+  landingOptions?: LandingOption[]
 }) {
   const [orderPending, startOrder] = useTransition()
   const [orderError, setOrderError] = useState("")
@@ -178,10 +187,14 @@ function FacetSection({
                 onLabelChange={(label) =>
                   setRows((p) => p.map((r) => (r.value === row.value ? { ...r, label } : r)))
                 }
+                onLandingChange={(landing_slug) =>
+                  setRows((p) => p.map((r) => (r.value === row.value ? { ...r, landing_slug } : r)))
+                }
                 onRemove={() => onRemove(row.value)}
                 save={save}
                 del={del}
                 deleteConfirmMessage={deleteConfirmMessage}
+                landingOptions={landingOptions}
               />
             )}
           />
@@ -205,18 +218,22 @@ function FacetItem({
   row,
   handle,
   onLabelChange,
+  onLandingChange,
   onRemove,
   save,
   del,
   deleteConfirmMessage,
+  landingOptions,
 }: {
   row: FacetRow
   handle: DragHandleProps
   onLabelChange: (label: string) => void
+  onLandingChange?: (landingSlug: string | null) => void
   onRemove: () => void
   save: (input: FacetRow) => Promise<{ ok?: true; error?: string }>
   del: (value: string) => Promise<{ error?: string }>
   deleteConfirmMessage: string
+  landingOptions?: LandingOption[]
 }) {
   const [pending, startTransition] = useTransition()
   const [savedState, setSavedState] = useState<"idle" | "visible" | "fading">("idle")
@@ -256,6 +273,24 @@ function FacetItem({
     })
   }
 
+  function handleLandingChange(raw: string) {
+    const next = raw || null
+    const prev = row.landing_slug ?? null
+    if (next === prev) return
+    onLandingChange?.(next) // 樂觀更新，存失敗再還原
+    setError("")
+    startTransition(async () => {
+      // label 用畫面當下的值（點下拉前 input 已先 blur 存檔），避免用舊名稱把剛改的名字蓋回去
+      const res = await save({ value: row.value, label: row.label.trim() || committed.current, sort: row.sort, landing_slug: next })
+      if (res.error) {
+        setError(res.error)
+        onLandingChange?.(prev)
+      } else {
+        flashSaved()
+      }
+    })
+  }
+
   function handleDelete() {
     if (!confirm(deleteConfirmMessage)) return
     startTransition(async () => {
@@ -288,7 +323,23 @@ function FacetItem({
         }}
         disabled={pending}
       />
-      <span className="text-[10px] text-white/25 font-mono px-1.5 py-0.5 rounded bg-white/[0.03] shrink-0">
+      {landingOptions && landingOptions.length > 0 && (
+        <select
+          value={row.landing_slug ?? ""}
+          onChange={(e) => handleLandingChange(e.target.value)}
+          disabled={pending}
+          aria-label="歸屬服務頁"
+          className="shrink-0 max-w-[150px] bg-white/[0.03] border border-white/10 text-temo-warm-gray/80 text-[11px] rounded-sm px-1.5 py-1 focus:outline-none focus:border-temo-gold/50 disabled:opacity-50"
+        >
+          <option value="">不掛服務頁</option>
+          {landingOptions.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      )}
+      <span className="hidden sm:inline text-[10px] text-white/25 font-mono px-1.5 py-0.5 rounded bg-white/[0.03] shrink-0">
         {row.value}
       </span>
       {pending && <Loader2 className="w-3.5 h-3.5 text-temo-warm-gray/40 animate-spin shrink-0" />}

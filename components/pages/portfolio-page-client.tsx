@@ -498,6 +498,7 @@ export function PortfolioGrid({
   transparentBg = false,
   categoryGroups,
   industries,
+  allowedGroups,
 }: {
   works: Work[]
   filters: FilterState
@@ -509,6 +510,8 @@ export function PortfolioGrid({
   // 由 Supabase 傳入的分類選項；未傳入時 fallback 到 portfolio-data 常數
   categoryGroups?: Facet[]
   industries?: Facet[]
+  // 分類落地頁用：只顯示這些執行項目的作品（使用者的篩選再疊加其上）；未傳＝不限制
+  allowedGroups?: string[]
 }) {
   const [hoveredId, setHoveredId] = useState<number | null>(null)
   const [visible, setVisible] = useState(false)
@@ -535,6 +538,7 @@ export function PortfolioGrid({
       .filter(Boolean)
 
     return works.filter((w) => {
+      if (allowedGroups && !allowedGroups.includes(w.categoryGroup)) return false
       if (filters.group !== "all" && w.categoryGroup !== filters.group) return false
       // 行業分類複選採「OR」：作品命中任一選取的產業即通過
       if (filters.industries.length > 0 && !filters.industries.some((i) => (w.industries as string[]).includes(i))) return false
@@ -547,7 +551,7 @@ export function PortfolioGrid({
       }
       return true
     })
-  }, [works, filters, haystacks])
+  }, [works, filters, haystacks, allowedGroups])
 
   return (
     <section

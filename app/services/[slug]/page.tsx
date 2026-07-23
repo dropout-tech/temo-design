@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { CategoryLandingClient } from "@/components/pages/category-landing-client"
 import { CATEGORY_LANDINGS, CATEGORY_LANDING_MAP } from "@/lib/category-landing-data"
-import { getCategoryLanding, getCategoryLandings } from "@/lib/content-supabase"
+import { getCategoryLanding, getCategoryLandings, getCategoryGroups } from "@/lib/content-supabase"
 import { getAllWorks } from "@/lib/portfolio-supabase"
 
 interface ServiceLandingPageProps {
@@ -31,6 +31,15 @@ export default async function ServiceLandingPage(props: ServiceLandingPageProps)
   const { slug } = await props.params
   const landing = (await getCategoryLanding(slug)) ?? CATEGORY_LANDING_MAP[slug]
   if (!landing) notFound()
-  const works = await getAllWorks()
-  return <CategoryLandingClient landing={landing} works={works} />
+  const [works, allGroups] = await Promise.all([getAllWorks(), getCategoryGroups()])
+  // 只顯示歸屬本落地頁的執行項目作品；migration 0018 未套用（歸屬全空）時照舊顯示全部
+  const ownGroups = allGroups.filter((g) => g.landingSlug === slug)
+  return (
+    <CategoryLandingClient
+      landing={landing}
+      works={works}
+      categoryGroups={ownGroups.length > 0 ? ownGroups : undefined}
+      allowedGroups={ownGroups.length > 0 ? ownGroups.map((g) => g.value) : undefined}
+    />
+  )
 }

@@ -6,15 +6,18 @@ import { createClient } from "@/lib/supabase/server"
 function revalidate() {
   revalidatePath("/portfolio")
   revalidatePath("/studio/categories")
+  revalidatePath("/services/[slug]", "page")
 }
 
-export type FacetInput = { value: string; label: string; sort: number }
+export type FacetInput = { value: string; label: string; sort: number; landing_slug?: string | null }
 
 // ── 執行項目（category_groups，單選）─────────────────────
 export async function saveCategoryGroup(input: FacetInput): Promise<{ ok?: true; error?: string }> {
   const supabase = await createClient()
   if (!input.label.trim()) return { error: "顯示名稱為必填" }
-  const row = { value: input.value, label: input.label.trim(), sort: input.sort }
+  // landing_slug 沒傳就不寫（upsert 只更新有給的欄位），避免舊呼叫點把歸屬洗掉
+  const row: Record<string, unknown> = { value: input.value, label: input.label.trim(), sort: input.sort }
+  if (input.landing_slug !== undefined) row.landing_slug = input.landing_slug
   const { error } = await supabase.from("category_groups").upsert(row, { onConflict: "value" })
   if (error) return { error: error.message }
   revalidate()

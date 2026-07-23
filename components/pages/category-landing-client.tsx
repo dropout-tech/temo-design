@@ -95,7 +95,19 @@ function LandingHero({ landing }: { landing: CategoryLanding }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export function CategoryLandingClient({ landing, works }: { landing: CategoryLanding; works?: Work[] }) {
+export function CategoryLandingClient({
+  landing,
+  works,
+  categoryGroups,
+  allowedGroups,
+}: {
+  landing: CategoryLanding
+  works?: Work[]
+  // 歸屬本落地頁的執行項目（篩選下拉只列自家分類）；未傳＝fallback 全部
+  categoryGroups?: { value: string; label: string }[]
+  // 本落地頁只顯示這些執行項目的作品；未傳＝不限制（migration 未套用時的照舊行為）
+  allowedGroups?: string[]
+}) {
   const [filters, setFilters] = useState<FilterState>({
     ...INITIAL_FILTERS,
     group: landing.portfolioGroup,
@@ -128,6 +140,8 @@ export function CategoryLandingClient({ landing, works }: { landing: CategoryLan
           setFilters={setFilters}
           showFilters={!landing.hideFilters}
           transparentBg
+          categoryGroups={categoryGroups}
+          allowedGroups={allowedGroups}
         />
       </main>
       <Footer />
