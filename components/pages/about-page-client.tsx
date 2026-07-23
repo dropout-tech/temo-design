@@ -754,7 +754,7 @@ export function AboutPageClient({
 
                   <Link
                     href="/quote"
-                    className="group mt-10 inline-flex items-center gap-3 px-7 py-3.5 border border-[#2a2a28] rounded-full text-sm text-[#2a2a28] hover:bg-[#2a2a28] hover:text-[#e7e6e2] transition-colors"
+                    className="group mt-10 inline-flex items-center gap-3 px-7 py-3.5 border border-[#2a2a28] rounded-full text-sm bg-[#2a2a28] text-[#e7e6e2] hover:bg-transparent hover:text-[#2a2a28] transition-colors"
                   >
                     <span className="tracking-wider">填寫設計報價表單</span>
                     <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
