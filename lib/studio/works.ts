@@ -28,20 +28,20 @@ export type WorkForEditWithBlocks = WorkFormInitial & {
 /** 作品表單需要的下拉/多選選項 */
 export async function getWorkOptions() {
   const supabase = await createClient()
-  const [categories, clients, designers, industries] = await Promise.all([
+  const [categories, clients, members, industries] = await Promise.all([
     supabase.from("category_groups").select("value,label").order("sort"),
     supabase.from("clients").select("id,name").order("name"),
-    supabase
-      .from("designers")
-      .select("id,name,name_zh")
-      .eq("category", "DESIGNER")
-      .order("sort"),
+    supabase.from("designers").select("id,name,name_zh,category").order("sort"),
     supabase.from("industries").select("value,label").order("sort"),
   ])
+  // designers.category 自 0006/0016 起是後台自由字串（如「DESIGNER 設計團隊」），
+  // 不能再精準比對舊代號；取分類含 DESIGNER 者，全對不到時退回全員以免選單空白。
+  const allMembers = members.data ?? []
+  const designerMembers = allMembers.filter((m) => /designer/i.test(m.category ?? ""))
   return {
     categories: categories.data ?? [],
     clients: clients.data ?? [],
-    designers: designers.data ?? [],
+    designers: designerMembers.length > 0 ? designerMembers : allMembers,
     industries: industries.data ?? [],
   }
 }

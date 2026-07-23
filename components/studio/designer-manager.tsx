@@ -638,7 +638,7 @@ function Card({
           <p className="text-[10px] text-temo-warm-gray/50 leading-relaxed -mt-2">
             同一分類的成員在「關於我們」是同一個分頁。要新的分類（攝影師、顧問、行銷…）請在上方「分類大項目」新增。
             <br />
-            ⚠️ 只有分類是 <span className="text-temo-gold/80">DESIGNER</span> 的成員，才會出現在「作品」的設計師選單裡。
+            ⚠️ 分類名稱含 <span className="text-temo-gold/80">DESIGNER</span>（大小寫不拘）的成員，才會出現在「作品」的設計師選單裡；若沒有任何分類含此字，選單會改列全部成員。
           </p>
 
           <div>
