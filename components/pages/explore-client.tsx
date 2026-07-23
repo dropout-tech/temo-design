@@ -14,7 +14,7 @@ const SERVICES = [
   {
     num: "01",
     id: "brand",
-    portfolioGroup: "branding",
+    landingSlug: "brand-graphic",
     zhShort: "品牌平面",
     zh: "品牌平面設計",
     en: "Brand & Graphic",
@@ -32,7 +32,7 @@ const SERVICES = [
   {
     num: "02",
     id: "installation",
-    portfolioGroup: "space-craft",
+    landingSlug: "public-art",
     zhShort: "裝置藝術",
     zh: "裝置藝術",
     en: "Installation Art",
@@ -50,7 +50,7 @@ const SERVICES = [
   {
     num: "03",
     id: "product",
-    portfolioGroup: "product",
+    landingSlug: "product-design",
     zhShort: "產品設計",
     zh: "產品設計",
     en: "Product Design",
@@ -68,7 +68,7 @@ const SERVICES = [
   {
     num: "04",
     id: "crafts",
-    portfolioGroup: "space-craft",
+    landingSlug: "crafts-design",
     zhShort: "工藝設計",
     zh: "工藝設計",
     en: "Crafts Design",
@@ -634,7 +634,7 @@ function CardFanStage({
                   </div>
                   <p className="text-xs text-white/55 leading-relaxed">{card.body}</p>
                   <Link
-                    href={`/portfolio?group=${current.portfolioGroup}`}
+                    href={`/services/${current.landingSlug}`}
                     onClick={(e) => e.stopPropagation()}
                     className="inline-flex items-center gap-1.5 text-[11px] font-medium tracking-[0.2em] uppercase hover:gap-2.5 transition-all"
                     style={{ color: current.colors.accent, pointerEvents: isActive ? "auto" : "none" }}
