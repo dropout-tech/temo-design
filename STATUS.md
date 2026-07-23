@@ -2,7 +2,45 @@
 
 > 會變的狀態放這裡（不變的事實放 CLAUDE.md）。開場先讀。
 
-## 目前進度（2026-07-21）
+## 目前進度（2026-07-24）
+
+### 本次完成：作品內容區塊「文字」升級富文本編輯器（已 push ba7c4cc，Vercel 自動部署）
+
+**需求（使用者原話）**：後台內容區塊文字不夠好，要加粗體、顏色、大小、斜體、列表等功能，
+參考講師資源站（夢想一號 Dream_One_Teacher_Web）的編輯系統改寫成適合這裡的形式。
+
+**做法**：
+- 沿用講師站同技術 `react-quill-new`（Quill 2，支援 React 19），新元件
+  `components/studio/rich-text-editor.tsx`：字級（小/正常/大/特大，picker 已中文化）、
+  粗體/斜體/底線/刪除線、文字色/背景色、有序/無序列表、對齊、連結、清除格式；
+  深色主題配 studio。不放圖片/影片鈕（已有專門區塊）。
+- **關鍵修復**：`useSemanticHTML={false}` 取 Quill 內部 HTML——預設的 getSemanticHTML()
+  會丟列表 data-list 與清單內對齊 class（Playwright 驗收抓到的兩個真 bug）。
+- **補了講師站沒有的安全層**：`lib/sanitize-rich-text.ts` 存檔白名單消毒（防 XSS；
+  style/class 開放至 strong/em/u/s/a，因 Quill 會把顏色直掛格式標籤；剔除 ql-ui 空 span）。
+- 前台 `portfolio-detail-client.tsx` 雙模式：HTML → `.rich-text` 樣式渲染（globals.css），
+  舊純文字照舊分段；舊資料開進編輯器自動轉段落。**不動 DB**（HTML 存既有 text_content）。
+
+**驗證**：消毒確定性測試 19/19（XSS 剝除＋格式保留，scratchpad/sanitize-test.ts 親跑）；
+Playwright 確定性斷言初輪 7/9 → 修列表 bug 後重測 9/9 全過（含手機 375px 無溢出、
+截圖 rte-desktop/picker/mobile/fixed.png 經 agent 判讀＋主對話抽查檔案存在）；
+tsc 0 錯、build ✓；commit 單獨在 git worktree 檢出重 build ✓（39/39 頁）。
+臨時驗證頁 /rte-harness 已刪。
+
+**下一步**：使用者登入 /studio 開一筆作品、在文字區塊實際用格式工具列存檔驗收
+（登入後流程我測不到）；前台看該作品內頁格式是否如編輯器所見。
+
+**地雷**：
+- **並行 session 警示（本次實際發生）**：同 repo 另一 session 在做「作品客戶 LOGO」
+  （migration 0017 未套用、work-form/actions/detail-client 等檔混有兩邊改動）——
+  本次用 hunk 級分割只提交富文本部分，對方改動原封留在工作區。**該 session 收尾時
+  注意：git status 會看到富文本已 commit，勿重複提交或誤 restore。**
+- Quill 內部格式：無序列表也輸出 `<ol>`＋`li[data-list="bullet"]`（非 `<ul>`），
+  前台 CSS 兩種格式都支援。sanitize 白名單改動時記得跑 scratchpad/sanitize-test.ts。
+
+---
+
+## 前次進度（2026-07-21）
 
 ### 本次完成：報價「重疊內容自動扣抵」＋聯絡頁分頁放大＋聯絡頁報價改讀 DB（已上線已驗，commit a6c52ad）
 
