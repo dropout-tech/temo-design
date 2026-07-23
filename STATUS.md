@@ -25,7 +25,7 @@
 
 ---
 
-### 前次：/explore TODAY 區左欄文字改灰＋透明、間距收緊、E 加粗（已 push ab979bd＋753b92a，Vercel 自動部署）
+### 前次：/explore TODAY 區左欄文字改灰＋透明、間距收緊、E 加粗（已 push ab979bd＋753b92a；追調 c5ee8a6，Vercel 自動部署）
 
 **需求（使用者原話，同輪三則）**：左側 TODAY 那邊所有文字灰一點、帶稍微透明感；
 上下行距變近一點；SOMETHING MORE... 的 E 要再更粗。
@@ -33,8 +33,10 @@
 rgba(196,196,196,0.8)，段間距各縮 20px（top 317→297、417→377、518→458）；
 SOMETHING MORE... 的兩個 E（SOMETHING、MORE 各一）字重 700→900（Barlow 900 已載入）。
 只動桌機版左欄；手機版堆疊佈局未動。依「小視覺微調直接改+push」慣例未跑 Playwright，
-部署後看 temo-design.vercel.app/explore 確認；「E」若只想加粗其中一個、或灰度／間距
-要再調，說一聲即可微調。
+部署後看 temo-design.vercel.app/explore 確認。
+**追調（c5ee8a6）**：使用者回饋太灰太透明 → 灰度回調亮 rgba(222,222,222,0.92)；
+並要求英文全面加粗 → SOMETHING MORE... 整行 700→900（E 的單獨加粗拆掉，整行已同粗）、
+英文段落 600→700；TODAY 本來就是 Barlow 最粗的 900，無法再粗（要更重只能加描邊，待指示）。
 
 ### 前次：關於頁品牌理念區 CTA 按鈕 hover 態對調（已 push 7dd0e9d，Vercel 自動部署）
 
