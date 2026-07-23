@@ -4,7 +4,40 @@
 
 ## 目前進度（2026-07-24）
 
-### 最新：後台作品表單「設計師（可複選）」選單空白修復（已 push defea97，Vercel 自動部署）
+### 最新：服務落地頁「大分類」後台可新增與刪除（已 push 348fa6c，Vercel 自動部署）
+
+**需求（使用者原話＋截圖）**：作品分類的大項目（01 BRAND & GRAPHIC 那層）要可以自由新增，
+相關的也一起開放後台自行新增。
+
+**現況查明**：執行項目/行業分類本來就能新增（作品分類頁清單捲到最底有「＋新增」列）；
+真正缺的是「服務落地頁」大分類只能編輯不能增刪 → 本次補上。
+
+**做法**（無 DB schema 變更、無 migration——0012 既有 RLS policy 已允許登入身分 insert/delete）：
+- `app/studio/(app)/landings/actions.ts`：createLanding（slug 格式/重複驗證、
+  編號與排序自動遞增、cta 等給預設、hide_filters 預設隱藏——新頁沒作品不亮空篩選列，
+  編輯表單可再打開）＋ deleteLanding（先清 category_groups.landing_slug 再刪，防孤兒掛載）。
+- `components/studio/landing-manager.tsx`：底部「＋新增落地頁」inline 表單
+  （slug/編號/英文大標多行/中英文標語）、每列刪除鈕（確認文案警告頁面會消失＋
+  執行項目變未歸屬）、錯誤上畫面不靜默。
+- 新增後自動生效的下游（皆已讀 DB，零改動）：/services/[新slug] 落地頁（dynamicParams
+  預設 true，不重 build 也能渲染）、作品分類頁的「服務頁」歸屬下拉。
+
+**驗證**：tsc 0 錯（親跑 exit 0）、build ✓；fresh agent read-back 8/8 驗收條件全過
+（含「先清歸屬再刪」順序、RLS policy 原文、explore-client 未被動到）。
+⚠️ 後台新增/刪除的實際點擊流程需登入 /studio，未實測（照 category-manager 已上線模式寫）。
+
+**下一步（使用者）**：登入 /studio → 服務落地頁 → 底部「＋新增落地頁」試建一筆，
+前台開 /services/你的slug 確認（前台 ISR 快取 60 秒）；掛執行項目：作品分類頁該項目
+右側下拉選新落地頁。
+
+**地雷**：
+- /explore 翻牌頁的 4 格是寫死的視覺設計（斜線幾何座標），新增的大分類**不會**出現在
+  /explore，只有 /services/[slug] 與後台下拉會生效；要上 explore 需另開需求（動幾何）。
+- 新落地頁不會自動進網站選單——要露出請到後台「選單 / 頁尾」自行加連結（nav_links 已可管理）。
+- 刪除內建 4 個大分類雖被允許，但 /explore 寫死的「查看案例」連結會 404，刪前三思
+  （刪除確認文案已警告）。
+
+### 前次：後台作品表單「設計師（可複選）」選單空白修復（已 push defea97，Vercel 自動部署）
 
 **需求（使用者截圖）**：後台編輯作品時，「設計師（可複選）」底下一顆選項都沒有。
 
