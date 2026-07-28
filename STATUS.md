@@ -4,7 +4,56 @@
 
 ## 目前進度（2026-07-28）
 
-### 最新：作品客戶 LOGO 支援多張（已 push ecbea10，Vercel 自動部署）
+### 最新：作品內頁首圖支援直接上傳影片（已 push a2c789b，Vercel 自動部署）
+
+**需求（使用者原話）**：作品的首圖希望也可以放影片，希望可以直接做上傳，但不太佔空間
+也不要讓網站卡卡的。
+
+**做法**：
+- 後台「內頁首圖」欄位開放上傳影片（MP4/WebM/MOV；accept 同時保留圖片）——沿用既有
+  `hero_url` 欄位與 `media` bucket，**零 migration、不動 DB**。影片超過 50MB（Supabase
+  免費方案單檔上限）在上傳前就擋下，錯誤訊息附建議規格（MP4、1080p、20 秒內循環短片）；
+  .mov 檔顯示「部分 Android/Windows 瀏覽器可能播不了，建議轉 MP4」提醒。表單預覽區
+  影片會直接小窗循環播放。
+- 前台內頁（portfolio-detail-client.tsx）：新 helper `lib/media-url.ts` 以副檔名偵測
+  首圖是影片 → 原生 `<video autoPlay muted loop playsInline preload="metadata">` 滿版
+  循環播放，poster 用封面圖；既有 YouTube/Vimeo `video_url` 優先權不變（有填仍走
+  VideoEmbed）。**列表卡片封面刻意維持圖片**（一頁幾十張卡全跑影片才會真的卡）。
+
+**驗證**：tsc 0 錯、build ✓ Compiled successfully；確定性 Playwright 14/14 全過
+（臨時 harness 頁＋ffmpeg 測試影片，驗完已刪）——桌面 1440：video 元素存在、
+muted/loop/playsInline/autoplay 齊全、已解碼且播放進度前進、滿版、漸層遮罩在、無 page error；
+手機 375：無橫向溢出、自動播放中；迴歸：圖片首圖仍走 next/image。截圖經 agent 判讀
+無破版（scratchpad/hero-video-desktop/mobile.png，主對話已 ls 抽查存在）。
+⚠️ 後台實際上傳影片流程需登入 /studio，未實測（僅改 accept＋大小檢查，上傳管道沿用既有）。
+
+**下一步（使用者）**：登入 /studio → 作品 → 「內頁首圖」上傳一支短 MP4 存檔，
+前台作品內頁看效果（ISR 快取，等 60-120 秒重新整理）。
+
+**地雷**：
+- 影片吃流量：Supabase 免費方案每月流量有限（超過會開始收費或被限），影片越小越好——
+  建議每支控制在 10-20MB 內、只放重點作品。若日後影片量大或流量成長，再評估專門影片
+  服務（Mux/Bunny）或 YouTube 隱藏連結。
+- iPhone 直接拍的 .mov（HEVC 編碼）在部分瀏覽器播不了，後台已有提醒，建議一律轉 MP4 再上傳。
+- 封面（cover_url）仍限圖片；若把影片網址貼進封面欄位，列表卡片會破圖（未做防呆，
+  後台欄位提示未提及影片即為此意）。
+
+### 前次：作品簡述照後台換行原樣顯示（已 push ed8f2a1，Vercel 自動部署）
+
+**需求（使用者原話）**：前台文字可以依照後台文字排版完全 100% 比照，有換行才換行。
+
+**根因與修法**：後台「簡述」的換行一路存到 DB 都在，只是前台 `<p>` 渲染時 HTML 預設
+把換行當空格吃掉。`portfolio-detail-client.tsx:174` 加 `whitespace-pre-line` 一個 class 解決
+（連續空行也會保留為空行；資料層零改動）。
+
+**驗證**：依「小視覺微調直接改+push」慣例未跑 Playwright；單一 class 改動。
+部署後看 temo-design.vercel.app/portfolio/ilo-2025 簡述應在「…視覺標誌。」後換行。
+
+**地雷（commit 紀律）**：本次工作區混有另一 session 的「首圖上傳影片」半成品
+（media-url.ts、detail-client 的 video hero、work-form 50MB 上限），已用 hunk 級
+git apply --cached 只提交自己那一行；該 session 收尾時勿誤 restore。
+
+### 前次：作品客戶 LOGO 支援多張（已 push ecbea10，Vercel 自動部署）
 
 **需求（使用者原話）**：現在作品連結可以放 logo 很好，但希望可以放不只一個，
 因為有時候不只有一位客戶。
