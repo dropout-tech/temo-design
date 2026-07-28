@@ -6,6 +6,7 @@ import { Loader2, Upload, Trash2, ArrowLeft, X, GripVertical } from "lucide-reac
 import { createClient } from "@/lib/supabase/client"
 import { downscaleImage } from "@/lib/downscale-image"
 import { isVideoUrl } from "@/lib/video"
+import { isUploadedVideoUrl } from "@/lib/media-url"
 import { cn } from "@/lib/utils"
 import { SortableList, type DragHandleProps } from "@/components/studio/sortable-list"
 import { saveWork, deleteWork, type WorkInput } from "@/app/studio/(app)/works/actions"
@@ -203,7 +204,7 @@ export function WorkForm({
       .from("media")
       .upload(path, file, { cacheControl: "3600", upsert: false })
     if (upErr) {
-      setError("圖片上傳失敗：" + upErr.message)
+      setError("檔案上傳失敗：" + upErr.message)
       return null
     }
     return supabase.storage.from("media").getPublicUrl(path).data.publicUrl
@@ -220,9 +221,19 @@ export function WorkForm({
     e.target.value = ""
   }
 
+  // 首圖影片上限：Supabase 免費方案單檔上限就是 50MB，這裡先擋下來給人話錯誤訊息
+  const HERO_VIDEO_MAX_MB = 50
+
   async function onHeroFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    if (file.type.startsWith("video/") && file.size > HERO_VIDEO_MAX_MB * 1024 * 1024) {
+      setError(
+        `影片檔太大（${(file.size / 1024 / 1024).toFixed(0)}MB），請壓到 ${HERO_VIDEO_MAX_MB}MB 以下再上傳。建議：MP4 格式、1080p、20 秒內的循環短片。`
+      )
+      e.target.value = ""
+      return
+    }
     setUploading(true)
     setError("")
     const url = await uploadToStorage(file)
@@ -444,20 +455,24 @@ export function WorkForm({
             </div>
           </div>
         </Field>
-        <Field label="內頁首圖（選填）" hint="留空＝沿用封面圖；作品內頁最上方顯示的大圖">
+        <Field label="內頁首圖（選填，可放影片）" hint="留空＝沿用封面圖；作品內頁最上方顯示的大圖。也可直接上傳影片（會靜音循環播放）：建議 MP4 格式、1080p、20 秒內、50MB 以下，越小網頁越順">
           <div className="flex items-start gap-4">
             <div className="w-32 h-32 rounded-lg overflow-hidden bg-white/[0.04] border border-white/10 shrink-0">
               {heroUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={heroUrl} alt="內頁首圖預覽" className="w-full h-full object-cover" />
+                isUploadedVideoUrl(heroUrl) ? (
+                  <video src={heroUrl} muted loop playsInline autoPlay preload="metadata" className="w-full h-full object-cover" />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={heroUrl} alt="內頁首圖預覽" className="w-full h-full object-cover" />
+                )
               )}
             </div>
             <div className="flex-1 space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <label className={cn("inline-flex items-center gap-2 px-4 py-2.5 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
                   {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                  {uploading ? "上傳中…" : "上傳圖片"}
-                  <input type="file" accept="image/*" className="hidden" onChange={onHeroFile} disabled={uploading} />
+                  {uploading ? "上傳中…" : "上傳圖片或影片"}
+                  <input type="file" accept="image/*,video/mp4,video/webm,video/quicktime,video/x-m4v" className="hidden" onChange={onHeroFile} disabled={uploading} />
                 </label>
                 {heroUrl && (
                   <button type="button" onClick={clearHero} className="inline-flex items-center gap-1 px-3 py-2.5 text-red-400/70 hover:text-red-400 text-xs tracking-wider transition-colors">
@@ -465,7 +480,10 @@ export function WorkForm({
                   </button>
                 )}
               </div>
-              <input className={inputCls} value={heroUrl} onChange={(e) => setHeroUrl(e.target.value)} placeholder="或直接貼圖片網址（留空則沿用封面圖）" />
+              {isUploadedVideoUrl(heroUrl) && heroUrl.split(/[?#]/)[0].toLowerCase().endsWith(".mov") && (
+                <p className="text-[11px] text-yellow-400/80">.mov 檔（iPhone 直接拍的格式）在部分 Android / Windows 瀏覽器可能無法播放，建議轉成 MP4 再上傳</p>
+              )}
+              <input className={inputCls} value={heroUrl} onChange={(e) => setHeroUrl(e.target.value)} placeholder="或直接貼圖片／影片網址（留空則沿用封面圖）" />
             </div>
           </div>
         </Field>

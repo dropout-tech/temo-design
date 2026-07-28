@@ -9,6 +9,7 @@ import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { VideoEmbed } from "@/components/video-embed"
 import { isVideoUrl } from "@/lib/video"
+import { isUploadedVideoUrl } from "@/lib/media-url"
 import { proxyImage } from "@/lib/portfolio-data"
 import type { WorkBlock } from "@/lib/portfolio-supabase"
 
@@ -190,6 +191,31 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                 poster={heroSrc}
                 title={project.title}
               />
+            </div>
+          ) : isUploadedVideoUrl(heroSrc) ? (
+            // 首圖是直接上傳的影片檔：原生 <video> 靜音循環播放（手機需 muted+playsInline 才能自動播）
+            <div
+              className="relative w-full aspect-[16/9] md:aspect-[21/9] overflow-hidden bg-temo-warm-gray/5"
+              style={{
+                transition: "opacity 1.1s ease 0.2s",
+                opacity: heroVisible ? 1 : 0,
+              }}
+            >
+              <video
+                src={heroSrc}
+                poster={
+                  !isUploadedVideoUrl(project.cover) && project.cover !== heroSrc
+                    ? proxyImage(project.cover)
+                    : undefined
+                }
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-temo-black/40 via-transparent to-transparent" />
             </div>
           ) : (
             <div
