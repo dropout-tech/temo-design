@@ -2,9 +2,35 @@
 
 > 會變的狀態放這裡（不變的事實放 CLAUDE.md）。開場先讀。
 
-## 目前進度（2026-07-24）
+## 目前進度（2026-07-28）
 
-### 最新：分類落地頁手機/平板補搜尋框（已 push ef156ee，Vercel 自動部署）
+### 最新：作品客戶 LOGO 支援多張（已 push ecbea10，Vercel 自動部署）
+
+**需求（使用者原話）**：現在作品連結可以放 logo 很好，但希望可以放不只一個，
+因為有時候不只有一位客戶。
+
+**做法**（免 migration、不動正式 DB）：沿用既有 `works.client_logo_url` text 欄位，
+多張 URL 以**換行分隔**存放（與表單 services/deliverables 一行一筆的慣例一致）；
+舊資料單張＝單行，完全相容。改 5 檔：
+- `lib/portfolio-supabase.ts`：讀取 split("\n") 還原成 `clientLogos: string[]`
+- `components/pages/portfolio-detail-client.tsx`：資訊欄頂端多張並排（flex-wrap、各 h-16）
+- `components/studio/work-form.tsx`：多張縮圖預覽（逐張 ✕ 移除）＋上傳可一次多選＋
+  貼網址按「加入」（或 Enter）
+- `app/studio/(app)/works/actions.ts`：存檔 join("\n")；`lib/studio/works.ts`：編輯帶出還原陣列
+
+**驗證**：tsc 0 錯（親跑 exit 0）、build ✓ 39/39；本地確定性 Playwright 10/10 全過
+（桌面 1440＋手機 375：狀態 200、無橫向溢出、無 page error、ilo-2025 既有**單張舊資料**
+走新陣列路徑渲染正常且 ≤64px；scratchpad/verify-multi-logo.js）。
+⚠️ 多張同顯的實際畫面與後台上傳流程需登入＋真實第二張 logo，未實測（渲染為簡單 map，
+與單張同款樣式）。
+
+**下一步（使用者）**：登入 /studio → 作品 → 「客戶 LOGO」區上傳第二張（可一次選多張），
+存檔後前台內頁確認多張並排（前台快取等 60–120 秒）。
+
+**地雷**：多張 logo 存放格式是「同欄位換行分隔」——若日後有其他程式直接讀
+`client_logo_url` 當單一網址用，要記得 split("\n")（目前讀取端只有上述兩處，皆已改）。
+
+### 前次：分類落地頁手機/平板補搜尋框（已 push ef156ee，Vercel 自動部署）
 
 **需求（使用者原話）**：作品探索上方的 search 搜尋框好像不見了，做回來。
 
