@@ -271,7 +271,7 @@ function TodayStage({
           className="absolute pointer-events-none"
           style={{
             left: 50,
-            top: 297,
+            top: 309,
             fontFamily: "'Barlow', sans-serif",
             fontWeight: 900,
             fontSize: 44,
@@ -286,7 +286,7 @@ function TodayStage({
           className="absolute pointer-events-none"
           style={{
             left: 50,
-            top: 377,
+            top: 389,
             fontFamily: "'Noto Sans TC', sans-serif",
             fontWeight: 700,
             fontSize: 40,
@@ -301,7 +301,7 @@ function TodayStage({
           className="absolute pointer-events-none"
           style={{
             left: 49,
-            top: 458,
+            top: 470,
             width: 371,
             fontFamily: "'Barlow', sans-serif",
             fontWeight: 700,
