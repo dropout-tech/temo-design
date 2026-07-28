@@ -170,7 +170,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                   {project.subtitle}
                 </p>
               )}
-              <p className="text-lg md:text-xl text-temo-warm-gray max-w-3xl leading-relaxed">
+              <p className="text-lg md:text-xl text-temo-warm-gray max-w-3xl leading-relaxed whitespace-pre-line">
                 {project.description}
               </p>
 
