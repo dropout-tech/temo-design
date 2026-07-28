@@ -4,7 +4,21 @@
 
 ## 目前進度（2026-07-28）
 
-### 最新：作品內頁首圖支援直接上傳影片（已 push a2c789b，Vercel 自動部署）
+### 最新：服務落地頁大標行距等距＋齊底（已 push 83ac442，Vercel 自動部署）
+
+**需求（使用者截圖）**：/services 落地頁大標「BRAND & GRAPHIC」三行上下行距要統一；
+GRAPHIC 要跟右邊「價格試算表單」按鈕齊底。
+
+**做法**（category-landing-client.tsx，4 行）：& 行原本 `my-1 md:my-2` 對稱 margin，
+但字級縮小造成視覺間距不均 → 改手機/桌機各自定值（mt-[4px] mb-[6px] / md:mt-[11px] md:mb-[5px]）；
+右欄原本固定 `md:pt-16 lg:pt-24` 頂對齊 → 改 grid `md:items-end` 齊底並移除 pt。
+
+**驗證**：本地確定性 Playwright 量測（canvas TextMetrics 取字形墨水邊緣，非 line box）——
+桌機 1440 行距 27.1/27.1px 完全相等、按鈕底與 GRAPHIC 墨水底差 3.8px（按鈕圓角，視覺即齊）；
+手機 375 行距 15.5/15.4px、無橫向溢出（腳本 scratchpad/measure-hero.js）。
+四個落地頁共用此元件，其他頁標題無 & 行、不受 margin 改動影響。
+
+### 前次：作品內頁首圖支援直接上傳影片（已 push a2c789b，Vercel 自動部署）
 
 **需求（使用者原話）**：作品的首圖希望也可以放影片，希望可以直接做上傳，但不太佔空間
 也不要讓網站卡卡的。
