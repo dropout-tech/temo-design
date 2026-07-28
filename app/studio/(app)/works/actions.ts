@@ -15,8 +15,8 @@ export type WorkInput = {
   cover_url: string
   /** 內頁首圖，選填，留空＝沿用封面圖 */
   hero_url: string
-  /** 客戶 LOGO，選填；顯示於作品內頁右側資訊欄最頂端 */
-  client_logo_url: string
+  /** 客戶 LOGO，選填可多張（一件作品可能有多位客戶）；顯示於作品內頁右側資訊欄最頂端 */
+  client_logo_urls: string[]
   video_url: string
   size: "large" | "medium" | "small"
   description: string
@@ -57,7 +57,9 @@ function toRow(input: WorkInput) {
     client_id: input.client_id || null,
     cover_url: input.cover_url.trim() || null,
     hero_url: input.hero_url.trim() || null,
-    client_logo_url: input.client_logo_url.trim() || null,
+    // 多張 LOGO 以換行分隔存進既有 text 欄位（免 migration；讀取端 split("\n") 還原）
+    client_logo_url:
+      input.client_logo_urls.map((u) => u.trim()).filter(Boolean).join("\n") || null,
     video_url: input.video_url.trim() || null,
     size: input.size,
     description: input.description.trim() || null,

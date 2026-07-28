@@ -80,7 +80,11 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
 
   return {
     hero_url: w.hero_url ?? "",
-    client_logo_url: w.client_logo_url ?? "",
+    // 多張 LOGO 換行分隔存於同一欄位，還原成陣列給表單
+    client_logo_urls: String(w.client_logo_url ?? "")
+      .split("\n")
+      .map((s: string) => s.trim())
+      .filter(Boolean),
     blocks,
     slug: w.slug ?? "",
     title: w.title ?? "",

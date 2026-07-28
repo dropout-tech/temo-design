@@ -46,8 +46,8 @@ export type DetailProject = {
   clientName?: string
   clientSlug?: string
   clientBrief?: string
-  /** 客戶 LOGO，選填；顯示於作品內頁右側資訊欄最頂端 */
-  clientLogo?: string
+  /** 客戶 LOGO，選填可多張（一件作品可能有多位客戶）；顯示於作品內頁右側資訊欄最頂端 */
+  clientLogos?: string[]
   description: string
   cover: string
   videoUrl?: string
@@ -116,7 +116,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
     project.deliverables?.length ||
     project.designers.length ||
     project.clientName ||
-    project.clientLogo
+    project.clientLogos?.length
 
   // 內頁首圖：優先用後台設定的 hero，沒有就退回封面
   const heroSrc = project.hero || project.cover
@@ -279,15 +279,22 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
               {hasMeta && (
                 <aside className="lg:col-span-4">
                   <div className="lg:sticky lg:top-28 space-y-8 lg:border-l lg:border-temo-warm-gray/15 lg:pl-10">
-                    {project.clientLogo && (
-                      <div>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={proxyImage(project.clientLogo)}
-                          alt={`${project.clientName || project.title} logo`}
-                          className="h-16 w-auto max-w-full object-contain"
-                          referrerPolicy="no-referrer"
-                        />
+                    {project.clientLogos && project.clientLogos.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+                        {project.clientLogos.map((logo, i) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            key={`${logo}-${i}`}
+                            src={proxyImage(logo)}
+                            alt={
+                              project.clientLogos!.length > 1
+                                ? `${project.clientName || project.title} logo ${i + 1}`
+                                : `${project.clientName || project.title} logo`
+                            }
+                            className="h-16 w-auto max-w-full object-contain"
+                            referrerPolicy="no-referrer"
+                          />
+                        ))}
                       </div>
                     )}
                     {project.clientName && (
