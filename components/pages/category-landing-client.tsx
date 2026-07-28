@@ -50,7 +50,7 @@ function LandingHero({ landing }: { landing: CategoryLanding }) {
         </Link>
 
         {/* 兩欄：左大標 / 右描述 + 按鈕 */}
-        <div className="grid md:grid-cols-[1.1fr_1fr] gap-10 md:gap-16 items-start">
+        <div className="grid md:grid-cols-[1.1fr_1fr] gap-10 md:gap-16 items-start md:items-end">
           {/* 左：大標 */}
           <h1 className="text-[clamp(2.5rem,12vw,3.75rem)] md:text-8xl lg:text-9xl font-black text-temo-black leading-[0.95] tracking-tight break-words">
             {landing.titleEn.map((line, i) => {
@@ -60,7 +60,7 @@ function LandingHero({ landing }: { landing: CategoryLanding }) {
                   key={i}
                   className={cn(
                     "block",
-                    isAmpersand && "text-4xl md:text-6xl my-1 md:my-2"
+                    isAmpersand && "text-4xl md:text-6xl mt-[4px] mb-[6px] md:mt-[11px] md:mb-[5px]"
                   )}
                 >
                   {line}
@@ -69,8 +69,8 @@ function LandingHero({ landing }: { landing: CategoryLanding }) {
             })}
           </h1>
 
-          {/* 右：中英描述 + CTA */}
-          <div className="md:pt-16 lg:pt-24">
+          {/* 右：中英描述 + CTA（桌機與左側大標齊底） */}
+          <div>
             <p className="text-white/70 text-base md:text-lg leading-relaxed mb-5 whitespace-pre-line">
               {landing.taglineZh}
             </p>
