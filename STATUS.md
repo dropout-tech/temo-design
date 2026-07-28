@@ -4,7 +4,7 @@
 
 ## 目前進度（2026-07-28）
 
-### 最新：作品內頁新增「新聞報導」欄位（已 commit **未 push**——等 migration 0019 套用授權）
+### 最新：作品內頁新增「新聞報導」欄位（**已上線已驗**，commit dce5930）
 
 **需求（使用者原話＋截圖）**：作品探索多加一個新聞的欄位，像獎項（RECOGNITION）那樣：
 沒有的時候不會出現，有的話會跑出來；後台管理要可以自定義。
@@ -26,12 +26,18 @@ href/target/rel 正確、Recognition 迴歸正常、手機 375 無溢出長網�
 容錯路徑正常（欄位未上線不壞站、無 Press 區塊）；手機截圖經 agent 判讀通過，桌面以
 確定性 opacity/位置斷言補驗（截圖時機碰上 reveal 動畫的老坑，非真問題）。
 
-**⚠️ 上線順序（重要，勿先 push）**：actions.ts 存檔會寫 `press_mentions` 欄位——
-**migration 0019 沒套進正式 Supabase 前就 push，部署後後台存作品會失敗**。
-正確順序：使用者授權 → psql 套 0019 → push → 線上驗。已 commit 在本地等授權。
+**上線紀錄（2026-07-28，使用者原話「同意上線」）**：psql 套 0019 進正式 Supabase
+（information_schema 確認 press_mentions|ARRAY）→ push dce5930 → 150 秒等部署 →
+**線上確定性腳本 10/10 PASS**（temo-design.vercel.app/portfolio/ilo-2025：Press 區塊出現、
+經濟時報／華視新聞兩筆可點、href/target 正確、手機 375 scrollWidth=375、無 page error；
+scratchpad/verify-live-press.js）。
 
-**下一步（使用者）**：回覆是否同意套 migration 上線；上線後登入 /studio → 作品 →
-「新聞報導」欄位貼「經濟時報 https://...」一行一則存檔，前台內頁看 Press 區塊。
+**首批資料**：驗證用的兩筆真實新聞（經濟時報＋華視新聞，即使用者截圖那兩條）已留在
+ilo-2025 的新聞報導欄位——不要的話後台可自行刪改。原本貼在內文文字區塊裡的純文字網址
+仍在，是否移除由使用者決定（後台作品 → 內容區塊）。
+
+**下一步（使用者）**：登入 /studio → 作品 → 任一作品的「新聞報導」欄位一行一則
+「媒體名稱 網址」存檔即可；前台等 60-120 秒重新整理看效果。
 
 ### 前次：服務落地頁大標行距等距＋齊底（已 push 83ac442，Vercel 自動部署）
 
