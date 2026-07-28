@@ -28,6 +28,8 @@ export type WorkInput = {
   quote_text: string
   quote_author: string
   awards: string[]
+  /** 新聞報導：一行一則「媒體名稱 網址」（migration 0019） */
+  press_mentions: string[]
   published: boolean
   industryValues: string[]
   designerIds: string[]
@@ -71,6 +73,7 @@ function toRow(input: WorkInput) {
     quote_text: input.quote_text.trim() || null,
     quote_author: input.quote_author.trim() || null,
     awards: input.awards,
+    press_mentions: input.press_mentions,
     published: input.published,
   }
 }

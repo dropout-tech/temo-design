@@ -43,6 +43,7 @@ export type WorkFormInitial = {
   quote_text: string
   quote_author: string
   awards: string
+  press: string
   published: boolean
   industryValues: string[]
   designerIds: string[]
@@ -56,7 +57,7 @@ const EMPTY: WorkFormInitial = {
   slug: "", title: "", subtitle: "", category_group: "", year: "", client_id: "",
   cover_url: "", hero_url: "", client_logo_urls: [], video_url: "", size: "medium", description: "", services: "",
   deliverables: "", challenge: "", approach: "", result: "", quote_text: "",
-  quote_author: "", awards: "", published: true, industryValues: [], designerIds: [],
+  quote_author: "", awards: "", press: "", published: true, industryValues: [], designerIds: [],
   gallery: [], blocks: [],
 }
 
@@ -322,7 +323,7 @@ export function WorkForm({
       description: f.description, services: toLines(f.services),
       deliverables: toLines(f.deliverables), challenge: f.challenge,
       approach: f.approach, result: f.result, quote_text: f.quote_text,
-      quote_author: f.quote_author, awards: toLines(f.awards),
+      quote_author: f.quote_author, awards: toLines(f.awards), press_mentions: toLines(f.press),
       published: f.published, industryValues: f.industryValues, designerIds: f.designerIds,
       blocks: blocks.map((b) => ({
         type: b.type,
@@ -612,6 +613,9 @@ export function WorkForm({
         </Field>
         <Field label="獎項" hint="一行一項">
           <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.awards} onChange={(e) => set("awards", e.target.value)} />
+        </Field>
+        <Field label="新聞報導" hint="一行一則，格式「媒體名稱 網址」；網址可省略，省略就只顯示文字不能點">
+          <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.press} onChange={(e) => set("press", e.target.value)} placeholder={"經濟時報 https://money.udn.com/...\n華視新聞 https://news.cts.com.tw/..."} />
         </Field>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <Field label="引言內文">

@@ -4,7 +4,36 @@
 
 ## 目前進度（2026-07-28）
 
-### 最新：服務落地頁大標行距等距＋齊底（已 push 83ac442，Vercel 自動部署）
+### 最新：作品內頁新增「新聞報導」欄位（已 commit **未 push**——等 migration 0019 套用授權）
+
+**需求（使用者原話＋截圖）**：作品探索多加一個新聞的欄位，像獎項（RECOGNITION）那樣：
+沒有的時候不會出現，有的話會跑出來；後台管理要可以自定義。
+
+**做法**（完全照 awards 模式）：
+- migration `0019_work_press_mentions.sql`：works 表加 `press_mentions text[]`（可安全重跑）。
+- 後台作品表單「獎項」下方新增「新聞報導」textarea，一行一則，格式「媒體名稱 網址」
+  （網址可省略＝純文字不可點）。
+- 前台內頁 Recognition 下方新增 Press 區塊（金色小標＋報紙 icon），有網址的項目可點
+  （新分頁開啟、hover 金色、行尾 ↗）；全形／半形冒號、豎線等分隔符自動剝除；
+  只貼網址沒名稱就顯示網址本身。讀取層照 client_logo 模式獨立容錯查詢——
+  **migration 未套用前，前台一切照舊不壞站**。
+- 改 6 檔：0019 migration、lib/portfolio-supabase.ts、components/pages/portfolio-detail-client.tsx、
+  components/studio/work-form.tsx、app/studio/(app)/works/actions.ts、lib/studio/works.ts。
+
+**驗證**：tsc 0 錯（exit 0 親跑）、build ✓ 39 頁；確定性 Playwright 20/20＋桌面補驗 4/4 全過
+（臨時 harness 頁驗完已刪）——四種輸入格式解析正確（名稱+網址／冒號分隔／純文字／裸網址）、
+href/target/rel 正確、Recognition 迴歸正常、手機 375 無溢出長網址斷行、ilo-2025 真實頁
+容錯路徑正常（欄位未上線不壞站、無 Press 區塊）；手機截圖經 agent 判讀通過，桌面以
+確定性 opacity/位置斷言補驗（截圖時機碰上 reveal 動畫的老坑，非真問題）。
+
+**⚠️ 上線順序（重要，勿先 push）**：actions.ts 存檔會寫 `press_mentions` 欄位——
+**migration 0019 沒套進正式 Supabase 前就 push，部署後後台存作品會失敗**。
+正確順序：使用者授權 → psql 套 0019 → push → 線上驗。已 commit 在本地等授權。
+
+**下一步（使用者）**：回覆是否同意套 migration 上線；上線後登入 /studio → 作品 →
+「新聞報導」欄位貼「經濟時報 https://...」一行一則存檔，前台內頁看 Press 區塊。
+
+### 前次：服務落地頁大標行距等距＋齊底（已 push 83ac442，Vercel 自動部署）
 
 **需求（使用者截圖）**：/services 落地頁大標「BRAND & GRAPHIC」三行上下行距要統一；
 GRAPHIC 要跟右邊「價格試算表單」按鈕齊底。

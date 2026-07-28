@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowUpRight, Award, ChevronLeft } from "lucide-react"
+import { ArrowUpRight, Award, ChevronLeft, Newspaper } from "lucide-react"
 import { useInView } from "@/hooks/use-in-view"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
@@ -35,6 +35,20 @@ export type DetailIndustry = {
   label: string
 }
 
+// 新聞報導單行解析：「媒體名稱 https://連結」→ { label, url }。
+// 沒有網址就整行當純文字；只貼網址沒名稱就以網址本身當顯示文字。
+function parsePressMention(raw: string): { label: string; url?: string } {
+  const m = raw.match(/https?:\/\/\S+/)
+  if (!m) return { label: raw.trim() }
+  const url = m[0]
+  const label = raw
+    .slice(0, m.index)
+    .trim()
+    .replace(/[:：|\-—]+$/, "")
+    .trim()
+  return { label: label || url, url }
+}
+
 export type DetailProject = {
   slug: string
   title: string
@@ -60,6 +74,8 @@ export type DetailProject = {
   gallery?: { src: string; alt?: string; caption?: string }[]
   quote?: { text: string; author?: string }
   awards?: string[]
+  /** 新聞報導：一行一筆「媒體名稱 https://連結」（連結選填），有值才顯示 Press 區塊 */
+  pressMentions?: string[]
   designers: DetailDesigner[]
   related: DetailRelated[]
   /** 內頁首圖，未提供時退回 cover（本地 demo fallback 資料無此欄位） */
@@ -296,6 +312,40 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                           <span>{a}</span>
                         </li>
                       ))}
+                    </ul>
+                  </div>
+                )}
+
+                {project.pressMentions && project.pressMentions.length > 0 && (
+                  <div className="mt-4 pt-10 border-t border-temo-warm-gray/15">
+                    <p className="text-[10px] tracking-[0.4em] text-temo-gold uppercase mb-5">
+                      Press
+                    </p>
+                    <ul className="space-y-3">
+                      {project.pressMentions.map((raw) => {
+                        const { label, url } = parsePressMention(raw)
+                        return (
+                          <li
+                            key={raw}
+                            className="flex items-start gap-3 text-temo-warm-gray text-sm md:text-base"
+                          >
+                            <Newspaper className="w-4 h-4 mt-1 text-temo-gold flex-shrink-0" />
+                            {url ? (
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="break-words underline decoration-temo-warm-gray/30 underline-offset-4 transition-colors hover:text-temo-gold hover:decoration-temo-gold"
+                              >
+                                {label}
+                                <ArrowUpRight className="inline-block w-3.5 h-3.5 ml-1 -mt-0.5" />
+                              </a>
+                            ) : (
+                              <span className="break-words">{label}</span>
+                            )}
+                          </li>
+                        )
+                      })}
                     </ul>
                   </div>
                 )}

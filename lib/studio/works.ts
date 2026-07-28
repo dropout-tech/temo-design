@@ -104,6 +104,7 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
     quote_text: w.quote_text ?? "",
     quote_author: w.quote_author ?? "",
     awards: (w.awards ?? []).join("\n"),
+    press: (w.press_mentions ?? []).join("\n"),
     published: w.published ?? true,
     industryValues: (w.work_industries ?? []).map((r: any) => r.industry_value),
     designerIds: (w.work_designers ?? []).map((r: any) => r.designer_id),

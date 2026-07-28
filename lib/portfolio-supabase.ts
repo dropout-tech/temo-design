@@ -225,6 +225,19 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     clientLogos = []
   }
 
+  // ── press_mentions：獨立查詢，欄位不存在（migration 0019 未套用）時安靜回空陣列 ──
+  let pressMentions: string[] = []
+  try {
+    const { data: pressRow, error: pressErr } = await supa
+      .from("works")
+      .select("press_mentions")
+      .eq("slug", slug)
+      .maybeSingle()
+    if (!pressErr) pressMentions = ((pressRow as any)?.press_mentions ?? []) as string[]
+  } catch {
+    pressMentions = []
+  }
+
   // ── blocks：獨立查詢 work_blocks（migration 未套用/表不存在/查詢失敗/空陣列 → fallback 成 gallery 轉的 image blocks）──
   let blocks: WorkBlock[] = []
   try {
@@ -298,6 +311,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     gallery: gallery.length > 0 ? gallery : undefined,
     quote: w.quote_text ? { text: w.quote_text, author: w.quote_author ?? undefined } : undefined,
     awards: w.awards ?? [],
+    pressMentions,
     designers,
     related,
     blocks,
