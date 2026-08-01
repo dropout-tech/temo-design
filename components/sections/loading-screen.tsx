@@ -86,7 +86,6 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
         role="img"
       >
         <div className={`logo-metal-stack ${mounted ? "is-mounted" : ""}`}>
-          <div className="logo-metal-layer logo-metal-shadow" />
           <div className="logo-metal-layer logo-metal-edge-shadow" />
           <div className="logo-metal-layer logo-metal-body" />
           <div className="logo-metal-layer logo-metal-edge-highlight" />
@@ -100,9 +99,7 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
         .logo-shimmer-wrap {
           width: min(76vw, 660px);
           position: relative;
-          filter:
-            drop-shadow(0 24px 34px rgba(0, 0, 0, 0.88))
-            drop-shadow(0 0 18px rgba(255, 255, 255, 0.08));
+          filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.06));
         }
         .logo-metal-stack {
           width: 100%;
@@ -125,17 +122,10 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
                   mask-size: contain;
           will-change: transform, opacity, background-position, filter;
         }
-        .logo-metal-shadow {
-          background: #000;
-          opacity: 0.72;
-          transform: translate(8px, 10px) scale(1.006);
-          filter: blur(1px);
-        }
         .logo-metal-edge-shadow {
           background:
             linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(24, 25, 25, 0.65) 42%, rgba(0, 0, 0, 0.95) 100%);
-          opacity: 0.82;
-          transform: translate(2px, 2px);
+          opacity: 0.5;
         }
         .logo-metal-body {
           background:
@@ -162,8 +152,7 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
             saturate(0.88)
             contrast(1.34)
             brightness(0.92)
-            drop-shadow(-1px -1px 0 rgba(255, 255, 255, 0.2))
-            drop-shadow(2px 3px 0 rgba(0, 0, 0, 0.75));
+            drop-shadow(-1px -1px 0 rgba(255, 255, 255, 0.18));
         }
         .logo-metal-edge-highlight {
           background:
@@ -262,8 +251,7 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
               saturate(0.88)
               contrast(1.34)
               brightness(0.88)
-              drop-shadow(-1px -1px 0 rgba(255, 255, 255, 0.18))
-              drop-shadow(2px 3px 0 rgba(0, 0, 0, 0.75));
+              drop-shadow(-1px -1px 0 rgba(255, 255, 255, 0.16));
           }
           100% {
             background-position: 48% 38%, center, 100% 50%;
@@ -271,8 +259,7 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
               saturate(0.86)
               contrast(1.38)
               brightness(0.96)
-              drop-shadow(-1px -1px 0 rgba(255, 255, 255, 0.22))
-              drop-shadow(2px 3px 0 rgba(0, 0, 0, 0.78));
+              drop-shadow(-1px -1px 0 rgba(255, 255, 255, 0.2));
           }
         }
         @keyframes logoMetalSweep {
