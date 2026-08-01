@@ -9,7 +9,14 @@ import { CursorSpotlight } from "@/components/cursor-spotlight"
 export default function HomePage() {
   const [showLoading, setShowLoading] = useState(true)
 
+  const shouldReplayLoading = () => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get("preview") === "loading-metal" || params.get("loadingReplay") === "1"
+  }
+
   useEffect(() => {
+    if (shouldReplayLoading()) return
+
     // Check if user has already seen the loading screen
     const hasSeenLoading = sessionStorage.getItem("temo-loading-seen")
     if (hasSeenLoading) {
@@ -18,7 +25,9 @@ export default function HomePage() {
   }, [])
 
   const handleLoadingComplete = () => {
-    sessionStorage.setItem("temo-loading-seen", "true")
+    if (!shouldReplayLoading()) {
+      sessionStorage.setItem("temo-loading-seen", "true")
+    }
     setShowLoading(false)
   }
 
