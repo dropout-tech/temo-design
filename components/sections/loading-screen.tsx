@@ -216,16 +216,16 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
           animation: logoMetalReveal 1.25s cubic-bezier(0.7, 0, 0.18, 1) 0.12s forwards;
         }
         .logo-metal-stack.is-mounted .logo-metal-body {
-          animation: logoMetalDrift 5.2s cubic-bezier(0.45, 0, 0.25, 1) 0.2s infinite alternate;
+          animation: logoMetalDrift 7.6s cubic-bezier(0.45, 0, 0.25, 1) 0.2s infinite alternate;
         }
         .logo-metal-stack.is-mounted .logo-metal-sweep {
-          animation: logoMetalSweep 5.6s cubic-bezier(0.68, 0, 0.22, 1) 0.36s infinite;
+          animation: logoMetalSweep 8.2s cubic-bezier(0.68, 0, 0.22, 1) 0.5s infinite;
         }
         .logo-metal-stack.is-mounted .logo-metal-glint {
-          animation: logoMetalGlint 5.6s cubic-bezier(0.65, 0, 0.3, 1) 0.5s infinite;
+          animation: logoMetalGlint 8.2s cubic-bezier(0.65, 0, 0.3, 1) 0.7s infinite;
         }
         .logo-metal-stack.is-mounted + .logo-corner-spark {
-          animation: logoCornerSpark 5.6s cubic-bezier(0.58, 0, 0.26, 1) 0.72s infinite;
+          animation: logoCornerSpark 8.2s cubic-bezier(0.58, 0, 0.26, 1) 1s infinite;
         }
         @keyframes logoMetalReveal {
           0% {
