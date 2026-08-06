@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useRef, useState, useTransition } from "react"
 import Image from "next/image"
 import { Loader2, Plus, Trash2, Check, Upload, ImageIcon, ExternalLink, GripVertical } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
@@ -25,7 +25,7 @@ export function PressLinkManager({ initial }: { initial: Row[] }) {
   const [rows, setRows] = useState<Row[]>(initial)
   const [orderPending, startOrder] = useTransition()
   const [orderError, setOrderError] = useState("")
-  let keyCounter = 0
+  const keyCounter = useRef(0)
 
   function commitOrder(next: Row[]) {
     const ids = next.filter((r) => r.id).map((r) => r.id!)
@@ -44,7 +44,7 @@ export function PressLinkManager({ initial }: { initial: Row[] }) {
     setRows((p) => [
       ...p,
       {
-        key: `new-${p.length}-${keyCounter++}`,
+        key: `new-${p.length}-${keyCounter.current++}`,
         title: "",
         source: "",
         url: "",
@@ -83,6 +83,7 @@ export function PressLinkManager({ initial }: { initial: Row[] }) {
           </p>
         </div>
         <button
+          type="button"
           onClick={addRow}
           className="inline-flex items-center gap-2 px-5 py-3 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:brightness-110 transition-all"
         >
@@ -192,14 +193,23 @@ function Card({
 
   return (
     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4 space-y-3">
-      <button
-        type="button"
-        aria-label="拖拉排序"
-        className="text-temo-warm-gray/40 hover:text-temo-warm-gray active:cursor-grabbing"
-        {...handle}
-      >
-        <GripVertical className="w-4 h-4" />
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-label="拖拉排序"
+          className="text-temo-warm-gray/40 hover:text-temo-warm-gray active:cursor-grabbing shrink-0"
+          {...handle}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-temo-white truncate">{row.title || "未命名報導"}</p>
+          <p className="text-[11px] text-temo-warm-gray/45 truncate">
+            {row.source || "未填來源"} · {row.url ? "已填連結" : "缺連結"} · {row.image_url ? "有縮圖" : "缺縮圖"}
+          </p>
+        </div>
+        {!row.id && <span className="text-[10px] text-temo-gold/75 shrink-0">尚未儲存</span>}
+      </div>
       {/* 縮圖預覽 */}
       <div className="relative flex items-center justify-center h-32 rounded-md border border-white/10 bg-[#1a1815] overflow-hidden">
         {row.image_url ? (
@@ -277,6 +287,7 @@ function Card({
 
       <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={save}
           disabled={busy}
           className="inline-flex items-center gap-1.5 px-4 py-2 bg-temo-gold/90 text-temo-black text-xs font-bold tracking-wider rounded-sm hover:brightness-110 disabled:opacity-60 transition-all"
@@ -289,6 +300,7 @@ function Card({
           {saved ? "已儲存" : "儲存"}
         </button>
         <button
+          type="button"
           onClick={del}
           disabled={busy}
           className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60"

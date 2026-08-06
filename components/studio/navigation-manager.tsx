@@ -138,6 +138,7 @@ export function NavigationManager({ links }: { links: NavLinkRow[] }) {
                 </span>
               </h2>
               <button
+                type="button"
                 onClick={() => addRow(section.location)}
                 className="inline-flex items-center gap-2 px-4 py-2.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:brightness-110 transition-all"
               >
@@ -285,6 +286,7 @@ function NavLinkCard({
       <div className="flex items-center gap-3 mt-3">
         <SaveButton pending={pending} saved={saved} onClick={handleSave} label="儲存" />
         <button
+          type="button"
           onClick={handleDelete}
           disabled={pending}
           className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60"
@@ -309,6 +311,7 @@ function SaveButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={pending}
       className="inline-flex items-center gap-1.5 px-4 py-2 bg-temo-gold/90 text-temo-black text-xs font-bold tracking-wider rounded-sm hover:brightness-110 disabled:opacity-60 transition-all"

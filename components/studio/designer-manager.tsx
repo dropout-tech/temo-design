@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useRef, useState, useTransition } from "react"
 import Image from "next/image"
 import {
   Loader2,
@@ -70,7 +70,7 @@ export function DesignerManager({
   const [activeCat, setActiveCat] = useState<string>("全部")
   const [orderPending, startOrder] = useTransition()
   const [orderError, setOrderError] = useState("")
-  let keyCounter = 0
+  const keyCounter = useRef(0)
 
   // 顯示用分類順序：已登錄分類在前，未登錄的舊分類（成員身上有、但沒建大項目的）接在後面
   const registeredNames = cats.map((c) => c.name)
@@ -84,7 +84,7 @@ export function DesignerManager({
     setRows((p) => [
       ...p,
       {
-        key: `new-${p.length}-${keyCounter++}`,
+        key: `new-${p.length}-${keyCounter.current++}`,
         slug: "",
         name: "",
         name_zh: "",
@@ -153,6 +153,7 @@ export function DesignerManager({
           </p>
         </div>
         <button
+          type="button"
           onClick={addRow}
           className="inline-flex items-center gap-2 px-5 py-3 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:brightness-110 transition-all shrink-0"
         >
@@ -176,6 +177,7 @@ export function DesignerManager({
           const active = activeCat === c
           return (
             <button
+              type="button"
               key={c}
               onClick={() => setActiveCat(c)}
               className={cn(
@@ -718,6 +720,7 @@ function Card({
 
           <div className="flex items-center gap-3 pt-1">
             <button
+              type="button"
               onClick={save}
               disabled={busy}
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-temo-gold/90 text-temo-black text-xs font-bold tracking-wider rounded-sm hover:brightness-110 disabled:opacity-60 transition-all"
@@ -726,6 +729,7 @@ function Card({
               {saved ? "已儲存" : "儲存"}
             </button>
             <button
+              type="button"
               onClick={del}
               disabled={busy}
               className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60"

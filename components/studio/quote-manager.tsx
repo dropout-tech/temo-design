@@ -1,7 +1,21 @@
 "use client"
 
-import { useRef, useState, useTransition } from "react"
-import { Loader2, Plus, Trash2, Check, Star, GripVertical } from "lucide-react"
+import { useMemo, useRef, useState, useTransition } from "react"
+import Link from "next/link"
+import {
+  ArrowUpRight,
+  Calculator,
+  Check,
+  ClipboardList,
+  GripVertical,
+  Layers3,
+  Loader2,
+  PackagePlus,
+  Plus,
+  Puzzle,
+  Star,
+  Trash2,
+} from "lucide-react"
 import {
   saveCategory,
   deleteCategory,
@@ -54,6 +68,27 @@ type AddonRow = { key: string; id?: string; label: string; price: number; sort: 
 
 type CompRow = { key: string; id?: string; name: string; deductValue: number; sort: number }
 
+type QuoteWorkspace = "plans" | "addons" | "components"
+
+const WORKSPACES: {
+  id: QuoteWorkspace
+  label: string
+  helper: string
+  icon: typeof Calculator
+}[] = [
+  { id: "plans", label: "服務方案", helper: "類別、方案、價格", icon: Calculator },
+  { id: "addons", label: "共用加購", helper: "方案可選加價項", icon: PackagePlus },
+  { id: "components", label: "重疊扣抵", helper: "避免重複計價", icon: Puzzle },
+]
+
+const currency = new Intl.NumberFormat("zh-TW", {
+  style: "currency",
+  currency: "TWD",
+  maximumFractionDigits: 0,
+})
+
+const formatMoney = (value: number) => currency.format(value)
+
 export function QuoteManager({
   categories,
   addons,
@@ -104,6 +139,7 @@ export function QuoteManager({
   )
 
   const [activeKey, setActiveKey] = useState<string>(cats[0]?.key ?? "")
+  const [activeWorkspace, setActiveWorkspace] = useState<QuoteWorkspace>("plans")
   const activeCat = cats.find((c) => c.key === activeKey) ?? cats[0]
   const [orderPending, startOrder] = useTransition()
   const [orderError, setOrderError] = useState("")
@@ -114,6 +150,7 @@ export function QuoteManager({
     const k = newKey()
     setCats((p) => [...p, { key: k, title: "", titleEn: "", description: "", icon: "", sort: maxSort + 1 }])
     setActiveKey(k)
+    setActiveWorkspace("plans")
   }
   function updateCat(key: string, patch: Partial<CatRow>) {
     setCats((p) => p.map((c) => (c.key === key ? { ...c, ...patch } : c)))
@@ -130,6 +167,7 @@ export function QuoteManager({
   // ── 方案 ──
   function addPackage() {
     if (!activeCat?.id) return
+    setActiveWorkspace("plans")
     const inCat = pkgs.filter((p) => p.categoryId === activeCat.id)
     const maxSort = inCat.reduce((m, p) => Math.max(m, p.sort), -1)
     setPkgs((p) => [
@@ -161,6 +199,7 @@ export function QuoteManager({
   function addAddon() {
     const maxSort = addonRows.reduce((m, a) => Math.max(m, a.sort), -1)
     setAddonRows((p) => [...p, { key: newKey(), label: "", price: 0, sort: maxSort + 1 }])
+    setActiveWorkspace("addons")
   }
   function updateAddon(key: string, patch: Partial<AddonRow>) {
     setAddonRows((p) => p.map((a) => (a.key === key ? { ...a, ...patch } : a)))
@@ -173,6 +212,7 @@ export function QuoteManager({
   function addComponent() {
     const maxSort = compRows.reduce((m, c) => Math.max(m, c.sort), -1)
     setCompRows((p) => [...p, { key: newKey(), name: "", deductValue: 0, sort: maxSort + 1 }])
+    setActiveWorkspace("components")
   }
   function updateComponent(key: string, patch: Partial<CompRow>) {
     setCompRows((p) => p.map((c) => (c.key === key ? { ...c, ...patch } : c)))
@@ -184,6 +224,25 @@ export function QuoteManager({
   const savedComponents = compRows.filter((c): c is CompRow & { id: string } => !!c.id)
 
   const activePkgs = activeCat?.id ? pkgs.filter((p) => p.categoryId === activeCat.id) : []
+  const quoteStats = useMemo(() => {
+    const prices = pkgs.map((p) => p.basePrice).filter((price) => Number.isFinite(price) && price > 0)
+    const minPrice = prices.length > 0 ? Math.min(...prices) : 0
+    const maxPrice = prices.length > 0 ? Math.max(...prices) : 0
+    return {
+      categoryCount: cats.length,
+      packageCount: pkgs.length,
+      addonCount: addonRows.length,
+      componentCount: compRows.length,
+      addonEnabledCount: pkgs.filter((p) => p.showAddons).length,
+      componentLinkedCount: pkgs.filter((p) => p.componentIds.length > 0).length,
+      unsavedCount:
+        cats.filter((c) => !c.id).length +
+        pkgs.filter((p) => !p.id).length +
+        addonRows.filter((a) => !a.id).length +
+        compRows.filter((c) => !c.id).length,
+      priceRange: prices.length > 0 ? `${formatMoney(minPrice)} - ${formatMoney(maxPrice)}` : "尚未設定",
+    }
+  }, [addonRows, cats, compRows, pkgs])
 
   // ── 拖拉排序 ──
   function reorderCatsLive(next: CatRow[]) {
@@ -247,187 +306,415 @@ export function QuoteManager({
   }
 
   return (
-    <div className="px-6 md:px-10 py-10 md:py-14 max-w-4xl">
-      <div className="mb-8">
-        <p className="text-[10px] tracking-[0.5em] text-temo-gold uppercase mb-2">Estimate</p>
-        <h1 className="text-3xl md:text-4xl font-bold text-temo-white">報價試算</h1>
-        <p className="text-temo-warm-gray/60 text-sm mt-1">
-          管理前台「即時報價試算」的服務類別、方案價格與共用加購項。改完按各卡片的「儲存」即時生效。
-        </p>
+    <div className="px-6 md:px-10 py-10 md:py-14 max-w-7xl space-y-8">
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-5">
+        <div>
+          <p className="text-[10px] tracking-[0.5em] text-temo-gold uppercase mb-2">Estimate</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-temo-white">報價試算管理</h1>
+          <p className="text-temo-warm-gray/65 text-sm mt-2 max-w-2xl">
+            先管理服務類別與方案，再設定共用加購和重疊扣抵。每張卡片儲存後會同步到前台即時報價試算。
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/quote"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-3 border border-white/12 text-temo-warm-gray/75 hover:text-temo-gold hover:border-temo-gold/40 text-xs font-bold tracking-[0.12em] uppercase rounded-sm transition-colors"
+          >
+            <ArrowUpRight className="w-4 h-4" />
+            前台試算
+          </Link>
+          <Link
+            href="/studio/brief"
+            className="inline-flex items-center gap-2 px-4 py-3 border border-white/12 text-temo-warm-gray/75 hover:text-temo-gold hover:border-temo-gold/40 text-xs font-bold tracking-[0.12em] uppercase rounded-sm transition-colors"
+          >
+            <ClipboardList className="w-4 h-4" />
+            問卷管理
+          </Link>
+        </div>
       </div>
 
-      {/* 類別分頁 */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-white/10 pb-3 mb-6">
-        <SortableList
-          items={cats}
-          getKey={(c) => c.key}
-          onReorder={reorderCatsLive}
-          onCommit={reorderCatsCommit}
-          className="contents"
-          renderItem={(c, handle) => (
-            <div
-              className={cn(
-                "inline-flex items-center gap-1 pl-1.5 pr-1 py-1 rounded-sm border transition-all",
-                c.key === activeKey
-                  ? "border-temo-gold/60 bg-temo-gold/10 text-temo-gold"
-                  : "border-white/10 text-temo-warm-gray hover:text-white hover:border-white/25"
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <QuoteSummaryCard
+          icon={Layers3}
+          label="服務類別"
+          value={quoteStats.categoryCount}
+          helper={`${quoteStats.packageCount} 個方案`}
+        />
+        <QuoteSummaryCard
+          icon={Calculator}
+          label="價格範圍"
+          value={quoteStats.priceRange}
+          helper="以方案起價計算"
+        />
+        <QuoteSummaryCard
+          icon={PackagePlus}
+          label="共用加購"
+          value={quoteStats.addonCount}
+          helper={`${quoteStats.addonEnabledCount} 個方案會顯示`}
+        />
+        <QuoteSummaryCard
+          icon={Puzzle}
+          label="扣抵元件"
+          value={quoteStats.componentCount}
+          helper={`${quoteStats.componentLinkedCount} 個方案已設定`}
+        />
+      </div>
+
+      <div className="sticky top-0 z-20 -mx-6 md:-mx-10 px-6 md:px-10 py-3 bg-temo-black/95 backdrop-blur border-y border-white/[0.06] overflow-x-auto">
+        <div className="flex min-w-max items-center gap-2">
+          {WORKSPACES.map((workspace) => {
+            const active = activeWorkspace === workspace.id
+            return (
+              <button
+                key={workspace.id}
+                type="button"
+                onClick={() => setActiveWorkspace(workspace.id)}
+                className={cn(
+                  "min-w-40 rounded-md border px-3 py-2 text-left transition-colors",
+                  active
+                    ? "border-temo-gold/55 bg-temo-gold/10 text-temo-gold"
+                    : "border-white/10 bg-white/[0.02] text-temo-warm-gray/70 hover:text-temo-white hover:border-white/25"
+                )}
+              >
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <workspace.icon className="w-4 h-4" />
+                  {workspace.label}
+                </span>
+                <span className="block mt-0.5 text-[11px] opacity-55">{workspace.helper}</span>
+              </button>
+            )
+          })}
+          {quoteStats.unsavedCount > 0 && (
+            <span className="ml-2 rounded-full border border-temo-gold/25 bg-temo-gold/8 px-3 py-1.5 text-xs text-temo-gold">
+              {quoteStats.unsavedCount} 筆尚未儲存
+            </span>
+          )}
+          {orderPending && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-temo-warm-gray/50">
+              <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
+            </span>
+          )}
+          {orderError && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-red-400/90">
+              排序儲存失敗：{orderError}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {activeWorkspace === "plans" && (
+        <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)] items-start">
+          <aside className="xl:sticky xl:top-28 space-y-4">
+            <div>
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <h2 className="text-sm font-bold text-temo-white tracking-wide">服務類別</h2>
+                  <p className="text-xs text-temo-warm-gray/45 mt-1">前台試算的第一層選擇。</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={addCategory}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.12em] uppercase rounded-sm hover:brightness-110 transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  新增
+                </button>
+              </div>
+
+              <SortableList
+                items={cats}
+                getKey={(c) => c.key}
+                onReorder={reorderCatsLive}
+                onCommit={reorderCatsCommit}
+                className="space-y-2"
+                renderItem={(c, handle) => (
+                  <CategoryNavItem
+                    row={c}
+                    active={c.key === activeKey}
+                    packageCount={c.id ? pkgs.filter((p) => p.categoryId === c.id).length : 0}
+                    handle={handle}
+                    onSelect={() => setActiveKey(c.key)}
+                  />
+                )}
+              />
+
+              {cats.length === 0 && (
+                <div className="rounded-lg border border-dashed border-white/12 py-10 text-center">
+                  <p className="text-sm text-temo-warm-gray/55">還沒有任何類別。</p>
+                  <button
+                    type="button"
+                    onClick={addCategory}
+                    className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.12em] uppercase rounded-sm hover:brightness-110 transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    新增第一個類別
+                  </button>
+                </div>
               )}
+            </div>
+          </aside>
+
+          <main className="min-w-0 space-y-6">
+            {activeCat ? (
+              <>
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+                  <div>
+                    <p className="text-xs text-temo-gold/80 mb-2">目前編輯類別</p>
+                    <h2 className="text-2xl font-bold text-temo-white">{activeCat.title || "未命名類別"}</h2>
+                    <p className="text-sm text-temo-warm-gray/50 mt-1">
+                      {activePkgs.length} 個方案，{activePkgs.filter((p) => p.recommended).length} 個推薦，{activePkgs.filter((p) => p.showAddons).length} 個顯示加購
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addPackage}
+                    disabled={!activeCat.id}
+                    title={activeCat.id ? "" : "請先儲存此類別，才能新增方案"}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    新增方案
+                  </button>
+                </div>
+
+                <CategoryCard row={activeCat} onChange={(p) => updateCat(activeCat.key, p)} onRemove={() => removeCat(activeCat.key)} />
+
+                {!activeCat.id && (
+                  <div className="rounded-md border border-temo-gold/25 bg-temo-gold/[0.05] px-4 py-3 text-sm text-temo-gold/85">
+                    這個類別還沒儲存。先按「儲存類別」，才能新增方案並出現在前台。
+                  </div>
+                )}
+
+                <section className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-bold text-temo-white tracking-wide">
+                      方案清單
+                      <span className="text-temo-warm-gray/50 font-normal ml-2">拖拉即可改前台順序</span>
+                    </h3>
+                  </div>
+                  <SortableList
+                    items={activePkgs}
+                    getKey={(r) => r.key}
+                    onReorder={(next) => {
+                      const cid = activeCat.id
+                      if (cid) reorderPkgsLive(cid, next)
+                    }}
+                    onCommit={(next) => {
+                      const cid = activeCat.id
+                      if (cid) reorderPkgsCommit(cid, next)
+                    }}
+                    className="space-y-4"
+                    renderItem={(r, handle) => (
+                      <PackageCard
+                        row={r}
+                        handle={handle}
+                        components={savedComponents}
+                        onChange={(p) => updatePkg(r.key, p)}
+                        onRemove={() => removePkg(r.key)}
+                      />
+                    )}
+                  />
+                  {activeCat.id && activePkgs.length === 0 && (
+                    <div className="rounded-lg border border-dashed border-white/12 py-10 text-center">
+                      <p className="text-temo-warm-gray/55 text-sm">這個類別還沒有方案。</p>
+                      <button
+                        type="button"
+                        onClick={addPackage}
+                        className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.12em] uppercase rounded-sm hover:brightness-110 transition"
+                      >
+                        <Plus className="w-4 h-4" />
+                        新增第一個方案
+                      </button>
+                    </div>
+                  )}
+                </section>
+              </>
+            ) : (
+              <div className="rounded-lg border border-dashed border-white/12 py-14 text-center">
+                <p className="text-temo-warm-gray/55 text-sm">先新增一個服務類別，再建立方案價格。</p>
+              </div>
+            )}
+          </main>
+        </div>
+      )}
+
+      {activeWorkspace === "addons" && (
+        <section className="space-y-5">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-temo-white">共用加購池</h2>
+              <p className="text-sm text-temo-warm-gray/55 mt-2 max-w-2xl">
+                加購項不會自動出現在所有方案，只有方案卡片勾選「顯示共用加購池」時，前台才會讓客戶加選。
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addAddon}
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:brightness-110 transition-all"
             >
+              <Plus className="w-4 h-4" />
+              新增加購項
+            </button>
+          </div>
+          <div className="rounded-md border border-white/10 bg-white/[0.02] px-4 py-3 text-xs text-temo-warm-gray/60">
+            目前有 {addonRows.length} 個加購項，{quoteStats.addonEnabledCount} 個方案會在前台顯示這個池。
+          </div>
+          <SortableList
+            items={addonRows}
+            getKey={(a) => a.key}
+            onReorder={reorderAddonsLive}
+            onCommit={reorderAddonsCommit}
+            className="space-y-3"
+            renderItem={(a, handle) => (
+              <AddonCard row={a} handle={handle} onChange={(p) => updateAddon(a.key, p)} onRemove={() => removeAddon(a.key)} />
+            )}
+          />
+          {addonRows.length === 0 && (
+            <div className="rounded-lg border border-dashed border-white/12 py-10 text-center">
+              <p className="text-temo-warm-gray/55 text-sm">還沒有加購項。</p>
               <button
                 type="button"
-                aria-label="拖拉排序類別"
-                className="text-current opacity-50 hover:opacity-90 active:cursor-grabbing shrink-0"
-                {...handle}
+                onClick={addAddon}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.12em] uppercase rounded-sm hover:brightness-110 transition"
               >
-                <GripVertical className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={() => setActiveKey(c.key)} className="px-2 py-1 text-xs font-medium tracking-wide">
-                {c.title || "（未命名類別）"}
-                {!c.id && <span className="ml-1 text-[10px] text-temo-gold/70">未儲存</span>}
+                <Plus className="w-4 h-4" />
+                新增第一個加購項
               </button>
             </div>
           )}
-        />
-        <button
-          onClick={addCategory}
-          className="px-3 py-2 text-xs text-temo-warm-gray/70 hover:text-temo-gold inline-flex items-center gap-1 rounded-sm border border-dashed border-white/15 hover:border-temo-gold/40 transition-all"
-        >
-          <Plus className="w-3.5 h-3.5" /> 新增類別
-        </button>
-        {orderPending && (
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-temo-warm-gray/50">
-            <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
-          </span>
-        )}
-        {orderError && (
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-red-400/90">
-            排序儲存失敗：{orderError}
-          </span>
-        )}
-      </div>
-
-      {activeCat ? (
-        <>
-          <CategoryCard row={activeCat} onChange={(p) => updateCat(activeCat.key, p)} onRemove={() => removeCat(activeCat.key)} />
-
-          <div className="flex items-center justify-between mt-8 mb-3">
-            <h2 className="text-sm font-bold text-temo-white tracking-wide">
-              「{activeCat.title || "此類別"}」的方案
-              <span className="text-temo-warm-gray/50 font-normal ml-2">共 {activePkgs.length} 個</span>
-            </h2>
-            <button
-              onClick={addPackage}
-              disabled={!activeCat.id}
-              title={activeCat.id ? "" : "請先儲存此類別，才能新增方案"}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-            >
-              <Plus className="w-4 h-4" /> 新增方案
-            </button>
-          </div>
-          {!activeCat.id && (
-            <p className="text-[11px] text-temo-gold/70 mb-3">↑ 這個類別還沒儲存，先在上方卡片按「儲存類別」，才能加方案。</p>
-          )}
-
-          <SortableList
-            items={activePkgs}
-            getKey={(r) => r.key}
-            onReorder={(next) => {
-              const cid = activeCat.id
-              if (cid) reorderPkgsLive(cid, next)
-            }}
-            onCommit={(next) => {
-              const cid = activeCat.id
-              if (cid) reorderPkgsCommit(cid, next)
-            }}
-            className="space-y-4"
-            renderItem={(r, handle) => (
-              <PackageCard
-                row={r}
-                handle={handle}
-                components={savedComponents}
-                onChange={(p) => updatePkg(r.key, p)}
-                onRemove={() => removePkg(r.key)}
-              />
-            )}
-          />
-          {activeCat.id && activePkgs.length === 0 && (
-            <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
-              這個類別還沒有方案，點右上「新增方案」。
-            </p>
-          )}
-        </>
-      ) : (
-        <p className="text-temo-warm-gray/50 text-sm py-8 text-center">還沒有任何類別，點「新增類別」開始。</p>
+        </section>
       )}
 
-      {/* 共用加購池 */}
-      <div className="mt-14 pt-8 border-t border-white/10">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-sm font-bold text-temo-white tracking-wide">
-            共用加購池
-            <span className="text-temo-warm-gray/50 font-normal ml-2">共 {addonRows.length} 項</span>
-          </h2>
-          <button
-            onClick={addAddon}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/[0.06] text-temo-white text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:bg-white/[0.1] transition-all"
-          >
-            <Plus className="w-4 h-4" /> 新增加購項
-          </button>
-        </div>
-        <p className="text-[11px] text-temo-warm-gray/50 mb-4">
-          這些加購項會出現在「有勾選『顯示加購池』的方案」底下，讓客戶自由加選。
-        </p>
-        <SortableList
-          items={addonRows}
-          getKey={(a) => a.key}
-          onReorder={reorderAddonsLive}
-          onCommit={reorderAddonsCommit}
-          className="space-y-3"
-          renderItem={(a, handle) => (
-            <AddonCard row={a} handle={handle} onChange={(p) => updateAddon(a.key, p)} onRemove={() => removeAddon(a.key)} />
+      {activeWorkspace === "components" && (
+        <section className="space-y-5">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-temo-white">重疊扣抵元件</h2>
+              <p className="text-sm text-temo-warm-gray/55 mt-2 max-w-2xl">
+                元件代表方案內含的內容，例如 LOGO、名片、包裝。兩個方案含同一元件時，前台會扣掉重複的抵扣值。
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={addComponent}
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:brightness-110 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              新增元件
+            </button>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-3">
+            <div className="rounded-md border border-white/10 bg-white/[0.02] px-4 py-3">
+              <p className="text-xs text-temo-warm-gray/45">元件數</p>
+              <p className="text-xl font-bold text-temo-white mt-1">{compRows.length}</p>
+            </div>
+            <div className="rounded-md border border-white/10 bg-white/[0.02] px-4 py-3">
+              <p className="text-xs text-temo-warm-gray/45">已掛元件的方案</p>
+              <p className="text-xl font-bold text-temo-white mt-1">{quoteStats.componentLinkedCount}</p>
+            </div>
+            <div className="rounded-md border border-temo-gold/25 bg-temo-gold/[0.04] px-4 py-3">
+              <p className="text-xs text-temo-gold/80">建議</p>
+              <p className="text-xs text-temo-warm-gray/65 mt-1">抵扣值保守填，避免多扣造成少收款。</p>
+            </div>
+          </div>
+          <SortableList
+            items={compRows}
+            getKey={(c) => c.key}
+            onReorder={reorderCompsLive}
+            onCommit={reorderCompsCommit}
+            className="space-y-3"
+            renderItem={(c, handle) => (
+              <ComponentCard row={c} handle={handle} onChange={(p) => updateComponent(c.key, p)} onRemove={() => removeComponent(c.key)} />
+            )}
+          />
+          {compRows.length === 0 && (
+            <div className="rounded-lg border border-dashed border-white/12 py-10 text-center">
+              <p className="text-temo-warm-gray/55 text-sm">還沒有內容元件。先新增 LOGO、名片等元件，再回方案卡勾選。</p>
+              <button
+                type="button"
+                onClick={addComponent}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.12em] uppercase rounded-sm hover:brightness-110 transition"
+              >
+                <Plus className="w-4 h-4" />
+                新增第一個元件
+              </button>
+            </div>
           )}
-        />
-        {addonRows.length === 0 && (
-          <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
-            還沒有加購項。
-          </p>
-        )}
-      </div>
+        </section>
+      )}
+    </div>
+  )
+}
 
-      {/* 內容元件（重疊自動扣抵）*/}
-      <div className="mt-14 pt-8 border-t border-white/10">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-sm font-bold text-temo-white tracking-wide">
-            內容元件（重疊自動扣抵）
-            <span className="text-temo-warm-gray/50 font-normal ml-2">共 {compRows.length} 項</span>
-          </h2>
-          <button
-            onClick={addComponent}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/[0.06] text-temo-white text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:bg-white/[0.1] transition-all"
-          >
-            <Plus className="w-4 h-4" /> 新增元件
-          </button>
-        </div>
-        <p className="text-[11px] text-temo-warm-gray/50 mb-4 leading-relaxed">
-          內容元件＝方案「內含的東西」（例：LOGO、名片、社群背景）。<strong className="text-temo-warm-gray/80">抵扣值</strong>通常填該品項單獨購買的價格。
-          當客人同時選到兩個都含同一元件的方案時，系統會自動扣掉重複那份的抵扣值，不重複計價。<br />
-          設好元件後，回上方每個「方案」卡片勾選它包含哪些元件即可生效。<span className="text-temo-gold/70">建議抵扣值寧可少填一點，避免多扣＝少收錢。</span>
-        </p>
-        <SortableList
-          items={compRows}
-          getKey={(c) => c.key}
-          onReorder={reorderCompsLive}
-          onCommit={reorderCompsCommit}
-          className="space-y-3"
-          renderItem={(c, handle) => (
-            <ComponentCard row={c} handle={handle} onChange={(p) => updateComponent(c.key, p)} onRemove={() => removeComponent(c.key)} />
+function QuoteSummaryCard({
+  icon: Icon,
+  label,
+  value,
+  helper,
+}: {
+  icon: typeof Calculator
+  label: string
+  value: number | string
+  helper: string
+}) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-white/[0.025] p-4">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <Icon className="w-4 h-4 text-temo-gold" />
+        <span className="text-[10px] text-temo-warm-gray/35">前台同步</span>
+      </div>
+      <p className="text-2xl font-bold text-temo-white">{value}</p>
+      <p className="text-sm text-temo-warm-gray/60 mt-1">{label}</p>
+      <p className="text-[11px] text-temo-warm-gray/35 mt-2">{helper}</p>
+    </div>
+  )
+}
+
+function CategoryNavItem({
+  row,
+  active,
+  packageCount,
+  handle,
+  onSelect,
+}: {
+  row: CatRow
+  active: boolean
+  packageCount: number
+  handle: DragHandleProps
+  onSelect: () => void
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-lg border transition-colors",
+        active
+          ? "border-temo-gold/45 bg-temo-gold/[0.06]"
+          : "border-white/10 bg-white/[0.02] hover:border-white/25"
+      )}
+    >
+      <div className="flex items-center gap-2 p-2">
+        <button
+          type="button"
+          aria-label="拖拉排序類別"
+          className={cn(
+            "text-temo-warm-gray/35 hover:text-temo-warm-gray active:cursor-grabbing shrink-0",
+            active && "text-temo-gold/70 hover:text-temo-gold"
           )}
-        />
-        {compRows.length === 0 && (
-          <p className="text-temo-warm-gray/50 text-sm py-6 text-center border border-dashed border-white/10 rounded-sm">
-            還沒有內容元件。想啟用「重疊自動扣抵」，先新增元件（如 LOGO），再到方案卡勾選。
-          </p>
-        )}
+          {...handle}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+        <button type="button" onClick={onSelect} className="min-w-0 flex-1 text-left">
+          <span className={cn("block truncate text-sm font-medium", active ? "text-temo-gold" : "text-temo-white")}>
+            {row.title || "未命名類別"}
+          </span>
+          <span className="mt-1 block text-[11px] text-temo-warm-gray/45">
+            {packageCount} 個方案
+            {!row.id && <span className="ml-2 text-temo-gold/75">尚未儲存</span>}
+          </span>
+        </button>
       </div>
     </div>
   )
@@ -491,7 +778,7 @@ function CategoryCard({ row, onChange, onRemove }: { row: CatRow; onChange: (p: 
       {error && <p className="text-xs text-red-400/90">{error}</p>}
       <div className="flex items-center gap-3">
         <SaveButton pending={pending} saved={saved} onClick={save} label="儲存類別" />
-        <button onClick={del} disabled={pending} className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60">
+        <button type="button" onClick={del} disabled={pending} className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60">
           <Trash2 className="w-3.5 h-3.5" /> 刪除類別
         </button>
       </div>
@@ -564,16 +851,44 @@ function PackageCard({
     })
   }
 
+  const featureCount = row.features.split("\n").map((f) => f.trim()).filter(Boolean).length
+  const priceLabel = row.priceNote.trim() || formatMoney(row.basePrice)
+
   return (
     <div className={cn("rounded-lg border bg-white/[0.02] p-4 space-y-3", row.recommended ? "border-temo-gold/40" : "border-white/10")}>
-      <button
-        type="button"
-        aria-label="拖拉排序方案"
-        className="text-temo-warm-gray/40 hover:text-temo-warm-gray active:cursor-grabbing"
-        {...handle}
-      >
-        <GripVertical className="w-4 h-4" />
-      </button>
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <button
+            type="button"
+            aria-label="拖拉排序方案"
+            className="mt-1 text-temo-warm-gray/40 hover:text-temo-warm-gray active:cursor-grabbing shrink-0"
+            {...handle}
+          >
+            <GripVertical className="w-4 h-4" />
+          </button>
+          <div className="min-w-0">
+            <p className="text-base font-bold text-temo-white truncate">{row.name || "未命名方案"}</p>
+            <p className="text-xs text-temo-warm-gray/45 mt-1 truncate">
+              {row.nameEn || "未填英文名"} · {featureCount} 項特色 · {row.componentIds.length} 個扣抵元件
+            </p>
+          </div>
+        </div>
+        <div className="md:text-right shrink-0">
+          <p className="text-sm font-semibold text-temo-gold">{priceLabel}</p>
+          <div className="mt-2 flex flex-wrap md:justify-end gap-1.5">
+            {row.recommended && (
+              <span className="rounded-full bg-temo-gold/12 px-2 py-1 text-[10px] text-temo-gold">推薦</span>
+            )}
+            {row.showAddons && (
+              <span className="rounded-full bg-white/[0.06] px-2 py-1 text-[10px] text-temo-warm-gray/70">顯示加購</span>
+            )}
+            {!row.id && (
+              <span className="rounded-full bg-white/[0.06] px-2 py-1 text-[10px] text-temo-gold/80">尚未儲存</span>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="grid sm:grid-cols-2 gap-3">
         <label className="space-y-1">
           <span className={labelCls}>方案名稱（中）</span>
@@ -633,7 +948,7 @@ function PackageCard({
         <p className={labelCls + " mb-2"}>內含內容元件（重疊時自動扣抵）</p>
         {components.length === 0 ? (
           <p className="text-[11px] text-temo-warm-gray/50">
-            尚未建立任何內容元件。到頁面最下方「內容元件」區新增（如 LOGO、名片），再回這裡勾選。
+            尚未建立任何內容元件。到「重疊扣抵」工作區新增（如 LOGO、名片），再回這裡勾選。
           </p>
         ) : (
           <div className="flex flex-wrap gap-2">
@@ -663,7 +978,7 @@ function PackageCard({
       {error && <p className="text-xs text-red-400/90">{error}</p>}
       <div className="flex items-center gap-3">
         <SaveButton pending={pending} saved={saved} onClick={save} label="儲存" />
-        <button onClick={del} disabled={pending} className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60">
+        <button type="button" onClick={del} disabled={pending} className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60">
           <Trash2 className="w-3.5 h-3.5" /> 刪除
         </button>
       </div>
@@ -735,7 +1050,7 @@ function AddonCard({
       {error && <p className="text-xs text-red-400/90 mt-2">{error}</p>}
       <div className="flex items-center gap-3 mt-3">
         <SaveButton pending={pending} saved={saved} onClick={save} label="儲存" />
-        <button onClick={del} disabled={pending} className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60">
+        <button type="button" onClick={del} disabled={pending} className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60">
           <Trash2 className="w-3.5 h-3.5" /> 刪除
         </button>
       </div>
@@ -808,7 +1123,7 @@ function ComponentCard({
       {error && <p className="text-xs text-red-400/90 mt-2">{error}</p>}
       <div className="flex items-center gap-3 mt-3">
         <SaveButton pending={pending} saved={saved} onClick={save} label="儲存" />
-        <button onClick={del} disabled={pending} className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60">
+        <button type="button" onClick={del} disabled={pending} className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60">
           <Trash2 className="w-3.5 h-3.5" /> 刪除
         </button>
       </div>
@@ -819,6 +1134,7 @@ function ComponentCard({
 function SaveButton({ pending, saved, onClick, label }: { pending: boolean; saved: boolean; onClick: () => void; label: string }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={pending}
       className="inline-flex items-center gap-1.5 px-4 py-2 bg-temo-gold/90 text-temo-black text-xs font-bold tracking-wider rounded-sm hover:brightness-110 disabled:opacity-60 transition-all"

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Loader2, Plus, Trash2, Check, GripVertical } from "lucide-react"
+import { ChevronDown, Loader2, Plus, Trash2, Check, GripVertical } from "lucide-react"
 import {
   saveSection,
   deleteSection,
@@ -11,6 +11,7 @@ import {
   reorderBriefQuestions,
 } from "@/app/studio/(app)/brief/actions"
 import { SortableList, type DragHandleProps } from "@/components/studio/sortable-list"
+import { cn } from "@/lib/utils"
 
 const inputCls =
   "w-full px-3 py-2.5 bg-white/[0.03] border border-white/10 text-temo-white text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:outline-none transition-all rounded-sm"
@@ -233,6 +234,7 @@ export function BriefManager({ sections }: { sections: BriefSectionRow[] }) {
             </span>
           )}
           <button
+            type="button"
             onClick={addSection}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:brightness-110 transition-all"
           >
@@ -300,6 +302,7 @@ function SectionCard({
   onReorderQuestions: (next: QuestionState[]) => void
   onCommitQuestions: (next: QuestionState[]) => void
 }) {
+  const [open, setOpen] = useState(!row.savedToDb)
   const [pending, startTransition] = useTransition()
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState("")
@@ -341,118 +344,145 @@ function SectionCard({
   }
 
   const allApplies = row.appliesTo.length === 0
+  const appliesLabel = allApplies
+    ? "一律顯示"
+    : APPLIES_OPTIONS.filter((option) => row.appliesTo.includes(option.value)).map((option) => option.label).join("、")
 
   return (
-    <div className="rounded-lg border border-temo-gold/20 bg-temo-gold/[0.03] p-4 space-y-3">
-      <div className="flex items-center gap-2">
+    <div className="rounded-lg border border-temo-gold/20 bg-temo-gold/[0.03] overflow-hidden">
+      <div className="flex items-center gap-2 pl-3 pr-4">
         <button
           type="button"
           aria-label="拖拉排序區塊"
-          className="text-temo-warm-gray/40 hover:text-temo-warm-gray active:cursor-grabbing shrink-0"
+          className="text-temo-warm-gray/40 hover:text-temo-warm-gray active:cursor-grabbing shrink-0 py-4"
           {...handle}
         >
           <GripVertical className="w-4 h-4" />
         </button>
-        <p className={labelCls}>區塊設定</p>
-      </div>
-      <div className="grid sm:grid-cols-2 gap-3">
-        <label className="space-y-1">
-          <span className={labelCls}>區塊標題（中）</span>
-          <input className={inputCls} value={row.title} onChange={(e) => dirty({ title: e.target.value })} placeholder="例：基本資料" />
-        </label>
-        <label className="space-y-1">
-          <span className={labelCls}>英文標題</span>
-          <input className={inputCls} value={row.titleEn} onChange={(e) => dirty({ titleEn: e.target.value })} placeholder="BASIC INFO" />
-        </label>
-      </div>
-      <label className="space-y-1 block">
-        <span className={labelCls}>區塊說明</span>
-        <textarea
-          className={inputCls + " min-h-16 resize-y"}
-          value={row.description}
-          onChange={(e) => dirty({ description: e.target.value })}
-          placeholder="這個區塊會顯示在題目上方的說明文字"
-        />
-      </label>
-
-      <div className="space-y-1">
-        <span className={labelCls}>適用類別</span>
-        <div className="flex flex-wrap gap-x-5 gap-y-2">
-          <label className="inline-flex items-center gap-2 text-xs text-temo-warm-gray cursor-pointer">
-            <input
-              type="checkbox"
-              className="accent-temo-gold w-4 h-4"
-              checked={allApplies}
-              onChange={(e) => {
-                if (e.target.checked) dirty({ appliesTo: [] })
-              }}
-            />
-            一律顯示
-          </label>
-          {APPLIES_OPTIONS.map((o) => (
-            <label key={o.value} className="inline-flex items-center gap-2 text-xs text-temo-warm-gray cursor-pointer">
-              <input
-                type="checkbox"
-                className="accent-temo-gold w-4 h-4"
-                checked={row.appliesTo.includes(o.value)}
-                onChange={(e) => {
-                  if (e.target.checked) dirty({ appliesTo: [...row.appliesTo, o.value] })
-                  else dirty({ appliesTo: row.appliesTo.filter((v) => v !== o.value) })
-                }}
-              />
-              {o.label}
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {error && <p className="text-xs text-red-400/90">{error}</p>}
-      <div className="flex items-center gap-3">
-        <SaveButton pending={pending} saved={saved} onClick={save} label="儲存區塊" />
         <button
-          onClick={del}
-          disabled={pending}
-          className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60"
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          className="flex-1 min-w-0 py-4 text-left"
         >
-          <Trash2 className="w-3.5 h-3.5" /> 刪除區塊
+          <div className="flex items-center gap-2 min-w-0">
+            <p className="text-sm font-bold text-temo-white truncate">{row.title || "未命名區塊"}</p>
+            {!row.savedToDb && (
+              <span className="rounded-full bg-temo-gold/10 px-2 py-0.5 text-[10px] text-temo-gold shrink-0">
+                尚未儲存
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-[11px] text-temo-warm-gray/50 truncate">
+            {questions.length} 題 · {appliesLabel}
+          </p>
         </button>
+        <ChevronDown className={cn("w-4 h-4 text-temo-warm-gray/40 shrink-0 transition-transform", open && "rotate-180")} />
       </div>
 
-      {/* 題目 */}
-      <div className="pt-3 mt-1 border-t border-white/10">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-bold text-temo-white tracking-wide">
-            題目
-            <span className="text-temo-warm-gray/50 font-normal ml-2">共 {questions.length} 題</span>
-          </h3>
-          <button
-            onClick={onAddQuestion}
-            disabled={!row.savedToDb}
-            title={row.savedToDb ? "" : "請先儲存此區塊，才能新增題目"}
-            className="inline-flex items-center gap-2 px-3 py-2 bg-white/[0.06] text-temo-white text-xs font-bold tracking-[0.1em] uppercase rounded-sm hover:bg-white/[0.1] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" /> 新增題目
-          </button>
+      {open && (
+        <div className="border-t border-white/8 p-4 space-y-3">
+          <div className="grid sm:grid-cols-2 gap-3">
+            <label className="space-y-1">
+              <span className={labelCls}>區塊標題（中）</span>
+              <input className={inputCls} value={row.title} onChange={(e) => dirty({ title: e.target.value })} placeholder="例：基本資料" />
+            </label>
+            <label className="space-y-1">
+              <span className={labelCls}>英文標題</span>
+              <input className={inputCls} value={row.titleEn} onChange={(e) => dirty({ titleEn: e.target.value })} placeholder="BASIC INFO" />
+            </label>
+          </div>
+          <label className="space-y-1 block">
+            <span className={labelCls}>區塊說明</span>
+            <textarea
+              className={inputCls + " min-h-16 resize-y"}
+              value={row.description}
+              onChange={(e) => dirty({ description: e.target.value })}
+              placeholder="這個區塊會顯示在題目上方的說明文字"
+            />
+          </label>
+
+          <div className="space-y-1">
+            <span className={labelCls}>適用類別</span>
+            <div className="flex flex-wrap gap-x-5 gap-y-2">
+              <label className="inline-flex items-center gap-2 text-xs text-temo-warm-gray cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="accent-temo-gold w-4 h-4"
+                  checked={allApplies}
+                  onChange={(e) => {
+                    if (e.target.checked) dirty({ appliesTo: [] })
+                  }}
+                />
+                一律顯示
+              </label>
+              {APPLIES_OPTIONS.map((o) => (
+                <label key={o.value} className="inline-flex items-center gap-2 text-xs text-temo-warm-gray cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="accent-temo-gold w-4 h-4"
+                    checked={row.appliesTo.includes(o.value)}
+                    onChange={(e) => {
+                      if (e.target.checked) dirty({ appliesTo: [...row.appliesTo, o.value] })
+                      else dirty({ appliesTo: row.appliesTo.filter((v) => v !== o.value) })
+                    }}
+                  />
+                  {o.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {error && <p className="text-xs text-red-400/90">{error}</p>}
+          <div className="flex items-center gap-3">
+            <SaveButton pending={pending} saved={saved} onClick={save} label="儲存區塊" />
+            <button
+              type="button"
+              onClick={del}
+              disabled={pending}
+              className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> 刪除區塊
+            </button>
+          </div>
+
+          {/* 題目 */}
+          <div className="pt-3 mt-1 border-t border-white/10">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-bold text-temo-white tracking-wide">
+                題目
+                <span className="text-temo-warm-gray/50 font-normal ml-2">共 {questions.length} 題</span>
+              </h3>
+              <button
+                type="button"
+                onClick={onAddQuestion}
+                disabled={!row.savedToDb}
+                title={row.savedToDb ? "" : "請先儲存此區塊，才能新增題目"}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-white/[0.06] text-temo-white text-xs font-bold tracking-[0.1em] uppercase rounded-sm hover:bg-white/[0.1] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" /> 新增題目
+              </button>
+            </div>
+            {!row.savedToDb && (
+              <p className="text-[11px] text-temo-gold/70 mb-3">↑ 這個區塊還沒儲存，先按上方「儲存區塊」，才能加題目。</p>
+            )}
+            <SortableList
+              items={questions}
+              getKey={(q) => q.key}
+              onReorder={onReorderQuestions}
+              onCommit={onCommitQuestions}
+              className="space-y-3"
+              renderItem={(q, qHandle) => (
+                <QuestionCard row={q} handle={qHandle} onChange={(p) => onUpdateQuestion(q.key, p)} onRemove={() => onRemoveQuestion(q.key)} />
+              )}
+            />
+            {questions.length === 0 && (
+              <p className="text-temo-warm-gray/50 text-xs py-4 text-center border border-dashed border-white/10 rounded-sm">
+                這個區塊還沒有題目。
+              </p>
+            )}
+          </div>
         </div>
-        {!row.savedToDb && (
-          <p className="text-[11px] text-temo-gold/70 mb-3">↑ 這個區塊還沒儲存，先按上方「儲存區塊」，才能加題目。</p>
-        )}
-        <SortableList
-          items={questions}
-          getKey={(q) => q.key}
-          onReorder={onReorderQuestions}
-          onCommit={onCommitQuestions}
-          className="space-y-3"
-          renderItem={(q, qHandle) => (
-            <QuestionCard row={q} handle={qHandle} onChange={(p) => onUpdateQuestion(q.key, p)} onRemove={() => onRemoveQuestion(q.key)} />
-          )}
-        />
-        {questions.length === 0 && (
-          <p className="text-temo-warm-gray/50 text-xs py-4 text-center border border-dashed border-white/10 rounded-sm">
-            這個區塊還沒有題目。
-          </p>
-        )}
-      </div>
+      )}
     </div>
   )
 }
@@ -592,6 +622,7 @@ function QuestionCard({
       <div className="flex items-center gap-3">
         <SaveButton pending={pending} saved={saved} onClick={save} label="儲存" />
         <button
+          type="button"
           onClick={del}
           disabled={pending}
           className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 text-red-400/70 hover:text-red-400 text-xs transition-colors disabled:opacity-60"
@@ -606,6 +637,7 @@ function QuestionCard({
 function SaveButton({ pending, saved, onClick, label }: { pending: boolean; saved: boolean; onClick: () => void; label: string }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={pending}
       className="inline-flex items-center gap-1.5 px-4 py-2 bg-temo-gold/90 text-temo-black text-xs font-bold tracking-wider rounded-sm hover:brightness-110 disabled:opacity-60 transition-all"

@@ -167,3 +167,23 @@ export async function deleteWork(id: string): Promise<{ error: string } | void> 
   revalidatePath("/studio/works")
   redirect("/studio/works")
 }
+
+export async function setWorkPublished(
+  id: string,
+  published: boolean
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("works")
+    .update({ published })
+    .eq("id", id)
+    .select("slug")
+    .maybeSingle()
+  if (error) return { error: error.message }
+
+  revalidatePath("/studio/works")
+  revalidatePath("/portfolio")
+  if (data?.slug) revalidatePath(`/portfolio/${data.slug}`)
+
+  return {}
+}

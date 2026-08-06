@@ -284,6 +284,7 @@ function SaveButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={pending}
       className="inline-flex items-center gap-1.5 px-4 py-2 bg-temo-gold/90 text-temo-black text-xs font-bold tracking-wider rounded-sm hover:brightness-110 disabled:opacity-60 transition-all"

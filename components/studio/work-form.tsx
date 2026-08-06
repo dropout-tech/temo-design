@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, Upload, Trash2, ArrowLeft, X, GripVertical } from "lucide-react"
+import { Loader2, Upload, Trash2, ArrowLeft, X, GripVertical, Plus } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { downscaleImage } from "@/lib/downscale-image"
 import { isVideoUrl } from "@/lib/video"
@@ -169,6 +169,16 @@ function Field({ label, children, hint }: { label: string; children: React.React
 
 const toLines = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean)
 
+type WorkFormTab = "basics" | "media" | "blocks" | "story" | "publish"
+
+const FORM_TABS: { id: WorkFormTab; label: string; helper: string }[] = [
+  { id: "basics", label: "基本", helper: "名稱、分類、關聯" },
+  { id: "media", label: "媒體", helper: "封面、首圖、Logo、影片" },
+  { id: "blocks", label: "內容區塊", helper: "內頁圖文編排" },
+  { id: "story", label: "案例文字", helper: "簡述、獎項、報導" },
+  { id: "publish", label: "發布", helper: "上架狀態" },
+]
+
 export function WorkForm({
   initial,
   workId,
@@ -187,6 +197,7 @@ export function WorkForm({
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
   const [pending, startTransition] = useTransition()
+  const [activeTab, setActiveTab] = useState<WorkFormTab>("basics")
 
   const set = <K extends keyof WorkFormInitial>(k: K, v: WorkFormInitial[K]) =>
     setF((prev) => ({ ...prev, [k]: v }))
@@ -271,8 +282,14 @@ export function WorkForm({
     setClientLogoDraft("")
   }
 
-  function addBlock(type: BlockType) {
-    setBlocks((prev) => [...prev, emptyBlock(type)])
+  function addBlock(type: BlockType, dual = false, afterIndex?: number) {
+    const nextBlock = emptyBlock(type, dual)
+    setBlocks((prev) => {
+      if (typeof afterIndex !== "number") return [...prev, nextBlock]
+      const next = [...prev]
+      next.splice(afterIndex + 1, 0, nextBlock)
+      return next
+    })
   }
 
   function removeBlock(idx: number) {
@@ -356,302 +373,434 @@ export function WorkForm({
   }
 
   const busy = pending || uploading
+  const missingBasics = !f.title.trim() || !f.slug.trim()
+  const activeTabLabel = FORM_TABS.find((tab) => tab.id === activeTab)?.label ?? "基本"
+  const mediaSummary = [
+    f.cover_url ? "封面" : null,
+    heroUrl ? "首圖" : null,
+    clientLogos.length > 0 ? `${clientLogos.length} 張 Logo` : null,
+    f.video_url.trim() ? "影片連結" : null,
+  ].filter(Boolean)
+  const storySummary = [
+    f.description.trim() ? "簡述" : null,
+    toLines(f.awards).length > 0 ? `${toLines(f.awards).length} 則獎項` : null,
+    toLines(f.press).length > 0 ? `${toLines(f.press).length} 則報導` : null,
+  ].filter(Boolean)
 
   return (
-    <form onSubmit={submit} className="px-6 md:px-10 py-8 md:py-12 max-w-3xl space-y-10">
-      <div>
-        <button
-          type="button"
-          onClick={() => router.push("/studio/works")}
-          className="inline-flex items-center gap-1.5 text-temo-warm-gray/60 hover:text-temo-gold text-sm mb-4 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> 返回作品列表
-        </button>
-        <h1 className="text-2xl md:text-3xl font-bold text-temo-white">
-          {workId ? "編輯作品" : "新增作品"}
-        </h1>
+    <form onSubmit={submit} className="min-h-[calc(100svh-1px)] pb-28">
+      <div className="px-6 md:px-10 py-8 md:py-12 max-w-6xl space-y-8">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5">
+          <div>
+            <button
+              type="button"
+              onClick={() => router.push("/studio/works")}
+              className="inline-flex items-center gap-1.5 text-temo-warm-gray/60 hover:text-temo-gold text-sm mb-4 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" /> 返回作品列表
+            </button>
+            <h1 className="text-2xl md:text-3xl font-bold text-temo-white">
+              {workId ? "編輯作品" : "新增作品"}
+            </h1>
+            <p className="text-sm text-temo-warm-gray/55 mt-2">
+              目前在「{activeTabLabel}」工作區。底部固定列可隨時儲存，不必捲回頁尾。
+            </p>
+          </div>
+          {f.slug.trim() && (
+            <a
+              href={`/portfolio/${f.slug.trim()}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center px-4 py-3 border border-white/12 text-temo-warm-gray/75 hover:text-temo-gold hover:border-temo-gold/40 text-xs font-bold tracking-[0.12em] uppercase rounded-sm transition-colors"
+            >
+              開啟前台頁
+            </a>
+          )}
+        </div>
+
+        <div className="sticky top-0 z-20 -mx-6 md:-mx-10 px-6 md:px-10 py-3 bg-temo-black/95 backdrop-blur border-y border-white/[0.06] overflow-x-auto">
+          <div className="flex min-w-max gap-2">
+            {FORM_TABS.map((tab) => {
+              const active = activeTab === tab.id
+              const needsAttention = tab.id === "basics" && missingBasics
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "min-w-32 rounded-md border px-3 py-2 text-left transition-colors",
+                    active
+                      ? "border-temo-gold/55 bg-temo-gold/10 text-temo-gold"
+                      : "border-white/10 bg-white/[0.02] text-temo-warm-gray/70 hover:text-temo-white hover:border-white/25"
+                  )}
+                >
+                  <span className="flex items-center gap-2 text-sm font-medium">
+                    {tab.label}
+                    {needsAttention && (
+                      <span className="rounded-full bg-red-400/12 px-1.5 py-0.5 text-[10px] text-red-300">
+                        必填
+                      </span>
+                    )}
+                  </span>
+                  <span className="block mt-0.5 text-[11px] opacity-55">{tab.helper}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px] items-start">
+          <div className="space-y-8 min-w-0">
+            {activeTab === "basics" && (
+              <>
+                <section className="space-y-5">
+                  <SectionTitle>基本資料</SectionTitle>
+                  <Field label="標題（中文）*">
+                    <input className={inputCls} value={f.title} onChange={(e) => set("title", e.target.value)} />
+                  </Field>
+                  <Field label="英文副標">
+                    <input className={inputCls} value={f.subtitle} onChange={(e) => set("subtitle", e.target.value)} />
+                  </Field>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <Field label="網址 slug *" hint="用於 /portfolio/[slug]，英數與連字號">
+                      <input className={inputCls} value={f.slug} onChange={(e) => set("slug", e.target.value)} placeholder="tea-brand" />
+                    </Field>
+                    <Field label="年份">
+                      <input className={inputCls} value={f.year} onChange={(e) => set("year", e.target.value)} placeholder="2025" />
+                    </Field>
+                  </div>
+                </section>
+
+                <section className="space-y-5">
+                  <SectionTitle>分類與關聯</SectionTitle>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <Field label="執行項目（單選）">
+                      <select className={inputCls} value={f.category_group} onChange={(e) => set("category_group", e.target.value)}>
+                        <option value="">（未選）</option>
+                        {options.categories.map((c) => (
+                          <option key={c.value} value={c.value} className="bg-[#201d1a]">{c.label}</option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="版面尺寸">
+                      <select className={inputCls} value={f.size} onChange={(e) => set("size", e.target.value as WorkFormInitial["size"])}>
+                        <option value="large" className="bg-[#201d1a]">large（直立大圖）</option>
+                        <option value="medium" className="bg-[#201d1a]">medium（正方）</option>
+                        <option value="small" className="bg-[#201d1a]">small（橫式小圖）</option>
+                      </select>
+                    </Field>
+                  </div>
+                  <Field label="客戶">
+                    <select className={inputCls} value={f.client_id} onChange={(e) => set("client_id", e.target.value)}>
+                      <option value="">（未選）</option>
+                      {options.clients.map((c) => (
+                        <option key={c.id} value={c.id} className="bg-[#201d1a]">{c.name}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="行業分類（可複選）">
+                    <ChipGroup
+                      items={options.industries.map((i) => ({ value: i.value, label: i.label }))}
+                      selected={f.industryValues}
+                      onToggle={(v) => set("industryValues", toggle(f.industryValues, v))}
+                    />
+                  </Field>
+                  <Field label="設計師（可複選）">
+                    <ChipGroup
+                      items={options.designers.map((d) => ({ value: d.id, label: d.name_zh ? `${d.name}（${d.name_zh}）` : d.name }))}
+                      selected={f.designerIds}
+                      onToggle={(v) => set("designerIds", toggle(f.designerIds, v))}
+                    />
+                  </Field>
+                </section>
+              </>
+            )}
+
+            {activeTab === "media" && (
+              <section className="space-y-5">
+                <SectionTitle>封面與影片</SectionTitle>
+                <Field label="封面圖">
+                  <div className="flex items-start gap-4">
+                    <div className="w-32 h-32 rounded-lg overflow-hidden bg-white/[0.04] border border-white/10 shrink-0">
+                      {f.cover_url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={f.cover_url} alt="封面預覽" className="w-full h-full object-cover" />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <label className={cn("inline-flex items-center gap-2 px-4 py-2.5 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
+                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                        {uploading ? "上傳中…" : "上傳圖片"}
+                        <input type="file" accept="image/*" className="hidden" onChange={onFile} disabled={uploading} />
+                      </label>
+                      <input className={inputCls} value={f.cover_url} onChange={(e) => set("cover_url", e.target.value)} placeholder="或直接貼圖片網址 /images/portfolio/xxx.jpg" />
+                    </div>
+                  </div>
+                </Field>
+                <Field label="內頁首圖（選填，可放影片）" hint="留空＝沿用封面圖；作品內頁最上方顯示的大圖。也可直接上傳影片（會靜音循環播放）：建議 MP4 格式、1080p、20 秒內、50MB 以下，越小網頁越順">
+                  <div className="flex items-start gap-4">
+                    <div className="w-32 h-32 rounded-lg overflow-hidden bg-white/[0.04] border border-white/10 shrink-0">
+                      {heroUrl && (
+                        isUploadedVideoUrl(heroUrl) ? (
+                          <video src={heroUrl} muted loop playsInline autoPlay preload="metadata" className="w-full h-full object-cover" />
+                        ) : (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={heroUrl} alt="內頁首圖預覽" className="w-full h-full object-cover" />
+                        )
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <label className={cn("inline-flex items-center gap-2 px-4 py-2.5 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
+                          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                          {uploading ? "上傳中…" : "上傳圖片或影片"}
+                          <input type="file" accept="image/*,video/mp4,video/webm,video/quicktime,video/x-m4v" className="hidden" onChange={onHeroFile} disabled={uploading} />
+                        </label>
+                        {heroUrl && (
+                          <button type="button" onClick={clearHero} className="inline-flex items-center gap-1 px-3 py-2.5 text-red-400/70 hover:text-red-400 text-xs tracking-wider transition-colors">
+                            <X className="w-3.5 h-3.5" /> 清除，改用封面圖
+                          </button>
+                        )}
+                      </div>
+                      {isUploadedVideoUrl(heroUrl) && heroUrl.split(/[?#]/)[0].toLowerCase().endsWith(".mov") && (
+                        <p className="text-[11px] text-yellow-400/80">.mov 檔（iPhone 直接拍的格式）在部分 Android / Windows 瀏覽器可能無法播放，建議轉成 MP4 再上傳</p>
+                      )}
+                      <input className={inputCls} value={heroUrl} onChange={(e) => setHeroUrl(e.target.value)} placeholder="或直接貼圖片／影片網址（留空則沿用封面圖）" />
+                    </div>
+                  </div>
+                </Field>
+                <Field label="客戶 LOGO（選填，可放多張）" hint="顯示於作品內頁右上角資訊欄頂端；一件作品有多位客戶時可放多張，依加入順序排列。深色底網站，建議上傳白色或淺色版本">
+                  <div className="space-y-3">
+                    {clientLogos.length > 0 && (
+                      <div className="flex flex-wrap gap-3">
+                        {clientLogos.map((url, i) => (
+                          <div key={`${url}-${i}`} className="relative w-28 h-28 rounded-lg overflow-hidden bg-white/[0.04] border border-white/10 flex items-center justify-center p-2">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={url} alt={`客戶 LOGO ${i + 1} 預覽`} className="max-w-full max-h-full object-contain" />
+                            <button
+                              type="button"
+                              onClick={() => removeClientLogo(i)}
+                              className="absolute top-1 right-1 p-1 rounded bg-black/60 text-red-400/80 hover:text-red-400 transition-colors"
+                              aria-label={`移除第 ${i + 1} 張客戶 LOGO`}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <label className={cn("inline-flex items-center gap-2 px-4 py-2.5 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
+                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                        {uploading ? "上傳中…" : "上傳圖片（可一次選多張）"}
+                        <input type="file" accept="image/*" multiple className="hidden" onChange={onClientLogoFile} disabled={uploading} />
+                      </label>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        className={inputCls}
+                        value={clientLogoDraft}
+                        onChange={(e) => setClientLogoDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault()
+                            addClientLogoDraft()
+                          }
+                        }}
+                        placeholder="或貼圖片網址後按「加入」（留空則不顯示）"
+                      />
+                      <button
+                        type="button"
+                        onClick={addClientLogoDraft}
+                        className="shrink-0 px-4 py-2.5 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm hover:border-temo-gold/50 transition-colors"
+                      >
+                        加入
+                      </button>
+                    </div>
+                  </div>
+                </Field>
+                <Field label="首圖影片（YouTube / Vimeo 連結，選填）" hint="有值時內頁最上方以影片呈現，取代首圖">
+                  <input className={inputCls} value={f.video_url} onChange={(e) => set("video_url", e.target.value)} placeholder="https://youtu.be/..." />
+                  {f.video_url.trim() && !isVideoUrl(f.video_url) && (
+                    <p className="text-[11px] text-red-400/80 mt-1.5">看起來不是支援的 YouTube / Vimeo 連結</p>
+                  )}
+                </Field>
+              </section>
+            )}
+
+            {activeTab === "blocks" && (
+              <section className="space-y-5">
+                <SectionTitle>內容區塊</SectionTitle>
+                <p className="text-xs text-temo-warm-gray/50 -mt-2">
+                  自由編排作品內頁的內容，由上而下依序呈現。可新增單圖、雙圖並排、文字段落、影片區塊，並用上移／下移調整順序。
+                </p>
+
+                <BlockAddBar
+                  label={blocks.length > 0 ? "新增到最下方" : "新增第一個區塊"}
+                  onAdd={(type, dual) => addBlock(type, dual)}
+                />
+
+                {blocks.length > 0 && (
+                  <SortableList
+                    items={blocks}
+                    getKey={(b) => b.key}
+                    onReorder={(next) => setBlocks(next)}
+                    onCommit={(next) => setBlocks(next)}
+                    className="space-y-3"
+                    renderItem={(b, handle) => {
+                      const i = blocks.findIndex((x) => x.key === b.key)
+                      return (
+                        <div className="space-y-2">
+                          <BlockCard
+                            block={b}
+                            index={i}
+                            total={blocks.length}
+                            uploading={uploading}
+                            dragHandle={handle}
+                            onMove={(dir) => moveBlock(i, dir)}
+                            onRemove={() => removeBlock(i)}
+                            onChange={(patch) => updateBlock(i, patch)}
+                            onUploadImage={(slot, e) => onBlockImage(i, slot, e)}
+                          />
+                          <BlockAddBar
+                            compact
+                            label={`在第 ${i + 1} 個區塊後插入`}
+                            onAdd={(type, dual) => addBlock(type, dual, i)}
+                          />
+                        </div>
+                      )
+                    }}
+                  />
+                )}
+
+                {blocks.length === 0 && (
+                  <div className="rounded-lg border border-dashed border-white/12 py-10 text-center">
+                    <p className="text-sm text-temo-warm-gray/55">還沒有內容區塊，請從上方選一種版型開始。</p>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {activeTab === "story" && (
+              <section className="space-y-5">
+                <SectionTitle>案例內容</SectionTitle>
+                <Field label="簡述">
+                  <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.description} onChange={(e) => set("description", e.target.value)} />
+                </Field>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <Field label="服務範疇" hint="一行一項">
+                    <textarea className={cn(inputCls, "min-h-24 resize-y")} value={f.services} onChange={(e) => set("services", e.target.value)} placeholder={"品牌策略\nLogo 設計"} />
+                  </Field>
+                  <Field label="交付項目" hint="一行一項">
+                    <textarea className={cn(inputCls, "min-h-24 resize-y")} value={f.deliverables} onChange={(e) => set("deliverables", e.target.value)} />
+                  </Field>
+                </div>
+                <Field label="挑戰 Challenge">
+                  <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.challenge} onChange={(e) => set("challenge", e.target.value)} />
+                </Field>
+                <Field label="做法 Approach">
+                  <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.approach} onChange={(e) => set("approach", e.target.value)} />
+                </Field>
+                <Field label="成果 Result">
+                  <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.result} onChange={(e) => set("result", e.target.value)} />
+                </Field>
+                <Field label="獎項" hint="一行一項">
+                  <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.awards} onChange={(e) => set("awards", e.target.value)} />
+                </Field>
+                <Field label="新聞報導" hint="一行一則，格式「媒體名稱 網址」；網址可省略，省略就只顯示文字不能點">
+                  <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.press} onChange={(e) => set("press", e.target.value)} placeholder={"經濟時報 https://money.udn.com/...\n華視新聞 https://news.cts.com.tw/..."} />
+                </Field>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <Field label="引言內文">
+                    <input className={inputCls} value={f.quote_text} onChange={(e) => set("quote_text", e.target.value)} />
+                  </Field>
+                  <Field label="引言出處">
+                    <input className={inputCls} value={f.quote_author} onChange={(e) => set("quote_author", e.target.value)} />
+                  </Field>
+                </div>
+              </section>
+            )}
+
+            {activeTab === "publish" && (
+              <section className="space-y-5">
+                <SectionTitle>發布</SectionTitle>
+                <div className="rounded-lg border border-white/10 bg-white/[0.02] p-5 space-y-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" checked={f.published} onChange={(e) => set("published", e.target.checked)} className="w-4 h-4 mt-0.5 accent-temo-gold" />
+                    <span>
+                      <span className="block text-sm text-temo-white">上架顯示</span>
+                      <span className="block text-xs text-temo-warm-gray/50 mt-1">
+                        取消勾選則存為草稿，前台作品列表與作品頁不顯示。
+                      </span>
+                    </span>
+                  </label>
+                  {missingBasics && (
+                    <p className="text-xs text-red-300/90">發布前請回「基本」補完標題與 slug。</p>
+                  )}
+                </div>
+              </section>
+            )}
+          </div>
+
+          <aside className="hidden lg:block sticky top-24 space-y-4">
+            <div className="rounded-lg border border-white/10 bg-white/[0.025] p-4">
+              <p className="text-[10px] tracking-[0.25em] text-temo-gold uppercase mb-3">狀態摘要</p>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-temo-warm-gray/55">發布狀態</span>
+                  <span className={f.published ? "text-temo-gold" : "text-temo-warm-gray/70"}>
+                    {f.published ? "上架" : "草稿"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-temo-warm-gray/55">必填</span>
+                  <span className={missingBasics ? "text-red-300" : "text-temo-gold"}>
+                    {missingBasics ? "未完成" : "完成"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-temo-warm-gray/55">內容區塊</span>
+                  <span className="text-temo-white">{blocks.length}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-white/10 bg-white/[0.025] p-4">
+              <p className="text-[10px] tracking-[0.25em] text-temo-gold uppercase mb-3">已填內容</p>
+              <div className="space-y-2 text-xs text-temo-warm-gray/55">
+                <p>媒體：{mediaSummary.length > 0 ? mediaSummary.join("、") : "尚未補媒體"}</p>
+                <p>文字：{storySummary.length > 0 ? storySummary.join("、") : "尚未補案例文字"}</p>
+                <p>關聯：{f.industryValues.length} 個行業 · {f.designerIds.length} 位設計師</p>
+              </div>
+            </div>
+          </aside>
+        </div>
       </div>
 
-      {/* 基本資料 */}
-      <section className="space-y-5">
-        <SectionTitle>基本資料</SectionTitle>
-        <Field label="標題（中文）*">
-          <input className={inputCls} value={f.title} onChange={(e) => set("title", e.target.value)} required />
-        </Field>
-        <Field label="英文副標">
-          <input className={inputCls} value={f.subtitle} onChange={(e) => set("subtitle", e.target.value)} />
-        </Field>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <Field label="網址 slug *" hint="用於 /portfolio/[slug]，英數與連字號">
-            <input className={inputCls} value={f.slug} onChange={(e) => set("slug", e.target.value)} required placeholder="tea-brand" />
-          </Field>
-          <Field label="年份">
-            <input className={inputCls} value={f.year} onChange={(e) => set("year", e.target.value)} placeholder="2025" />
-          </Field>
-        </div>
-      </section>
-
-      {/* 分類與關聯 */}
-      <section className="space-y-5">
-        <SectionTitle>分類與關聯</SectionTitle>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <Field label="執行項目（單選）">
-            <select className={inputCls} value={f.category_group} onChange={(e) => set("category_group", e.target.value)}>
-              <option value="">（未選）</option>
-              {options.categories.map((c) => (
-                <option key={c.value} value={c.value} className="bg-[#201d1a]">{c.label}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="版面尺寸">
-            <select className={inputCls} value={f.size} onChange={(e) => set("size", e.target.value as WorkFormInitial["size"])}>
-              <option value="large" className="bg-[#201d1a]">large（直立大圖）</option>
-              <option value="medium" className="bg-[#201d1a]">medium（正方）</option>
-              <option value="small" className="bg-[#201d1a]">small（橫式小圖）</option>
-            </select>
-          </Field>
-        </div>
-        <Field label="客戶">
-          <select className={inputCls} value={f.client_id} onChange={(e) => set("client_id", e.target.value)}>
-            <option value="">（未選）</option>
-            {options.clients.map((c) => (
-              <option key={c.id} value={c.id} className="bg-[#201d1a]">{c.name}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="行業分類（可複選）">
-          <ChipGroup
-            items={options.industries.map((i) => ({ value: i.value, label: i.label }))}
-            selected={f.industryValues}
-            onToggle={(v) => set("industryValues", toggle(f.industryValues, v))}
-          />
-        </Field>
-        <Field label="設計師（可複選）">
-          <ChipGroup
-            items={options.designers.map((d) => ({ value: d.id, label: d.name_zh ? `${d.name}（${d.name_zh}）` : d.name }))}
-            selected={f.designerIds}
-            onToggle={(v) => set("designerIds", toggle(f.designerIds, v))}
-          />
-        </Field>
-      </section>
-
-      {/* 封面與影片 */}
-      <section className="space-y-5">
-        <SectionTitle>封面與影片</SectionTitle>
-        <Field label="封面圖">
-          <div className="flex items-start gap-4">
-            <div className="w-32 h-32 rounded-lg overflow-hidden bg-white/[0.04] border border-white/10 shrink-0">
-              {f.cover_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={f.cover_url} alt="封面預覽" className="w-full h-full object-cover" />
-              )}
-            </div>
-            <div className="flex-1 space-y-2">
-              <label className={cn("inline-flex items-center gap-2 px-4 py-2.5 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
-                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                {uploading ? "上傳中…" : "上傳圖片"}
-                <input type="file" accept="image/*" className="hidden" onChange={onFile} disabled={uploading} />
-              </label>
-              <input className={inputCls} value={f.cover_url} onChange={(e) => set("cover_url", e.target.value)} placeholder="或直接貼圖片網址 /images/portfolio/xxx.jpg" />
-            </div>
+      <div className="sticky bottom-0 z-30 border-t border-white/10 bg-[#141210]/95 backdrop-blur px-6 md:px-10 py-3">
+        <div className="max-w-6xl flex flex-col md:flex-row md:items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-temo-warm-gray/55">
+              {workId ? "編輯中" : "建立新作品"} · {f.published ? "儲存後會在前台顯示" : "儲存為草稿"}
+            </p>
+            {error && <p className="text-sm text-red-400/90 mt-1" role="alert">{error}</p>}
           </div>
-        </Field>
-        <Field label="內頁首圖（選填，可放影片）" hint="留空＝沿用封面圖；作品內頁最上方顯示的大圖。也可直接上傳影片（會靜音循環播放）：建議 MP4 格式、1080p、20 秒內、50MB 以下，越小網頁越順">
-          <div className="flex items-start gap-4">
-            <div className="w-32 h-32 rounded-lg overflow-hidden bg-white/[0.04] border border-white/10 shrink-0">
-              {heroUrl && (
-                isUploadedVideoUrl(heroUrl) ? (
-                  <video src={heroUrl} muted loop playsInline autoPlay preload="metadata" className="w-full h-full object-cover" />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={heroUrl} alt="內頁首圖預覽" className="w-full h-full object-cover" />
-                )
-              )}
-            </div>
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <label className={cn("inline-flex items-center gap-2 px-4 py-2.5 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
-                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                  {uploading ? "上傳中…" : "上傳圖片或影片"}
-                  <input type="file" accept="image/*,video/mp4,video/webm,video/quicktime,video/x-m4v" className="hidden" onChange={onHeroFile} disabled={uploading} />
-                </label>
-                {heroUrl && (
-                  <button type="button" onClick={clearHero} className="inline-flex items-center gap-1 px-3 py-2.5 text-red-400/70 hover:text-red-400 text-xs tracking-wider transition-colors">
-                    <X className="w-3.5 h-3.5" /> 清除，改用封面圖
-                  </button>
-                )}
-              </div>
-              {isUploadedVideoUrl(heroUrl) && heroUrl.split(/[?#]/)[0].toLowerCase().endsWith(".mov") && (
-                <p className="text-[11px] text-yellow-400/80">.mov 檔（iPhone 直接拍的格式）在部分 Android / Windows 瀏覽器可能無法播放，建議轉成 MP4 再上傳</p>
-              )}
-              <input className={inputCls} value={heroUrl} onChange={(e) => setHeroUrl(e.target.value)} placeholder="或直接貼圖片／影片網址（留空則沿用封面圖）" />
-            </div>
-          </div>
-        </Field>
-        <Field label="客戶 LOGO（選填，可放多張）" hint="顯示於作品內頁右上角資訊欄頂端；一件作品有多位客戶時可放多張，依加入順序排列。深色底網站，建議上傳白色或淺色版本">
-          <div className="space-y-3">
-            {clientLogos.length > 0 && (
-              <div className="flex flex-wrap gap-3">
-                {clientLogos.map((url, i) => (
-                  <div key={`${url}-${i}`} className="relative w-28 h-28 rounded-lg overflow-hidden bg-white/[0.04] border border-white/10 flex items-center justify-center p-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt={`客戶 LOGO ${i + 1} 預覽`} className="max-w-full max-h-full object-contain" />
-                    <button
-                      type="button"
-                      onClick={() => removeClientLogo(i)}
-                      className="absolute top-1 right-1 p-1 rounded bg-black/60 text-red-400/80 hover:text-red-400 transition-colors"
-                      aria-label={`移除第 ${i + 1} 張客戶 LOGO`}
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="flex items-center gap-2 flex-wrap">
-              <label className={cn("inline-flex items-center gap-2 px-4 py-2.5 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
-                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                {uploading ? "上傳中…" : "上傳圖片（可一次選多張）"}
-                <input type="file" accept="image/*" multiple className="hidden" onChange={onClientLogoFile} disabled={uploading} />
-              </label>
-            </div>
-            <div className="flex gap-2">
-              <input
-                className={inputCls}
-                value={clientLogoDraft}
-                onChange={(e) => setClientLogoDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault()
-                    addClientLogoDraft()
-                  }
-                }}
-                placeholder="或貼圖片網址後按「加入」（留空則不顯示）"
-              />
-              <button
-                type="button"
-                onClick={addClientLogoDraft}
-                className="shrink-0 px-4 py-2.5 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm hover:border-temo-gold/50 transition-colors"
-              >
-                加入
+          <div className="flex items-center gap-3">
+            <button type="submit" disabled={busy} className="inline-flex items-center gap-2 px-6 py-3 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.2em] uppercase hover:brightness-110 active:scale-[0.98] disabled:opacity-60 transition-all rounded-sm">
+              {pending && <Loader2 className="w-4 h-4 animate-spin" />}
+              {workId ? "儲存變更" : "建立作品"}
+            </button>
+            <button type="button" onClick={() => router.push("/studio/works")} className="px-5 py-3 text-temo-warm-gray/70 hover:text-temo-white text-xs tracking-wider transition-colors">
+              取消
+            </button>
+            {workId && (
+              <button type="button" onClick={onDelete} disabled={busy} className="ml-auto inline-flex items-center gap-1.5 px-4 py-3 text-red-400/80 hover:text-red-400 text-xs tracking-wider transition-colors disabled:opacity-60">
+                <Trash2 className="w-3.5 h-3.5" /> 刪除
               </button>
-            </div>
+            )}
           </div>
-        </Field>
-        <Field label="首圖影片（YouTube / Vimeo 連結，選填）" hint="有值時內頁最上方以影片呈現，取代首圖">
-          <input className={inputCls} value={f.video_url} onChange={(e) => set("video_url", e.target.value)} placeholder="https://youtu.be/..." />
-          {f.video_url.trim() && !isVideoUrl(f.video_url) && (
-            <p className="text-[11px] text-red-400/80 mt-1.5">看起來不是支援的 YouTube / Vimeo 連結</p>
-          )}
-        </Field>
-      </section>
-
-      {/* 內容區塊：Adobe Portfolio 式彈性內頁編排 */}
-      <section className="space-y-5">
-        <SectionTitle>內容區塊</SectionTitle>
-        <p className="text-xs text-temo-warm-gray/50 -mt-2">
-          自由編排作品內頁的內容，由上而下依序呈現。可新增單圖、雙圖並排、文字段落、影片區塊，並用上移／下移調整順序。
-        </p>
-
-        {blocks.length > 0 && (
-          <SortableList
-            items={blocks}
-            getKey={(b) => b.key}
-            onReorder={(next) => setBlocks(next)}
-            onCommit={(next) => setBlocks(next)}
-            className="space-y-3"
-            renderItem={(b, handle) => {
-              const i = blocks.findIndex((x) => x.key === b.key)
-              return (
-                <BlockCard
-                  block={b}
-                  index={i}
-                  total={blocks.length}
-                  uploading={uploading}
-                  dragHandle={handle}
-                  onMove={(dir) => moveBlock(i, dir)}
-                  onRemove={() => removeBlock(i)}
-                  onChange={(patch) => updateBlock(i, patch)}
-                  onUploadImage={(slot, e) => onBlockImage(i, slot, e)}
-                />
-              )
-            }}
-          />
-        )}
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] tracking-[0.2em] text-temo-warm-gray/60 uppercase mr-1">新增區塊</span>
-          <button type="button" onClick={() => setBlocks((prev) => [...prev, emptyBlock("image", false)])} className="px-3 py-2 text-xs border border-white/15 text-temo-white rounded-sm hover:border-temo-gold/50 transition-colors">+ 單圖</button>
-          <button type="button" onClick={() => setBlocks((prev) => [...prev, emptyBlock("image", true)])} className="px-3 py-2 text-xs border border-white/15 text-temo-white rounded-sm hover:border-temo-gold/50 transition-colors">+ 雙圖</button>
-          <button type="button" onClick={() => addBlock("text")} className="px-3 py-2 text-xs border border-white/15 text-temo-white rounded-sm hover:border-temo-gold/50 transition-colors">+ 文字</button>
-          <button type="button" onClick={() => addBlock("video")} className="px-3 py-2 text-xs border border-white/15 text-temo-white rounded-sm hover:border-temo-gold/50 transition-colors">+ 影片</button>
         </div>
-      </section>
-
-      {/* 案例內容 */}
-      <section className="space-y-5">
-        <SectionTitle>案例內容</SectionTitle>
-        <Field label="簡述">
-          <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.description} onChange={(e) => set("description", e.target.value)} />
-        </Field>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <Field label="服務範疇" hint="一行一項">
-            <textarea className={cn(inputCls, "min-h-24 resize-y")} value={f.services} onChange={(e) => set("services", e.target.value)} placeholder={"品牌策略\nLogo 設計"} />
-          </Field>
-          <Field label="交付項目" hint="一行一項">
-            <textarea className={cn(inputCls, "min-h-24 resize-y")} value={f.deliverables} onChange={(e) => set("deliverables", e.target.value)} />
-          </Field>
-        </div>
-        <Field label="挑戰 Challenge">
-          <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.challenge} onChange={(e) => set("challenge", e.target.value)} />
-        </Field>
-        <Field label="做法 Approach">
-          <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.approach} onChange={(e) => set("approach", e.target.value)} />
-        </Field>
-        <Field label="成果 Result">
-          <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.result} onChange={(e) => set("result", e.target.value)} />
-        </Field>
-        <Field label="獎項" hint="一行一項">
-          <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.awards} onChange={(e) => set("awards", e.target.value)} />
-        </Field>
-        <Field label="新聞報導" hint="一行一則，格式「媒體名稱 網址」；網址可省略，省略就只顯示文字不能點">
-          <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.press} onChange={(e) => set("press", e.target.value)} placeholder={"經濟時報 https://money.udn.com/...\n華視新聞 https://news.cts.com.tw/..."} />
-        </Field>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <Field label="引言內文">
-            <input className={inputCls} value={f.quote_text} onChange={(e) => set("quote_text", e.target.value)} />
-          </Field>
-          <Field label="引言出處">
-            <input className={inputCls} value={f.quote_author} onChange={(e) => set("quote_author", e.target.value)} />
-          </Field>
-        </div>
-      </section>
-
-      {/* 發布 */}
-      <section className="space-y-5">
-        <SectionTitle>發布</SectionTitle>
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" checked={f.published} onChange={(e) => set("published", e.target.checked)} className="w-4 h-4 accent-temo-gold" />
-          <span className="text-sm text-temo-white">上架顯示（取消勾選則存為草稿，前台不顯示）</span>
-        </label>
-      </section>
-
-      {error && <p className="text-sm text-red-400/90">{error}</p>}
-
-      {/* 動作列 */}
-      <div className="flex items-center gap-3 pt-4 border-t border-white/[0.06]">
-        <button type="submit" disabled={busy} className="inline-flex items-center gap-2 px-6 py-3 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.2em] uppercase hover:brightness-110 active:scale-[0.98] disabled:opacity-60 transition-all rounded-sm">
-          {pending && <Loader2 className="w-4 h-4 animate-spin" />}
-          {workId ? "儲存變更" : "建立作品"}
-        </button>
-        <button type="button" onClick={() => router.push("/studio/works")} className="px-5 py-3 text-temo-warm-gray/70 hover:text-temo-white text-xs tracking-wider transition-colors">
-          取消
-        </button>
-        {workId && (
-          <button type="button" onClick={onDelete} disabled={busy} className="ml-auto inline-flex items-center gap-1.5 px-4 py-3 text-red-400/80 hover:text-red-400 text-xs tracking-wider transition-colors disabled:opacity-60">
-            <Trash2 className="w-3.5 h-3.5" /> 刪除
-          </button>
-        )}
       </div>
     </form>
   )
@@ -663,6 +812,61 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 
 const blockTypeLabel = (b: { type: "image" | "video" | "text"; dual: boolean }) =>
   b.type === "image" ? (b.dual ? "雙圖" : "單圖") : b.type === "video" ? "影片" : "文字"
+
+function BlockAddBar({
+  label,
+  compact = false,
+  onAdd,
+}: {
+  label: string
+  compact?: boolean
+  onAdd: (type: BlockType, dual?: boolean) => void
+}) {
+  const buttons: { label: string; type: BlockType; dual?: boolean }[] = [
+    { label: "單圖", type: "image" },
+    { label: "雙圖", type: "image", dual: true },
+    { label: "文字", type: "text" },
+    { label: "影片", type: "video" },
+  ]
+
+  return (
+    <div
+      className={cn(
+        "flex flex-col gap-3 rounded-lg border transition-colors",
+        compact
+          ? "border-white/[0.07] bg-white/[0.012] px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+          : "border-temo-gold/25 bg-temo-gold/[0.045] p-4 sm:flex-row sm:items-center sm:justify-between"
+      )}
+    >
+      <span
+        className={cn(
+          "text-temo-warm-gray/65",
+          compact ? "text-[11px]" : "text-sm font-medium text-temo-white"
+        )}
+      >
+        {label}
+      </span>
+      <div className="flex flex-wrap items-center gap-2">
+        {buttons.map((button) => (
+          <button
+            key={`${button.type}-${button.label}`}
+            type="button"
+            onClick={() => onAdd(button.type, button.dual)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-sm border text-xs transition-colors",
+              compact
+                ? "border-white/10 px-2.5 py-1.5 text-temo-warm-gray/65 hover:border-temo-gold/40 hover:text-temo-gold"
+                : "border-white/15 bg-temo-black/25 px-3 py-2 text-temo-white hover:border-temo-gold/50 hover:text-temo-gold"
+            )}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            {button.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 function BlockCard({
   block,
