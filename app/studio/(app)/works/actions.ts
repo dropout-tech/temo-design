@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { sanitizeRichText, richTextIsEmpty } from "@/lib/sanitize-rich-text"
+import { normalizeWorkSlug } from "@/lib/work-slug"
 
 export type WorkInput = {
   slug: string
@@ -51,7 +52,7 @@ export type WorkInput = {
 
 function toRow(input: WorkInput) {
   return {
-    slug: input.slug.trim(),
+    slug: normalizeWorkSlug(input.slug),
     title: input.title.trim(),
     subtitle: input.subtitle.trim() || null,
     category_group: input.category_group || null,
@@ -84,8 +85,9 @@ export async function saveWork(
   id?: string
 ): Promise<{ error: string } | void> {
   const supabase = await createClient()
+  const normalizedSlug = normalizeWorkSlug(input.slug)
 
-  if (!input.title.trim() || !input.slug.trim()) {
+  if (!input.title.trim() || !normalizedSlug) {
     return { error: "標題與網址 slug 為必填" }
   }
 

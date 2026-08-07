@@ -12,6 +12,7 @@ import { SortableList, type DragHandleProps } from "@/components/studio/sortable
 import { saveWork, deleteWork, type WorkInput } from "@/app/studio/(app)/works/actions"
 import type { WorkBlockRow } from "@/lib/studio/works"
 import { RichTextEditor, looksLikeHtml, plainTextToHtml } from "@/components/studio/rich-text-editor"
+import { normalizeWorkSlug } from "@/lib/work-slug"
 
 type Options = {
   categories: { value: string; label: string }[]
@@ -463,8 +464,15 @@ export function WorkForm({
                     <input className={inputCls} value={f.subtitle} onChange={(e) => set("subtitle", e.target.value)} />
                   </Field>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <Field label="網址 slug *" hint="用於 /portfolio/[slug]，英數與連字號">
-                      <input className={inputCls} value={f.slug} onChange={(e) => set("slug", e.target.value)} placeholder="tea-brand" />
+                    <Field label="網址 slug *" hint="網址會自動轉成小寫英數與連字號，例如 AsoBé 會變成 asobe">
+                      <input
+                        className={inputCls}
+                        value={f.slug}
+                        onChange={(e) => set("slug", normalizeWorkSlug(e.target.value))}
+                        placeholder="tea-brand"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                      />
                     </Field>
                     <Field label="年份">
                       <input className={inputCls} value={f.year} onChange={(e) => set("year", e.target.value)} placeholder="2025" />

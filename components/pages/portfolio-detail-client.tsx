@@ -582,16 +582,25 @@ function BlocksSection({
   blocks: WorkBlock[]
   projectTitle: string
 }) {
-  const { ref, isInView } = useInView<HTMLDivElement>({ once: true, amount: 0.05 })
+  // 不觀察整個圖庫：長作品可能高達數萬 px，5% 可見比例會大於整個視窗，
+  // IntersectionObserver 因而永遠不觸發，整區持續 opacity: 0。
+  // 改由短小的 Gallery 標題觸發淡入，作品再長都能可靠顯示。
+  const { ref: revealRef, isInView } = useInView<HTMLParagraphElement>({
+    once: true,
+    amount: 0.5,
+    rootMargin: "0px 0px 120px 0px",
+  })
 
   return (
     <section className="pb-20 md:pb-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <p className="text-[10px] tracking-[0.4em] text-temo-gold uppercase mb-8">
+        <p
+          ref={revealRef}
+          className="text-[10px] tracking-[0.4em] text-temo-gold uppercase mb-8"
+        >
           Gallery
         </p>
         <div
-          ref={ref}
           className="space-y-8 md:space-y-12"
           style={{
             transition: "opacity 0.9s ease, transform 0.9s ease",

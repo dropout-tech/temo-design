@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { PortfolioDetailClient, type DetailProject } from "@/components/pages/portfolio-detail-client"
 import { getWorkDetail, getPublishedWorkSlugs } from "@/lib/portfolio-supabase"
+import { decodeWorkSlugParam } from "@/lib/work-slug"
 import {
   CLIENT_MAP,
   DESIGNER_MAP,
@@ -85,7 +86,7 @@ export async function generateMetadata(
   props: PortfolioDetailPageProps
 ): Promise<Metadata> {
   const params = await props.params
-  const project = await loadProject(params.slug)
+  const project = await loadProject(decodeWorkSlugParam(params.slug))
 
   return {
     title: `${project?.title || "案例"} | TEMO DESIGN`,
@@ -103,7 +104,7 @@ export default async function PortfolioDetailPage(
   props: PortfolioDetailPageProps
 ) {
   const params = await props.params
-  const project = await loadProject(params.slug)
+  const project = await loadProject(decodeWorkSlugParam(params.slug))
 
   if (!project) {
     notFound()
