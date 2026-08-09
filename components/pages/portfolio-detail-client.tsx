@@ -503,12 +503,15 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+              <div
+                aria-label="其他案例，可左右滑動"
+                className="-mx-4 flex touch-pan-x snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:px-0 sm:pb-0 md:gap-8 lg:grid-cols-3"
+              >
                 {project.related.map((r) => (
                   <Link
                     key={r.slug}
                     href={`/portfolio/${r.slug}`}
-                    className="group block"
+                    className="group block w-[82vw] max-w-[320px] flex-none snap-start snap-always sm:w-auto sm:max-w-none"
                   >
                     <div className="relative aspect-[4/5] overflow-hidden bg-temo-warm-gray/5 mb-4">
                       <Image
@@ -516,7 +519,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                         alt={r.title}
                         fill
                         className="object-cover transition-transform duration-700 group-hover:scale-105"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        sizes="(max-width: 640px) 82vw, (max-width: 1024px) 50vw, 33vw"
                         referrerPolicy="no-referrer"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-temo-black/70 via-transparent to-transparent" />

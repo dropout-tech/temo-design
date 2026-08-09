@@ -851,6 +851,24 @@ export function WorkForm({
                     <textarea className={cn(inputCls, "min-h-24 resize-y")} value={f.deliverables} onChange={(e) => set("deliverables", e.target.value)} />
                   </Field>
                 </div>
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)]">
+                  <Field label="引言 Quote" hint="顯示於案例敘事區；留空時前台不顯示">
+                    <textarea
+                      className={cn(inputCls, "min-h-20 resize-y")}
+                      value={f.quote_text}
+                      onChange={(e) => set("quote_text", e.target.value)}
+                      placeholder="輸入客戶引言或案例前言"
+                    />
+                  </Field>
+                  <Field label="引言出處（選填）">
+                    <input
+                      className={inputCls}
+                      value={f.quote_author}
+                      onChange={(e) => set("quote_author", e.target.value)}
+                      placeholder="例如：客戶姓名／品牌名稱"
+                    />
+                  </Field>
+                </div>
                 <Field label="挑戰 Challenge">
                   <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.challenge} onChange={(e) => set("challenge", e.target.value)} />
                 </Field>
@@ -866,14 +884,6 @@ export function WorkForm({
                 <Field label="新聞報導" hint="一行一則，格式「媒體名稱 網址」；網址可省略，省略就只顯示文字不能點">
                   <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.press} onChange={(e) => set("press", e.target.value)} placeholder={"經濟時報 https://money.udn.com/...\n華視新聞 https://news.cts.com.tw/..."} />
                 </Field>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <Field label="引言內文">
-                    <input className={inputCls} value={f.quote_text} onChange={(e) => set("quote_text", e.target.value)} />
-                  </Field>
-                  <Field label="引言出處">
-                    <input className={inputCls} value={f.quote_author} onChange={(e) => set("quote_author", e.target.value)} />
-                  </Field>
-                </div>
               </section>
             )}
 
