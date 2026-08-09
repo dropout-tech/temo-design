@@ -127,7 +127,7 @@ export function HeroSection() {
 
             {/* Social icons anchored to bottom-left */}
             <div
-              className="flex items-center gap-3 md:gap-4 pt-6 md:pt-0"
+              className="relative top-8 flex items-center gap-3 pt-6 md:static md:gap-4 md:pt-0"
               style={{
                 transition: "opacity 1s ease 0.8s",
                 opacity: visible ? 1 : 0,
