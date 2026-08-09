@@ -975,7 +975,7 @@ function MobileProjectDetails({
         </section>
       )}
 
-      {(project.services?.length || project.deliverables?.length) && (
+      {(project.services?.length || project.deliverables?.length || project.designers.length > 0) && (
         <section className="space-y-7 border-b border-temo-warm-gray/15 py-10">
           {project.services && project.services.length > 0 && (
             <MobileEditorialMeta title="服務範疇" items={project.services} />
@@ -983,42 +983,9 @@ function MobileProjectDetails({
           {project.deliverables && project.deliverables.length > 0 && (
             <MobileEditorialMeta title="交付項目" items={project.deliverables} />
           )}
-        </section>
-      )}
-
-      {project.designers.length > 0 && (
-        <section className="border-b border-temo-warm-gray/15 py-10">
-          <MobileSectionHeading>參與人員</MobileSectionHeading>
-          <ul className="mt-5 grid grid-cols-1 gap-2 min-[390px]:grid-cols-2">
-            {project.designers.map((designer) => (
-              <li key={designer.slug}>
-                <Link
-                  href={`/team/${designer.slug}`}
-                  className="group flex min-h-16 items-center gap-3 border border-temo-warm-gray/10 px-3 py-2.5 transition-colors hover:border-temo-gold/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
-                >
-                  <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-temo-warm-gray/20">
-                    <Image
-                      src={proxyImage(designer.photo)}
-                      alt={designer.name}
-                      fill
-                      className="object-cover"
-                      sizes="40px"
-                      referrerPolicy="no-referrer"
-                    />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium text-temo-white group-hover:text-temo-gold">
-                      {designer.nameZh || designer.name}
-                    </span>
-                    <span className="mt-0.5 block text-[11px] leading-snug text-temo-warm-gray/55">
-                      {designer.role || "參與設計"}
-                    </span>
-                  </span>
-                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-temo-gold" aria-hidden="true" />
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {project.designers.length > 0 && (
+            <MobileEditorialPeople designers={project.designers} />
+          )}
         </section>
       )}
 
@@ -1090,6 +1057,44 @@ function MobileEditorialMeta({ title, items }: { title: string; items: string[] 
       <p className="-mt-1 text-[17px] leading-[1.75] tracking-wide text-temo-white/90">
         {items.join(" · ")}
       </p>
+    </div>
+  )
+}
+
+function MobileEditorialPeople({ designers }: { designers: DetailDesigner[] }) {
+  return (
+    <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-start gap-x-4">
+      <MobileSectionHeading>參與人員</MobileSectionHeading>
+      <ul className="-mt-2 space-y-3">
+        {designers.map((designer) => (
+          <li key={designer.slug}>
+            <Link
+              href={`/team/${designer.slug}`}
+              className="group flex min-h-14 items-center gap-3 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+            >
+              <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-temo-warm-gray/20">
+                <Image
+                  src={proxyImage(designer.photo)}
+                  alt={designer.name}
+                  fill
+                  className="object-cover"
+                  sizes="40px"
+                  referrerPolicy="no-referrer"
+                />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium leading-snug text-temo-white group-hover:text-temo-gold">
+                  {designer.nameZh || designer.name}
+                </span>
+                <span className="mt-1 block text-[11px] leading-snug text-temo-warm-gray/55">
+                  {designer.role || "參與設計"}
+                </span>
+              </span>
+              <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-temo-gold" aria-hidden="true" />
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
