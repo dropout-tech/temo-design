@@ -114,13 +114,15 @@ export function HeroSection() {
               transform: visible ? "translateY(0)" : "translateY(20px)",
             }}
           >
-            <div className="space-y-2 md:space-y-3">
-              <p className="text-white font-bold text-lg md:text-xl lg:text-2xl tracking-wide">
-                點擊右邊按鈕
-              </p>
-              <p className="text-white font-bold text-lg md:text-xl lg:text-2xl tracking-wide">
-                探索您的理想設計旅程
-              </p>
+            <div className="relative top-4 flex min-h-24 items-center pr-28 md:static md:min-h-0 md:pr-0">
+              <div className="space-y-2 md:space-y-3">
+                <p className="text-white font-bold text-lg md:text-xl lg:text-2xl tracking-wide">
+                  點擊右邊按鈕
+                </p>
+                <p className="text-white font-bold text-lg md:text-xl lg:text-2xl tracking-wide">
+                  探索您的理想設計旅程
+                </p>
+              </div>
             </div>
 
             {/* Social icons anchored to bottom-left */}
@@ -146,9 +148,9 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* Right — large circle CTA（手機版靠右、對齊標語高度；桌機維持右欄置中） */}
+          {/* Right — large circle CTA（手機版與標語共用同一條垂直中心線；桌機維持右欄置中） */}
           <div
-            className="absolute right-0 top-1 md:static flex items-center justify-end flex-shrink-0 md:mr-8 lg:mr-16 xl:mr-24"
+            className="absolute right-0 top-4 md:static flex items-center justify-end flex-shrink-0 md:mr-8 lg:mr-16 xl:mr-24"
             style={{
               transition: "opacity 1.2s ease 0.7s, transform 1.2s ease 0.7s",
               opacity: visible ? 1 : 0,
