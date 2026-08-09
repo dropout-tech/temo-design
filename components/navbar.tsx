@@ -9,6 +9,12 @@ import { cn } from "@/lib/utils"
 
 type NavItem = { href: string; label: string; labelZh: string }
 
+type NavbarProps = {
+  showSearch?: boolean
+  mobileSearchValue?: string
+  onMobileSearchChange?: (value: string) => void
+}
+
 // 預設值＝目前站台既有連結；掛載後從 nav_links 覆蓋（後台可改）。
 const DEFAULT_NAV_LINKS: NavItem[] = [
   { href: "/contact", label: "CONTACT US", labelZh: "聯絡我們" },
@@ -23,7 +29,11 @@ const DEFAULT_MENU_LINKS: NavItem[] = [
   { href: "/contact", label: "CONTACT", labelZh: "聯絡我們" },
 ]
 
-export function Navbar({ showSearch = false }: { showSearch?: boolean }) {
+export function Navbar({
+  showSearch = false,
+  mobileSearchValue,
+  onMobileSearchChange,
+}: NavbarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [scrolled, setScrolled] = useState(false)
@@ -57,6 +67,17 @@ export function Navbar({ showSearch = false }: { showSearch?: boolean }) {
   const handleSearch = (e: FormEvent) => {
     e.preventDefault()
     const query = q.trim()
+    router.push(query ? `/portfolio?q=${encodeURIComponent(query)}` : "/portfolio")
+  }
+
+  const handleMobileSearch = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (onMobileSearchChange) {
+      e.currentTarget.querySelector("input")?.blur()
+      return
+    }
+
+    const query = (mobileSearchValue ?? q).trim()
     router.push(query ? `/portfolio?q=${encodeURIComponent(query)}` : "/portfolio")
   }
 
@@ -102,6 +123,63 @@ export function Navbar({ showSearch = false }: { showSearch?: boolean }) {
                 className="h-full w-auto object-contain"
               />
             </Link>
+
+            {/* 分類頁手機版：搜尋留在主導覽列，避免掉到 Hero 與作品列表之間。 */}
+            {showSearch && (
+              <form
+                onSubmit={handleMobileSearch}
+                className="relative min-w-0 flex-1 lg:hidden"
+                role="search"
+              >
+                <input
+                  type="text"
+                  inputMode="search"
+                  enterKeyHint="search"
+                  value={mobileSearchValue ?? q}
+                  onChange={(e) => {
+                    if (onMobileSearchChange) {
+                      onMobileSearchChange(e.target.value)
+                    } else {
+                      setQ(e.target.value)
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape" && (mobileSearchValue ?? q)) {
+                      e.preventDefault()
+                      if (onMobileSearchChange) {
+                        onMobileSearchChange("")
+                      } else {
+                        setQ("")
+                      }
+                    }
+                  }}
+                  placeholder="SEARCH"
+                  aria-label="搜尋作品"
+                  className="h-10 w-full rounded-full border border-white/25 bg-white/[0.04] pl-4 pr-10 text-base tracking-[0.18em] text-white placeholder:text-[11px] placeholder:text-white/40 focus:border-temo-gold/80 focus:bg-white/[0.08] focus:outline-none"
+                />
+                {(mobileSearchValue ?? q) ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onMobileSearchChange) {
+                        onMobileSearchChange("")
+                      } else {
+                        setQ("")
+                      }
+                    }}
+                    aria-label="清除搜尋"
+                    className="absolute right-0 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-white/45 transition-colors hover:text-white focus-visible:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                ) : (
+                  <Search
+                    className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/45"
+                    aria-hidden="true"
+                  />
+                )}
+              </form>
+            )}
 
             {/* 中間：分類落地頁顯示搜尋框，其餘頁面維持原本的 CONTACT / ABOUT 連結 */}
             {showSearch ? (

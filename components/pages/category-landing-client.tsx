@@ -8,7 +8,6 @@ import { Footer } from "@/components/footer"
 import { cn } from "@/lib/utils"
 import {
   PortfolioGrid,
-  SearchBox,
   INITIAL_FILTERS,
   type FilterState,
 } from "@/components/pages/portfolio-page-client"
@@ -116,7 +115,13 @@ export function CategoryLandingClient({
 
   return (
     <>
-      <Navbar showSearch />
+      <Navbar
+        showSearch
+        mobileSearchValue={filters.query}
+        onMobileSearchChange={(query) => {
+          setFilters((current) => ({ ...current, query }))
+        }}
+      />
       {/* 整頁固定背景：改用首頁同一支影片，鋪滿視窗、隨捲動保持不動；Hero 與作品列表都疊在它上面 */}
       {/* 想換回岩石靜圖：把這段 <video> 換回 <img src="/images/category-landing-bg.jpg" .../> 即可（檔案仍保留） */}
       <div className="fixed inset-0 -z-10 pointer-events-none bg-temo-black">
@@ -135,13 +140,6 @@ export function CategoryLandingClient({
       </div>
       <main className="pt-[68px]">
         <LandingHero landing={landing} />
-        {/* lg 以下 navbar 的 SEARCH 框會隱藏，改在內容區補位；行為同 /portfolio：即時過濾本頁作品 */}
-        <div className="lg:hidden mx-auto max-w-7xl px-4 sm:px-6">
-          <SearchBox
-            value={filters.query}
-            onChange={(q) => setFilters({ ...filters, query: q })}
-          />
-        </div>
         <PortfolioGrid
           works={works && works.length > 0 ? works : DEMO_WORKS}
           filters={filters}
