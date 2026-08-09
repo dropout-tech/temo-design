@@ -14,7 +14,8 @@ import { proxyImage } from "@/lib/portfolio-data"
 import type { WorkBlock } from "@/lib/portfolio-supabase"
 
 export type DetailDesigner = {
-  slug: string
+  /** 只有正式團隊成員有 slug／個人頁；單次合作設計師只顯示名稱 */
+  slug?: string
   name: string
   nameZh?: string
   role: string
@@ -433,30 +434,38 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                     {project.designers.length > 0 && (
                       <MetaItem label="設計團隊 Team">
                         <ul className="space-y-1">
-                          {project.designers.map((d) => (
-                            <li key={d.slug}>
-                              <Link
-                                href={`/team/${d.slug}`}
-                                className="group flex items-center gap-3 -mx-2 px-2 py-1.5 rounded-lg hover:bg-temo-warm-gray/5 transition-colors"
-                              >
-                                <div className="relative w-10 h-10 rounded-full overflow-hidden border border-temo-warm-gray/20 group-hover:border-temo-gold/50 flex-shrink-0 transition-colors">
-                                  <Image
-                                    src={proxyImage(d.photo)}
-                                    alt={d.name}
-                                    fill
-                                    className="object-cover"
-                                    sizes="40px"
-                                    referrerPolicy="no-referrer"
-                                  />
+                          {project.designers.map((d, index) => (
+                            <li key={d.slug ?? `guest-${d.name}-${index}`}>
+                              {d.slug ? (
+                                <Link
+                                  href={`/team/${d.slug}`}
+                                  className="group flex items-center gap-3 -mx-2 px-2 py-1.5 rounded-lg hover:bg-temo-warm-gray/5 transition-colors"
+                                >
+                                  {d.photo && (
+                                    <div className="relative w-10 h-10 rounded-full overflow-hidden border border-temo-warm-gray/20 group-hover:border-temo-gold/50 flex-shrink-0 transition-colors">
+                                      <Image
+                                        src={proxyImage(d.photo)}
+                                        alt={d.name}
+                                        fill
+                                        className="object-cover"
+                                        sizes="40px"
+                                        referrerPolicy="no-referrer"
+                                      />
+                                    </div>
+                                  )}
+                                  <div className="min-w-0">
+                                    <p className="text-temo-white group-hover:text-temo-gold text-sm tracking-wider transition-colors">
+                                      {d.name}
+                                    </p>
+                                    {d.role && <p className="text-temo-warm-gray/60 text-xs truncate">{d.role}</p>}
+                                  </div>
+                                  <ArrowUpRight className="w-3.5 h-3.5 ml-auto text-temo-warm-gray/0 group-hover:text-temo-gold transition-colors" />
+                                </Link>
+                              ) : (
+                                <div className="-mx-2 px-2 py-1.5 text-sm tracking-wider text-temo-white">
+                                  {d.name}
                                 </div>
-                                <div className="min-w-0">
-                                  <p className="text-temo-white group-hover:text-temo-gold text-sm tracking-wider transition-colors">
-                                    {d.name}
-                                  </p>
-                                  <p className="text-temo-warm-gray/60 text-xs truncate">{d.role}</p>
-                                </div>
-                                <ArrowUpRight className="w-3.5 h-3.5 ml-auto text-temo-warm-gray/0 group-hover:text-temo-gold transition-colors" />
-                              </Link>
+                              )}
                             </li>
                           ))}
                         </ul>
@@ -1234,25 +1243,36 @@ function RelatedNav({ project }: { project: DetailProject }) {
         {/* 設計師 */}
         {project.designers.length > 0 && (
           <NavGroup label="設計師">
-            {project.designers.map((d) => (
-              <Link
-                key={d.slug}
-                href={`/team/${d.slug}`}
-                className={pillClass}
-              >
-                <span className="relative w-5 h-5 rounded-full overflow-hidden bg-white/10">
-                  <Image
-                    src={proxyImage(d.photo)}
-                    alt={d.name}
-                    fill
-                    className="object-cover"
-                    sizes="20px"
-                    referrerPolicy="no-referrer"
-                  />
+            {project.designers.map((d, index) =>
+              d.slug ? (
+                <Link
+                  key={d.slug}
+                  href={`/team/${d.slug}`}
+                  className={pillClass}
+                >
+                  {d.photo && (
+                    <span className="relative w-5 h-5 rounded-full overflow-hidden bg-white/10">
+                      <Image
+                        src={proxyImage(d.photo)}
+                        alt={d.name}
+                        fill
+                        className="object-cover"
+                        sizes="20px"
+                        referrerPolicy="no-referrer"
+                      />
+                    </span>
+                  )}
+                  {d.name}
+                </Link>
+              ) : (
+                <span
+                  key={`guest-${d.name}-${index}`}
+                  className="inline-flex items-center rounded-full border border-temo-warm-gray/20 px-3.5 py-2.5 text-xs text-temo-warm-gray/80 md:px-3 md:py-1.5"
+                >
+                  {d.name}
                 </span>
-                {d.name}
-              </Link>
-            ))}
+              )
+            )}
           </NavGroup>
         )}
       </div>

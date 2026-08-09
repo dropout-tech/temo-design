@@ -196,7 +196,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     }
   }
 
-  const designers = (w.work_designers ?? [])
+  const linkedDesigners = (w.work_designers ?? [])
     .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
     .map((r: any) => r.designers)
     .filter(Boolean)
@@ -207,6 +207,32 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       role: d.role ?? "",
       photo: d.photo_url ?? "",
     }))
+
+  // 單次合作設計師只存顯示名稱；獨立查詢可讓 migration 尚未套用時仍正常讀取舊作品。
+  let guestDesignerNames: string[] = []
+  try {
+    const { data: guestRow, error: guestErr } = await supa
+      .from("works")
+      .select("guest_designer_names")
+      .eq("slug", slug)
+      .maybeSingle()
+    if (!guestErr && Array.isArray((guestRow as any)?.guest_designer_names)) {
+      guestDesignerNames = (guestRow as any).guest_designer_names
+        .map((name: unknown) => String(name).trim())
+        .filter(Boolean)
+    }
+  } catch {
+    guestDesignerNames = []
+  }
+
+  const designers = [
+    ...linkedDesigners,
+    ...guestDesignerNames.map((name) => ({
+      name,
+      role: "",
+      photo: "",
+    })),
+  ]
 
   const gallery = (w.work_gallery ?? [])
     .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))

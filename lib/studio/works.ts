@@ -109,6 +109,11 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
     published: w.published ?? true,
     industryValues: (w.work_industries ?? []).map((r: any) => r.industry_value),
     designerIds: (w.work_designers ?? []).map((r: any) => r.designer_id),
+    guestDesignerNames: Array.isArray(w.guest_designer_names)
+      ? w.guest_designer_names
+          .map((name: unknown) => String(name).trim())
+          .filter(Boolean)
+      : [],
     gallery: (w.work_gallery ?? [])
       .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
       .map((g: any) => ({ src: g.src, alt: g.alt ?? undefined, caption: g.caption ?? undefined })),

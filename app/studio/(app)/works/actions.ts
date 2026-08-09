@@ -38,6 +38,8 @@ export type WorkInput = {
   published: boolean
   industryValues: string[]
   designerIds: string[]
+  /** 作品專屬的外部／單次合作設計師顯示名稱 */
+  guestDesignerNames: string[]
   blocks: {
     type: "image" | "video" | "text"
     src: string
@@ -53,6 +55,27 @@ export type WorkInput = {
     caption: string
     caption_mobile: string
   }[]
+}
+
+const GUEST_DESIGNER_NAME_MAX = 100
+const GUEST_DESIGNER_LIMIT = 20
+
+function normalizeGuestDesignerNames(names: unknown) {
+  const seen = new Set<string>()
+  const normalized: string[] = []
+
+  if (!Array.isArray(names)) return normalized
+
+  for (const raw of names) {
+    if (typeof raw !== "string") continue
+    const name = raw.trim().replace(/\s+/g, " ")
+    const key = name.toLocaleLowerCase()
+    if (!name || seen.has(key)) continue
+    seen.add(key)
+    normalized.push(name)
+  }
+
+  return normalized
 }
 
 function toRow(input: WorkInput) {
@@ -80,6 +103,7 @@ function toRow(input: WorkInput) {
     quote_author: input.quote_author.trim() || null,
     awards: input.awards,
     press_mentions: input.press_mentions,
+    guest_designer_names: normalizeGuestDesignerNames(input.guestDesignerNames),
     published: input.published,
   }
 }
@@ -94,6 +118,13 @@ export async function saveWork(
 
   if (!input.title.trim() || !normalizedSlug) {
     return { error: "標題與網址 slug 為必填" }
+  }
+  const guestDesignerNames = normalizeGuestDesignerNames(input.guestDesignerNames)
+  if (guestDesignerNames.length > GUEST_DESIGNER_LIMIT) {
+    return { error: `每件作品最多可新增 ${GUEST_DESIGNER_LIMIT} 位其他合作設計師` }
+  }
+  if (guestDesignerNames.some((name) => name.length > GUEST_DESIGNER_NAME_MAX)) {
+    return { error: `其他合作設計師名稱請控制在 ${GUEST_DESIGNER_NAME_MAX} 個字內` }
   }
 
   const row = toRow(input)

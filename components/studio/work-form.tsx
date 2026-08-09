@@ -54,6 +54,8 @@ export type WorkFormInitial = {
   published: boolean
   industryValues: string[]
   designerIds: string[]
+  /** 不在正式團隊名冊中的單次合作設計師，只在這件作品前台顯示名稱 */
+  guestDesignerNames: string[]
   /** 舊資料：僅用於表單初始化時的一次性 fallback，不再被編輯或送出 */
   gallery: { src: string; alt?: string; caption?: string }[]
   /** 內容區塊（新系統），有值時以此為準 */
@@ -65,6 +67,7 @@ const EMPTY: WorkFormInitial = {
   cover_url: "", hero_url: "", client_logo_urls: [], video_url: "", size: "medium", description: "", services: "",
   deliverables: "", challenge: "", approach: "", result: "", quote_text: "",
   quote_author: "", awards: "", press: "", published: true, industryValues: [], designerIds: [],
+  guestDesignerNames: [],
   gallery: [], blocks: [],
 }
 
@@ -218,6 +221,12 @@ function Field({ label, children, hint }: { label: string; children: React.React
 }
 
 const toLines = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean)
+const GUEST_DESIGNER_NAME_MAX = 100
+const GUEST_DESIGNER_LIMIT = 20
+
+function normalizeGuestDesignerName(value: string) {
+  return value.trim().replace(/\s+/g, " ")
+}
 
 type WorkFormTab = "basics" | "media" | "blocks" | "story" | "publish"
 
@@ -250,6 +259,8 @@ export function WorkForm({
   const [heroUrl, setHeroUrl] = useState(initial?.hero_url ?? "")
   const [clientLogos, setClientLogos] = useState<string[]>(initial?.client_logo_urls ?? [])
   const [clientLogoDraft, setClientLogoDraft] = useState("")
+  const [guestDesignerDraft, setGuestDesignerDraft] = useState("")
+  const [showGuestDesignerInput, setShowGuestDesignerInput] = useState(false)
   const [blocks, setBlocks] = useState<FormBlock[]>(() => initialBlocksFrom(initial))
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
@@ -272,6 +283,41 @@ export function WorkForm({
 
   function toggle(list: string[], v: string) {
     return list.includes(v) ? list.filter((x) => x !== v) : [...list, v]
+  }
+
+  function addGuestDesigner() {
+    const name = normalizeGuestDesignerName(guestDesignerDraft)
+    if (!name) return
+    if (name.length > GUEST_DESIGNER_NAME_MAX) {
+      setError(`其他合作設計師名稱請控制在 ${GUEST_DESIGNER_NAME_MAX} 個字內`)
+      return
+    }
+    if (f.guestDesignerNames.length >= GUEST_DESIGNER_LIMIT) {
+      setError(`每件作品最多可新增 ${GUEST_DESIGNER_LIMIT} 位其他合作設計師`)
+      return
+    }
+
+    const key = name.toLocaleLowerCase()
+    const isDuplicate = f.guestDesignerNames.some(
+      (existing) => normalizeGuestDesignerName(existing).toLocaleLowerCase() === key
+    )
+    if (isDuplicate) {
+      setError("這位其他合作設計師已經新增過了")
+      return
+    }
+
+    set("guestDesignerNames", [...f.guestDesignerNames, name])
+    setGuestDesignerDraft("")
+    setShowGuestDesignerInput(false)
+    setError("")
+  }
+
+  function removeGuestDesigner(index: number) {
+    set(
+      "guestDesignerNames",
+      f.guestDesignerNames.filter((_, i) => i !== index)
+    )
+    setError("")
   }
 
   async function uploadToStorage(raw: File): Promise<string | null> {
@@ -414,6 +460,7 @@ export function WorkForm({
       approach: f.approach, result: f.result, quote_text: f.quote_text,
       quote_author: f.quote_author, awards: toLines(f.awards), press_mentions: toLines(f.press),
       published: f.published, industryValues: f.industryValues, designerIds: f.designerIds,
+      guestDesignerNames: f.guestDesignerNames,
       blocks: blocks.map((b) => ({
         type: b.type,
         src: b.src,
@@ -638,7 +685,79 @@ export function WorkForm({
                       items={options.designers.map((d) => ({ value: d.id, label: d.name_zh ? `${d.name}（${d.name_zh}）` : d.name }))}
                       selected={f.designerIds}
                       onToggle={(v) => set("designerIds", toggle(f.designerIds, v))}
-                    />
+                    >
+                      {f.guestDesignerNames.map((name, index) => (
+                        <span
+                          key={`${name}-${index}`}
+                          className="inline-flex max-w-full items-center gap-1 rounded-full border border-temo-gold/40 bg-temo-gold/10 py-1.5 pl-3 pr-2 text-xs text-temo-gold"
+                        >
+                          <span className="truncate">{name}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeGuestDesigner(index)}
+                            aria-label={`移除其他合作設計師 ${name}`}
+                            className="shrink-0 rounded-full p-0.5 transition-colors hover:bg-temo-gold/15 hover:text-temo-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      ))}
+
+                      {showGuestDesignerInput ? (
+                        <div className="inline-flex max-w-full items-stretch overflow-hidden rounded-full border border-temo-gold/50 bg-temo-gold/[0.06]">
+                          <input
+                            autoFocus
+                            className="min-w-0 w-32 bg-transparent px-3 py-1 text-base text-temo-white placeholder:text-white/25 focus:outline-none sm:text-xs"
+                            value={guestDesignerDraft}
+                            onChange={(e) => setGuestDesignerDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                                e.preventDefault()
+                                addGuestDesigner()
+                              }
+                              if (e.key === "Escape") {
+                                setShowGuestDesignerInput(false)
+                                setGuestDesignerDraft("")
+                                setError("")
+                              }
+                            }}
+                            maxLength={GUEST_DESIGNER_NAME_MAX}
+                            placeholder="設計師名稱"
+                            aria-label="其他合作設計師名稱"
+                          />
+                          <button
+                            type="button"
+                            onClick={addGuestDesigner}
+                            disabled={!guestDesignerDraft.trim() || f.guestDesignerNames.length >= GUEST_DESIGNER_LIMIT}
+                            aria-label="新增其他合作設計師"
+                            className="border-l border-temo-gold/25 px-2.5 text-xs text-temo-gold transition-colors hover:bg-temo-gold/10 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-temo-gold/60"
+                          >
+                            新增
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowGuestDesignerInput(false)
+                              setGuestDesignerDraft("")
+                              setError("")
+                            }}
+                            aria-label="取消新增其他設計師"
+                            className="border-l border-temo-gold/15 px-2 text-temo-warm-gray/45 transition-colors hover:text-temo-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-temo-gold/60"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowGuestDesignerInput(true)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-white/20 px-3 py-1.5 text-xs text-temo-warm-gray/65 transition-colors hover:border-temo-gold/50 hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          其他
+                        </button>
+                      )}
+                    </ChipGroup>
                   </Field>
                 </section>
               </>
@@ -898,7 +1017,9 @@ export function WorkForm({
               <div className="space-y-2 text-xs text-temo-warm-gray/55">
                 <p>媒體：{mediaSummary.length > 0 ? mediaSummary.join("、") : "尚未補媒體"}</p>
                 <p>文字：{storySummary.length > 0 ? storySummary.join("、") : "尚未補案例文字"}</p>
-                <p>關聯：{f.industryValues.length} 個行業 · {f.designerIds.length} 位設計師</p>
+                <p>
+                  關聯：{f.industryValues.length} 個行業 · {f.designerIds.length + f.guestDesignerNames.length} 位設計師
+                </p>
               </div>
             </div>
           </aside>
@@ -1122,10 +1243,12 @@ function ChipGroup({
   items,
   selected,
   onToggle,
+  children,
 }: {
   items: { value: string; label: string }[]
   selected: string[]
   onToggle: (v: string) => void
+  children?: React.ReactNode
 }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -1147,6 +1270,7 @@ function ChipGroup({
           </button>
         )
       })}
+      {children}
     </div>
   )
 }
