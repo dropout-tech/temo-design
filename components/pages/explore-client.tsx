@@ -373,7 +373,7 @@ function TodayStage({
                 </span>
               </span>
               <span
-                className="relative text-[26px] leading-none tracking-[0.1em] text-[#F2F2F2] tabular-nums"
+                className="relative mr-1.5 text-[26px] leading-none tracking-[0.1em] text-[#F2F2F2] tabular-nums"
                 style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 900 }}
               >
                 {s.num}
