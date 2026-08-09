@@ -632,8 +632,6 @@ function BlockItem({
   index: number
   projectTitle: string
 }) {
-  const caption = block.caption
-
   if (block.type === "text") {
     if (!block.text) return null
     // 新資料是後台 Quill 富文本編輯器存下的 HTML（存檔時已消毒過）；舊資料仍是純文字，
@@ -658,11 +656,11 @@ function BlockItem({
             ))}
           </div>
         )}
-        {caption && (
-          <figcaption className="text-xs text-temo-warm-gray/60 tracking-wider text-center">
-            {caption}
-          </figcaption>
-        )}
+        <ResponsiveBlockCaption
+          desktop={block.caption}
+          mobile={block.captionMobile}
+          align="center"
+        />
       </figure>
     )
   }
@@ -672,11 +670,7 @@ function BlockItem({
     return (
       <figure className="space-y-3">
         <VideoEmbed url={block.videoUrl} title={projectTitle} />
-        {caption && (
-          <figcaption className="text-xs text-temo-warm-gray/60 tracking-wider">
-            {caption}
-          </figcaption>
-        )}
+        <ResponsiveBlockCaption desktop={block.caption} mobile={block.captionMobile} />
       </figure>
     )
   }
@@ -710,12 +704,36 @@ function BlockItem({
           height={block.height}
         />
       )}
-      {caption && (
-        <figcaption className="text-xs text-temo-warm-gray/60 tracking-wider">
-          {caption}
-        </figcaption>
-      )}
+      <ResponsiveBlockCaption desktop={block.caption} mobile={block.captionMobile} />
     </figure>
+  )
+}
+
+function ResponsiveBlockCaption({
+  desktop,
+  mobile,
+  align = "left",
+}: {
+  desktop?: string | null
+  mobile?: string | null
+  align?: "left" | "center"
+}) {
+  const desktopCaption = desktop?.trim() ? desktop : null
+  const mobileCaption = mobile?.trim() ? mobile : desktopCaption
+  const alignment = align === "center" ? "text-center" : "text-left"
+  const captionClass = `whitespace-pre-line break-words text-xs leading-relaxed tracking-wider text-temo-warm-gray/60 ${alignment}`
+
+  if (!desktopCaption && !mobileCaption) return null
+
+  return (
+    <>
+      {mobileCaption && (
+        <figcaption className={`${captionClass} md:hidden`}>{mobileCaption}</figcaption>
+      )}
+      {desktopCaption && (
+        <figcaption className={`${captionClass} hidden md:block`}>{desktopCaption}</figcaption>
+      )}
+    </>
   )
 }
 

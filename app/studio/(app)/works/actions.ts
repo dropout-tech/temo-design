@@ -51,6 +51,7 @@ export type WorkInput = {
     text_content: string
     video_url: string
     caption: string
+    caption_mobile: string
   }[]
 }
 
@@ -152,6 +153,7 @@ export async function saveWork(
             b.type === "text" ? (richTextIsEmpty(cleanText) ? null : cleanText) : cleanText || null,
           video_url: b.video_url.trim() || null,
           caption: b.caption.trim() || null,
+          caption_mobile: b.caption_mobile.trim() || null,
           sort: i,
         }
       })

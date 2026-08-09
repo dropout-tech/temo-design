@@ -87,6 +87,7 @@ type FormBlock = {
   text_content: string
   video_url: string
   caption: string
+  caption_mobile: string
 }
 
 function newKey() {
@@ -97,7 +98,7 @@ function emptyBlock(type: BlockType, dual = false): FormBlock {
   return {
     key: newKey(), type, dual, src: "", alt: "", width: undefined, height: undefined,
     src2: "", alt2: "", width2: undefined, height2: undefined,
-    text_content: "", video_url: "", caption: "",
+    text_content: "", video_url: "", caption: "", caption_mobile: "",
   }
 }
 
@@ -121,6 +122,7 @@ function blockRowToForm(b: WorkBlockRow): FormBlock {
         : b.text_content ?? "",
     video_url: b.video_url ?? "",
     caption: b.caption ?? "",
+    caption_mobile: b.caption_mobile ?? "",
   }
 }
 
@@ -145,6 +147,7 @@ function initialBlocksFrom(initial?: WorkFormInitial): FormBlock[] {
       text_content: "",
       video_url: "",
       caption: g.caption ?? "",
+      caption_mobile: "",
     }))
   }
   return []
@@ -163,6 +166,46 @@ const inputCls =
   "w-full px-4 py-3 bg-white/[0.03] border border-white/10 text-temo-white text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:bg-white/[0.05] focus:outline-none transition-all rounded-sm"
 const labelCls =
   "block text-[11px] tracking-[0.2em] text-temo-warm-gray/70 uppercase mb-2"
+
+function ResponsiveCaptionFields({
+  block,
+  contextLabel,
+  onChange,
+}: {
+  block: FormBlock
+  contextLabel: string
+  onChange: (patch: Partial<FormBlock>) => void
+}) {
+  const textareaCls = `${inputCls} min-h-28 resize-y leading-relaxed [&::placeholder]:text-temo-warm-gray/50`
+
+  return (
+    <div className="grid gap-3 pt-1 md:grid-cols-2">
+      <label>
+        <span className={labelCls}>桌機版說明</span>
+        <textarea
+          rows={4}
+          className={textareaCls}
+          value={block.caption}
+          onChange={(e) => onChange({ caption: e.target.value })}
+          placeholder={`${contextLabel}，可依桌機寬度換行`}
+        />
+      </label>
+      <label>
+        <span className={labelCls}>手機版說明（選填）</span>
+        <textarea
+          rows={4}
+          className={textareaCls}
+          value={block.caption_mobile}
+          onChange={(e) => onChange({ caption_mobile: e.target.value })}
+          placeholder={`${contextLabel}，可依手機寬度重新換行`}
+        />
+        <span className="mt-1.5 block text-[11px] leading-relaxed text-temo-warm-gray/55">
+          留空時會自動沿用桌機版說明。
+        </span>
+      </label>
+    </div>
+  )
+}
 
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
@@ -384,6 +427,7 @@ export function WorkForm({
         text_content: b.text_content,
         video_url: b.video_url,
         caption: b.caption,
+        caption_mobile: b.caption_mobile,
       })),
     }
     startTransition(async () => {
@@ -1008,7 +1052,7 @@ function BlockCard({
               <input type="file" accept="image/*" className="hidden" onChange={(e) => onUploadImage(1, e)} disabled={uploading} />
             </label>
             <input className={inputCls} value={block.alt} onChange={(e) => onChange({ alt: e.target.value })} placeholder="圖片替代文字 alt（選填）" />
-            <input className={inputCls} value={block.caption} onChange={(e) => onChange({ caption: e.target.value })} placeholder="圖片說明（選填）" />
+            <ResponsiveCaptionFields block={block} contextLabel="圖片說明" onChange={onChange} />
           </div>
         </div>
       )}
@@ -1042,7 +1086,7 @@ function BlockCard({
               )
             })}
           </div>
-          <input className={inputCls} value={block.caption} onChange={(e) => onChange({ caption: e.target.value })} placeholder="共用說明文字（選填）" />
+          <ResponsiveCaptionFields block={block} contextLabel="兩張圖片的共用說明" onChange={onChange} />
         </div>
       )}
 
@@ -1067,7 +1111,7 @@ function BlockCard({
           {block.video_url.trim() && !isVideoUrl(block.video_url) && (
             <p className="text-[11px] text-red-400/80">看起來不是支援的 YouTube / Vimeo 連結</p>
           )}
-          <input className={inputCls} value={block.caption} onChange={(e) => onChange({ caption: e.target.value })} placeholder="影片說明（選填）" />
+          <ResponsiveCaptionFields block={block} contextLabel="影片說明" onChange={onChange} />
         </div>
       )}
     </div>

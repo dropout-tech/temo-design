@@ -20,6 +20,7 @@ export type WorkBlock = {
   text?: string | null // 對應 DB 欄 text_content
   videoUrl?: string | null // 對應 DB 欄 video_url
   caption?: string | null
+  captionMobile?: string | null // 對應 DB 欄 caption_mobile；空值時前台沿用 caption
 }
 
 // getWorkDetail 在 DetailProject 之上疊加 hero / blocks（都是選填，向下相容既有呼叫端）。
@@ -266,9 +267,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
   try {
     const { data: blockRows, error: blockErr } = await supa
       .from("work_blocks")
-      .select(
-        "id, type, src, alt, width, height, src2, alt2, width2, height2, text_content, video_url, caption, sort"
-      )
+      .select("*")
       .eq("work_id", w.id)
       .order("sort")
     if (!blockErr && Array.isArray(blockRows)) {
@@ -286,6 +285,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
         text: b.text_content ?? null,
         videoUrl: b.video_url ?? null,
         caption: b.caption ?? null,
+        captionMobile: b.caption_mobile ?? null,
       }))
     }
   } catch {
@@ -306,6 +306,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       text: null,
       videoUrl: null,
       caption: g.caption ?? null,
+      captionMobile: null,
     }))
   }
 

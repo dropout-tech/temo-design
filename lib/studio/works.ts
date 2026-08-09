@@ -16,6 +16,7 @@ export type WorkBlockRow = {
   text_content?: string | null
   video_url?: string | null
   caption?: string | null
+  caption_mobile?: string | null
   sort?: number | null
 }
 
@@ -68,9 +69,7 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
   try {
     const { data: blockRows, error: blockErr } = await supabase
       .from("work_blocks")
-      .select(
-        "id, type, src, alt, width, height, src2, alt2, width2, height2, text_content, video_url, caption, sort"
-      )
+      .select("*")
       .eq("work_id", id)
       .order("sort")
     if (!blockErr && Array.isArray(blockRows)) {
