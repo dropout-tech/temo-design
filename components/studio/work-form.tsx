@@ -16,7 +16,13 @@ import { normalizeWorkSlug } from "@/lib/work-slug"
 
 type Options = {
   categories: { value: string; label: string }[]
-  clients: { id: string; name: string }[]
+  clients: {
+    id: string
+    name: string
+    address?: string | null
+    phone?: string | null
+    website?: string | null
+  }[]
   designers: { id: string; name: string; name_zh: string | null }[]
   industries: { value: string; label: string }[]
 }
@@ -191,6 +197,13 @@ export function WorkForm({
 }) {
   const router = useRouter()
   const [f, setF] = useState<WorkFormInitial>(initial ?? EMPTY)
+  const initialClient = options.clients.find((client) => client.id === initial?.client_id)
+  const [clientContact, setClientContact] = useState({
+    address: initialClient?.address ?? "",
+    phone: initialClient?.phone ?? "",
+    website: initialClient?.website ?? "",
+  })
+  const [clientContactDirty, setClientContactDirty] = useState(false)
   const [heroUrl, setHeroUrl] = useState(initial?.hero_url ?? "")
   const [clientLogos, setClientLogos] = useState<string[]>(initial?.client_logo_urls ?? [])
   const [clientLogoDraft, setClientLogoDraft] = useState("")
@@ -202,6 +215,17 @@ export function WorkForm({
 
   const set = <K extends keyof WorkFormInitial>(k: K, v: WorkFormInitial[K]) =>
     setF((prev) => ({ ...prev, [k]: v }))
+
+  function selectClient(id: string) {
+    set("client_id", id)
+    const client = options.clients.find((item) => item.id === id)
+    setClientContact({
+      address: client?.address ?? "",
+      phone: client?.phone ?? "",
+      website: client?.website ?? "",
+    })
+    setClientContactDirty(false)
+  }
 
   function toggle(list: string[], v: string) {
     return list.includes(v) ? list.filter((x) => x !== v) : [...list, v]
@@ -337,6 +361,10 @@ export function WorkForm({
     const input: WorkInput = {
       slug: f.slug, title: f.title, subtitle: f.subtitle,
       category_group: f.category_group, year: f.year, client_id: f.client_id,
+      client_address: clientContact.address,
+      client_phone: clientContact.phone,
+      client_website: clientContact.website,
+      client_contact_dirty: clientContactDirty,
       cover_url: f.cover_url, hero_url: heroUrl, client_logo_urls: clientLogos, video_url: f.video_url, size: f.size,
       description: f.description, services: toLines(f.services),
       deliverables: toLines(f.deliverables), challenge: f.challenge,
@@ -500,13 +528,60 @@ export function WorkForm({
                     </Field>
                   </div>
                   <Field label="客戶">
-                    <select className={inputCls} value={f.client_id} onChange={(e) => set("client_id", e.target.value)}>
+                    <select className={inputCls} value={f.client_id} onChange={(e) => selectClient(e.target.value)}>
                       <option value="">（未選）</option>
                       {options.clients.map((c) => (
                         <option key={c.id} value={c.id} className="bg-[#201d1a]">{c.name}</option>
                       ))}
                     </select>
                   </Field>
+                  {f.client_id && (
+                    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4 space-y-4">
+                      <div>
+                        <p className="text-sm font-medium text-temo-white">客戶聯絡資料</p>
+                        <p className="mt-1 text-[11px] leading-relaxed text-temo-warm-gray/45">
+                          這些資料屬於客戶本身，其他使用同一客戶的作品也會共用；留空時前台不顯示。
+                        </p>
+                      </div>
+                      <Field label="地址">
+                        <input
+                          className={inputCls}
+                          value={clientContact.address}
+                          onChange={(e) => {
+                            setClientContact((prev) => ({ ...prev, address: e.target.value }))
+                            setClientContactDirty(true)
+                          }}
+                          placeholder="例如：台北市信義區…"
+                        />
+                      </Field>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Field label="電話">
+                          <input
+                            className={inputCls}
+                            type="tel"
+                            value={clientContact.phone}
+                            onChange={(e) => {
+                              setClientContact((prev) => ({ ...prev, phone: e.target.value }))
+                              setClientContactDirty(true)
+                            }}
+                            placeholder="02-1234-5678"
+                          />
+                        </Field>
+                        <Field label="官方網站">
+                          <input
+                            className={inputCls}
+                            inputMode="url"
+                            value={clientContact.website}
+                            onChange={(e) => {
+                              setClientContact((prev) => ({ ...prev, website: e.target.value }))
+                              setClientContactDirty(true)
+                            }}
+                            placeholder="https://example.com"
+                          />
+                        </Field>
+                      </div>
+                    </div>
+                  )}
                   <Field label="行業分類（可複選）">
                     <ChipGroup
                       items={options.industries.map((i) => ({ value: i.value, label: i.label }))}

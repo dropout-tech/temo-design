@@ -61,6 +61,9 @@ export type DetailProject = {
   clientName?: string
   clientSlug?: string
   clientBrief?: string
+  clientAddress?: string
+  clientPhone?: string
+  clientWebsite?: string
   /** 客戶 LOGO，選填可多張（一件作品可能有多位客戶）；顯示於作品內頁右側資訊欄最頂端 */
   clientLogos?: string[]
   description: string
@@ -149,7 +152,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
       <Navbar />
       <main className="pt-20 bg-temo-black text-temo-white">
         {/* ─── Breadcrumb ───────────────────────────────────────────── */}
-        <div className="border-b border-temo-warm-gray/10">
+        <div className="hidden md:block border-b border-temo-warm-gray/10">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5 flex items-center gap-2 text-xs tracking-wider text-temo-warm-gray/70">
             <Link href="/" className="hover:text-temo-gold transition-colors">
               首頁
@@ -165,10 +168,11 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
 
         {/* ─── 相關導覽列：分類 / 細項 / 客戶 / 設計師（皆可點） ─────── */}
         <RelatedNav project={project} />
+        <MobileFilterNav project={project} />
 
         {/* ─── Hero ─────────────────────────────────────────────────── */}
         <section className="relative overflow-hidden">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-16 md:pt-24 pb-12 md:pb-20">
+          <div className="hidden md:block mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-24 pb-20">
             <div
               style={{
                 transition: "opacity 0.9s ease, transform 0.9s ease",
@@ -256,7 +260,9 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
         </section>
 
         {/* ─── Body：敘事 + 側欄 ───────────────────────────────────── */}
-        <section ref={bodyRef} className="py-20 md:py-28">
+        <MobileProjectDetails project={project} hasNarrative={hasNarrative} />
+
+        <section ref={bodyRef} className="hidden md:block py-20 md:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div
               className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16"
@@ -763,6 +769,392 @@ function MetaItem({ label, children }: { label: string; children: React.ReactNod
 
 // ─── 相關導覽列 ──────────────────────────────────────────────────────────────
 
+function MobileFilterNav({ project }: { project: DetailProject }) {
+  const industries = project.industries ?? []
+  const multipleIndustries = industries.length > 1
+
+  return (
+    <nav
+      aria-label="作品篩選連結"
+      className="md:hidden border-b border-temo-warm-gray/15 bg-[#11100e] px-4 py-4"
+    >
+      <div className={multipleIndustries ? "grid grid-cols-2 gap-2" : "grid grid-cols-3 gap-2"}>
+        <MobileFilterLink
+          label="年份"
+          value={project.year || "未設定"}
+          href={project.year ? `/portfolio?year=${encodeURIComponent(project.year)}` : "/portfolio"}
+        />
+        <MobileFilterLink
+          label="執行項目"
+          value={project.categoryLabel || "未分類"}
+          href={
+            project.categoryGroup
+              ? `/portfolio?group=${encodeURIComponent(project.categoryGroup)}`
+              : "/portfolio"
+          }
+        />
+
+        {multipleIndustries ? (
+          <div className="col-span-2 border border-temo-warm-gray/15 bg-temo-black/35 px-3 py-3">
+            <p className="mb-2 text-[9px] tracking-[0.24em] text-temo-warm-gray/45">行業</p>
+            <div className="flex flex-wrap gap-2">
+              {industries.map((industry) => (
+                <Link
+                  key={industry.value}
+                  href={`/portfolio?industry=${encodeURIComponent(industry.value)}`}
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-temo-gold/35 px-3 py-2 text-xs leading-snug text-temo-white transition-colors hover:border-temo-gold hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+                >
+                  {industry.label}
+                  <ArrowUpRight className="h-3 w-3 shrink-0 text-temo-gold" aria-hidden="true" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <MobileFilterLink
+            label="行業"
+            value={industries[0]?.label || project.industryLabels[0] || "未分類"}
+            href={
+              industries[0]
+                ? `/portfolio?industry=${encodeURIComponent(industries[0].value)}`
+                : "/portfolio"
+            }
+          />
+        )}
+      </div>
+    </nav>
+  )
+}
+
+function MobileFilterLink({
+  label,
+  value,
+  href,
+}: {
+  label: string
+  value: string
+  href: string
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex min-h-16 min-w-0 flex-col items-center justify-center border border-temo-warm-gray/15 bg-temo-black/35 px-2 py-2.5 text-center transition-colors hover:border-temo-gold/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+    >
+      <span className="text-[9px] tracking-[0.22em] text-temo-warm-gray/45">{label}</span>
+      <span className="mt-1 line-clamp-2 text-[11px] font-medium leading-snug text-temo-white group-hover:text-temo-gold">
+        {value}
+      </span>
+    </Link>
+  )
+}
+
+function MobileProjectDetails({
+  project,
+  hasNarrative,
+}: {
+  project: DetailProject
+  hasNarrative: boolean
+}) {
+  const hasClientContact = Boolean(
+    project.clientAddress || project.clientPhone || project.clientWebsite
+  )
+  const hasClient = Boolean(
+    project.clientLogos?.length || project.clientName || project.clientBrief || hasClientContact
+  )
+  const websiteHref = toWebsiteHref(project.clientWebsite)
+
+  return (
+    <article className="md:hidden px-4 pb-20">
+      <header className="border-b border-temo-warm-gray/15 py-10">
+        <h1 className="text-balance text-3xl font-bold leading-tight tracking-[-0.025em] text-temo-white">
+          {project.title}
+        </h1>
+        {project.subtitle && (
+          <p className="mt-3 text-sm leading-relaxed tracking-wide text-temo-warm-gray/65">
+            {project.subtitle}
+          </p>
+        )}
+      </header>
+
+      {hasClient && (
+        <section className="border-b border-temo-warm-gray/15 py-10">
+          {project.clientLogos && project.clientLogos.length > 0 && (
+            <div className="mb-7 flex flex-wrap items-center justify-center gap-6">
+              {project.clientLogos.map((logo, index) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={`${logo}-${index}`}
+                  src={proxyImage(logo)}
+                  alt={
+                    project.clientLogos!.length > 1
+                      ? `${project.clientName || project.title} logo ${index + 1}`
+                      : `${project.clientName || project.title} logo`
+                  }
+                  className="max-h-24 w-auto max-w-[min(70vw,18rem)] object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              ))}
+            </div>
+          )}
+
+          {project.clientName && (
+            <div className="text-center">
+              {project.clientSlug ? (
+                <Link
+                  href={`/portfolio?client=${encodeURIComponent(project.clientSlug)}`}
+                  className="inline-flex min-h-11 items-center justify-center gap-1.5 text-lg font-medium text-temo-white transition-colors hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+                >
+                  {project.clientName}
+                  <ArrowUpRight className="h-4 w-4 text-temo-gold" aria-hidden="true" />
+                </Link>
+              ) : (
+                <p className="text-lg font-medium text-temo-white">{project.clientName}</p>
+              )}
+              {project.clientBrief && (
+                <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-temo-warm-gray/60">
+                  {project.clientBrief}
+                </p>
+              )}
+            </div>
+          )}
+
+          {hasClientContact && (
+            <div className="mt-8 border-t border-temo-warm-gray/10 pt-7">
+              <MobileSectionHeading>客戶資訊</MobileSectionHeading>
+              <dl className="mt-5 space-y-4 text-sm">
+                {project.clientAddress && (
+                  <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3">
+                    <dt className="text-temo-warm-gray/45">地址</dt>
+                    <dd className="break-words text-temo-white/85">{project.clientAddress}</dd>
+                  </div>
+                )}
+                {project.clientPhone && (
+                  <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-3">
+                    <dt className="pt-3 text-temo-warm-gray/45">電話</dt>
+                    <dd>
+                      <a
+                        href={`tel:${project.clientPhone.replace(/\s+/g, "")}`}
+                        className="inline-flex min-h-11 items-center break-all text-temo-white/85 underline decoration-temo-warm-gray/30 underline-offset-4 hover:text-temo-gold"
+                      >
+                        {project.clientPhone}
+                      </a>
+                    </dd>
+                  </div>
+                )}
+                {project.clientWebsite && (
+                  <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-3">
+                    <dt className="pt-3 text-temo-warm-gray/45">官網</dt>
+                    <dd>
+                      {websiteHref ? (
+                        <a
+                          href={websiteHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex min-h-11 max-w-full items-center gap-1.5 break-all text-temo-white/85 underline decoration-temo-warm-gray/30 underline-offset-4 hover:text-temo-gold"
+                        >
+                          {project.clientWebsite}
+                          <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-temo-gold" aria-hidden="true" />
+                        </a>
+                      ) : (
+                        <span className="inline-flex min-h-11 items-center break-all text-temo-white/85">
+                          {project.clientWebsite}
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
+        </section>
+      )}
+
+      {(project.services?.length || project.deliverables?.length) && (
+        <section className="grid grid-cols-1 gap-8 border-b border-temo-warm-gray/15 py-10 min-[390px]:grid-cols-2 min-[390px]:gap-5">
+          {project.services && project.services.length > 0 && (
+            <MobileList title="服務範疇" items={project.services} />
+          )}
+          {project.deliverables && project.deliverables.length > 0 && (
+            <MobileList title="交付項目" items={project.deliverables} />
+          )}
+        </section>
+      )}
+
+      {project.designers.length > 0 && (
+        <section className="border-b border-temo-warm-gray/15 py-10">
+          <MobileSectionHeading>參與人員</MobileSectionHeading>
+          <ul className="mt-5 grid grid-cols-1 gap-2 min-[390px]:grid-cols-2">
+            {project.designers.map((designer) => (
+              <li key={designer.slug}>
+                <Link
+                  href={`/team/${designer.slug}`}
+                  className="group flex min-h-16 items-center gap-3 border border-temo-warm-gray/10 px-3 py-2.5 transition-colors hover:border-temo-gold/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+                >
+                  <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-temo-warm-gray/20">
+                    <Image
+                      src={proxyImage(designer.photo)}
+                      alt={designer.name}
+                      fill
+                      className="object-cover"
+                      sizes="40px"
+                      referrerPolicy="no-referrer"
+                    />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-temo-white group-hover:text-temo-gold">
+                      {designer.nameZh || designer.name}
+                    </span>
+                    <span className="mt-0.5 block text-[11px] leading-snug text-temo-warm-gray/55">
+                      {designer.role || "參與設計"}
+                    </span>
+                  </span>
+                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-temo-gold" aria-hidden="true" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {project.pressMentions && project.pressMentions.length > 0 && (
+        <MobilePressMentions items={project.pressMentions} />
+      )}
+
+      {project.awards && project.awards.length > 0 && (
+        <section className="border-b border-temo-warm-gray/15 py-10">
+          <MobileSectionHeading>得獎與肯定</MobileSectionHeading>
+          <ul className="mt-5 space-y-3">
+            {project.awards.map((award) => (
+              <li key={award} className="flex items-start gap-3 text-sm leading-relaxed text-temo-warm-gray">
+                <Award className="mt-0.5 h-4 w-4 shrink-0 text-temo-gold" aria-hidden="true" />
+                <span>{award}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {project.description && (
+        <section className="border-b border-temo-warm-gray/15 py-12">
+          <MobileSectionHeading>感言或前言</MobileSectionHeading>
+          <p className="mt-5 whitespace-pre-line text-base leading-[1.85] text-temo-warm-gray">
+            {project.description}
+          </p>
+        </section>
+      )}
+
+      {project.quote && (
+        <section className="border-b border-temo-warm-gray/15 py-12">
+          <MobileSectionHeading>客戶引言</MobileSectionHeading>
+          <blockquote className="mt-5 border-l border-temo-gold/70 pl-5">
+            <p className="text-xl font-light leading-relaxed text-temo-white/90">
+              &ldquo;{project.quote.text}&rdquo;
+            </p>
+            {project.quote.author && (
+              <footer className="mt-4 text-[10px] tracking-[0.24em] text-temo-gold uppercase">
+                — {project.quote.author}
+              </footer>
+            )}
+          </blockquote>
+        </section>
+      )}
+
+      <section className="space-y-12 py-12">
+        {project.challenge && <MobileNarrative title="Challenge" body={project.challenge} />}
+        {project.approach && <MobileNarrative title="Approach" body={project.approach} />}
+        {project.result && <MobileNarrative title="Result" body={project.result} />}
+        {!hasNarrative && (
+          <p className="text-sm leading-relaxed text-temo-warm-gray/65">
+            本案例的完整介紹將在 CMS 上線後由我們上傳，敬請期待。
+          </p>
+        )}
+      </section>
+    </article>
+  )
+}
+
+function MobileSectionHeading({ children }: { children: React.ReactNode }) {
+  return <h2 className="text-sm font-medium tracking-[0.18em] text-temo-gold">{children}</h2>
+}
+
+function MobileList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <MobileSectionHeading>{title}</MobileSectionHeading>
+      <ul className="mt-4 space-y-2.5">
+        {items.map((item) => (
+          <li key={item} className="flex gap-2 text-sm leading-relaxed text-temo-warm-gray">
+            <span className="text-temo-gold" aria-hidden="true">
+              —
+            </span>
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function MobilePressMentions({ items }: { items: string[] }) {
+  return (
+    <section className="border-b border-temo-warm-gray/15 py-10">
+      <MobileSectionHeading>新聞與媒體連結</MobileSectionHeading>
+      <ul className="mt-5 space-y-2">
+        {items.map((raw) => {
+          const { label, url } = parsePressMention(raw)
+          return (
+            <li key={raw}>
+              {url ? (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex min-h-11 items-center gap-3 border border-temo-warm-gray/10 px-3 py-2.5 text-sm leading-relaxed text-temo-warm-gray transition-colors hover:border-temo-gold/45 hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+                >
+                  <Newspaper className="h-4 w-4 shrink-0 text-temo-gold" aria-hidden="true" />
+                  <span className="min-w-0 flex-1 break-words">{label}</span>
+                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                </a>
+              ) : (
+                <div className="flex min-h-11 items-center gap-3 border border-temo-warm-gray/10 px-3 py-2.5 text-sm leading-relaxed text-temo-warm-gray">
+                  <Newspaper className="h-4 w-4 shrink-0 text-temo-gold" aria-hidden="true" />
+                  <span className="break-words">{label}</span>
+                </div>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
+function MobileNarrative({ title, body }: { title: string; body: string }) {
+  return (
+    <div>
+      <h2 className="text-2xl font-bold tracking-[-0.02em] text-temo-white">{title}</h2>
+      <div className="mt-5 space-y-5">
+        {body.split("\n\n").map((paragraph, index) => (
+          <p
+            key={index}
+            className="whitespace-pre-line break-words text-base leading-[1.85] text-temo-warm-gray"
+          >
+            {paragraph}
+          </p>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function toWebsiteHref(website?: string): string | undefined {
+  const value = website?.trim()
+  if (!value) return undefined
+  if (/^https?:\/\//i.test(value)) return value
+  if (/^[a-z][a-z\d+.-]*:/i.test(value)) return undefined
+  return `https://${value}`
+}
+
 function RelatedNav({ project }: { project: DetailProject }) {
   const hasAny =
     project.categoryGroup ||
@@ -776,7 +1168,7 @@ function RelatedNav({ project }: { project: DetailProject }) {
     "inline-flex items-center gap-1.5 px-3.5 py-2.5 md:px-3 md:py-1.5 rounded-full border border-temo-warm-gray/20 hover:border-temo-gold/60 text-xs text-temo-warm-gray/80 hover:text-temo-gold transition-colors"
 
   return (
-    <div className="border-b border-temo-warm-gray/10 bg-temo-black/40">
+    <div className="hidden md:block border-b border-temo-warm-gray/10 bg-temo-black/40">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center gap-x-6 gap-y-3">
         {/* 執行項目 */}
         {project.categoryGroup && (

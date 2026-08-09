@@ -125,6 +125,9 @@ export type Client = {
   slug: string
   name: string
   brief?: string
+  address?: string
+  phone?: string
+  website?: string
 }
 
 export const CLIENTS: Client[] = [

@@ -13,6 +13,10 @@ export type WorkInput = {
   category_group: string
   year: string
   client_id: string
+  client_address: string
+  client_phone: string
+  client_website: string
+  client_contact_dirty: boolean
   cover_url: string
   /** 內頁首圖，選填，留空＝沿用封面圖 */
   hero_url: string
@@ -153,6 +157,19 @@ export async function saveWork(
       })
     )
     if (error) return { error: error.message }
+  }
+
+  // 客戶聯絡資料屬於客戶本身，因此同一客戶的其他作品會共用這些欄位。
+  if (input.client_id && input.client_contact_dirty) {
+    const { error } = await supabase
+      .from("clients")
+      .update({
+        address: input.client_address.trim() || null,
+        phone: input.client_phone.trim() || null,
+        website: input.client_website.trim() || null,
+      })
+      .eq("id", input.client_id)
+    if (error) return { error: `客戶聯絡資料儲存失敗：${error.message}` }
   }
 
   // 後台與前台一起刷新（前台立即反映，不必等 ISR 60 秒）

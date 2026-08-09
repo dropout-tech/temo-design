@@ -172,6 +172,29 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     .filter(Boolean)
     .map((i: any) => ({ value: i.value, label: i.label }))
 
+  // 聯絡欄位用獨立查詢，讓前端在 migration 套用前仍能顯示作品，
+  // 只是暫時隱藏尚不存在的客戶聯絡資料。
+  let clientContact: { address?: string; phone?: string; website?: string } = {}
+  if (w.clients?.slug) {
+    try {
+      const { data: clientRow, error: clientError } = await supa
+        .from("clients")
+        .select("address, phone, website")
+        .eq("slug", w.clients.slug)
+        .maybeSingle()
+      if (!clientError && clientRow) {
+        const contact = clientRow as any
+        clientContact = {
+          address: contact.address ?? undefined,
+          phone: contact.phone ?? undefined,
+          website: contact.website ?? undefined,
+        }
+      }
+    } catch {
+      clientContact = {}
+    }
+  }
+
   const designers = (w.work_designers ?? [])
     .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
     .map((r: any) => r.designers)
@@ -298,6 +321,9 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     clientName: w.clients?.name ?? undefined,
     clientSlug: w.clients?.slug ?? undefined,
     clientBrief: w.clients?.brief ?? undefined,
+    clientAddress: clientContact.address,
+    clientPhone: clientContact.phone,
+    clientWebsite: clientContact.website,
     clientLogos: clientLogos.length > 0 ? clientLogos : undefined,
     description: w.description ?? "",
     cover,

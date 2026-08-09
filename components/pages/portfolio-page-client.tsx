@@ -781,7 +781,7 @@ export function PortfolioPageClient({
   const effectiveWorks = works && works.length > 0 ? works : DEMO_WORKS
 
   // 支援由案例頁、explore 等地方透過 URL 參數帶入初始篩選
-  // 支援的參數：?group=xxx&industry=xxx&client=xxx&designer=xxx&q=xxx
+  // 支援的參數：?group=xxx&industry=xxx&client=xxx&designer=xxx&year=xxx&q=xxx
   const searchParams = useSearchParams()
   const initialFilters = useMemo<FilterState>(() => {
     const next: FilterState = { ...INITIAL_FILTERS }
@@ -804,6 +804,11 @@ export function PortfolioPageClient({
     const designerParam = searchParams?.get("designer")
     if (designerParam && effectiveWorks.some((w) => w.designerSlugs.includes(designerParam))) {
       next.designer = designerParam
+    }
+
+    const yearParam = searchParams?.get("year")
+    if (yearParam && effectiveWorks.some((w) => w.year === yearParam)) {
+      next.year = yearParam
     }
 
     const queryParam = searchParams?.get("q")
