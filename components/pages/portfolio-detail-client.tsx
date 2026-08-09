@@ -976,12 +976,12 @@ function MobileProjectDetails({
       )}
 
       {(project.services?.length || project.deliverables?.length) && (
-        <section className="grid grid-cols-1 gap-8 border-b border-temo-warm-gray/15 py-10 min-[390px]:grid-cols-2 min-[390px]:gap-5">
+        <section className="space-y-7 border-b border-temo-warm-gray/15 py-10">
           {project.services && project.services.length > 0 && (
-            <MobileList title="服務範疇" items={project.services} />
+            <MobileEditorialMeta title="服務範疇" items={project.services} />
           )}
           {project.deliverables && project.deliverables.length > 0 && (
-            <MobileList title="交付項目" items={project.deliverables} />
+            <MobileEditorialMeta title="交付項目" items={project.deliverables} />
           )}
         </section>
       )}
@@ -1083,20 +1083,13 @@ function MobileSectionHeading({ children }: { children: React.ReactNode }) {
   return <h2 className="text-sm font-medium tracking-[0.18em] text-temo-gold">{children}</h2>
 }
 
-function MobileList({ title, items }: { title: string; items: string[] }) {
+function MobileEditorialMeta({ title, items }: { title: string; items: string[] }) {
   return (
-    <div>
+    <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-start gap-x-4">
       <MobileSectionHeading>{title}</MobileSectionHeading>
-      <ul className="mt-4 space-y-2.5">
-        {items.map((item) => (
-          <li key={item} className="flex gap-2 text-sm leading-relaxed text-temo-warm-gray">
-            <span className="text-temo-gold" aria-hidden="true">
-              —
-            </span>
-            <span>{item}</span>
-          </li>
-        ))}
-      </ul>
+      <p className="-mt-1 text-[17px] leading-[1.75] tracking-wide text-temo-white/90">
+        {items.join(" · ")}
+      </p>
     </div>
   )
 }
