@@ -114,7 +114,7 @@ export function HeroSection() {
               transform: visible ? "translateY(0)" : "translateY(20px)",
             }}
           >
-            <div className="relative top-4 flex min-h-24 items-center pr-28 md:static md:min-h-0 md:pr-0">
+            <div className="relative top-8 flex min-h-24 items-center pr-28 md:static md:min-h-0 md:pr-0">
               <div className="space-y-2 md:space-y-3">
                 <p className="text-white font-bold text-lg md:text-xl lg:text-2xl tracking-wide">
                   點擊右邊按鈕
@@ -150,7 +150,7 @@ export function HeroSection() {
 
           {/* Right — large circle CTA（手機版與標語共用同一條垂直中心線；桌機維持右欄置中） */}
           <div
-            className="absolute right-0 top-4 md:static flex items-center justify-end flex-shrink-0 md:mr-8 lg:mr-16 xl:mr-24"
+            className="absolute right-0 top-8 md:static flex items-center justify-end flex-shrink-0 md:mr-8 lg:mr-16 xl:mr-24"
             style={{
               transition: "opacity 1.2s ease 0.7s, transform 1.2s ease 0.7s",
               opacity: visible ? 1 : 0,
