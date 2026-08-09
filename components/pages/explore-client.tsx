@@ -327,8 +327,8 @@ function TodayStage({
             SOMETHING MORE...
           </p>
           <p
-            className="mt-2 text-base font-bold tracking-[0.25em] text-[#F2F2F2]"
-            style={{ fontFamily: "'Noto Sans TC', sans-serif", textShadow: "0 1px 8px rgba(0,0,0,0.3)" }}
+            className="mt-2 text-base font-bold tracking-[0.25em] text-[rgba(222,222,222,0.92)]"
+            style={{ fontFamily: "'Noto Sans TC', sans-serif" }}
           >
             今天我想來點...
           </p>
