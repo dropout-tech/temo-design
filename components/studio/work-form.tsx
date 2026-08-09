@@ -53,6 +53,8 @@ export type WorkFormInitial = {
   press: string
   published: boolean
   industryValues: string[]
+  /** 不在既有行業分類中的作品專屬顯示名稱 */
+  customIndustryNames: string[]
   designerIds: string[]
   /** 不在正式團隊名冊中的單次合作設計師，只在這件作品前台顯示名稱 */
   guestDesignerNames: string[]
@@ -66,7 +68,7 @@ const EMPTY: WorkFormInitial = {
   slug: "", title: "", subtitle: "", category_group: "", year: "", client_id: "",
   cover_url: "", hero_url: "", client_logo_urls: [], video_url: "", size: "medium", description: "", services: "",
   deliverables: "", challenge: "", approach: "", result: "", quote_text: "",
-  quote_author: "", awards: "", press: "", published: true, industryValues: [], designerIds: [],
+  quote_author: "", awards: "", press: "", published: true, industryValues: [], customIndustryNames: [], designerIds: [],
   guestDesignerNames: [],
   gallery: [], blocks: [],
 }
@@ -221,10 +223,10 @@ function Field({ label, children, hint }: { label: string; children: React.React
 }
 
 const toLines = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean)
-const GUEST_DESIGNER_NAME_MAX = 100
-const GUEST_DESIGNER_LIMIT = 20
+const CUSTOM_NAME_MAX = 100
+const CUSTOM_NAME_LIMIT = 20
 
-function normalizeGuestDesignerName(value: string) {
+function normalizeCustomName(value: string) {
   return value.trim().replace(/\s+/g, " ")
 }
 
@@ -259,8 +261,6 @@ export function WorkForm({
   const [heroUrl, setHeroUrl] = useState(initial?.hero_url ?? "")
   const [clientLogos, setClientLogos] = useState<string[]>(initial?.client_logo_urls ?? [])
   const [clientLogoDraft, setClientLogoDraft] = useState("")
-  const [guestDesignerDraft, setGuestDesignerDraft] = useState("")
-  const [showGuestDesignerInput, setShowGuestDesignerInput] = useState(false)
   const [blocks, setBlocks] = useState<FormBlock[]>(() => initialBlocksFrom(initial))
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
@@ -283,41 +283,6 @@ export function WorkForm({
 
   function toggle(list: string[], v: string) {
     return list.includes(v) ? list.filter((x) => x !== v) : [...list, v]
-  }
-
-  function addGuestDesigner() {
-    const name = normalizeGuestDesignerName(guestDesignerDraft)
-    if (!name) return
-    if (name.length > GUEST_DESIGNER_NAME_MAX) {
-      setError(`其他合作設計師名稱請控制在 ${GUEST_DESIGNER_NAME_MAX} 個字內`)
-      return
-    }
-    if (f.guestDesignerNames.length >= GUEST_DESIGNER_LIMIT) {
-      setError(`每件作品最多可新增 ${GUEST_DESIGNER_LIMIT} 位其他合作設計師`)
-      return
-    }
-
-    const key = name.toLocaleLowerCase()
-    const isDuplicate = f.guestDesignerNames.some(
-      (existing) => normalizeGuestDesignerName(existing).toLocaleLowerCase() === key
-    )
-    if (isDuplicate) {
-      setError("這位其他合作設計師已經新增過了")
-      return
-    }
-
-    set("guestDesignerNames", [...f.guestDesignerNames, name])
-    setGuestDesignerDraft("")
-    setShowGuestDesignerInput(false)
-    setError("")
-  }
-
-  function removeGuestDesigner(index: number) {
-    set(
-      "guestDesignerNames",
-      f.guestDesignerNames.filter((_, i) => i !== index)
-    )
-    setError("")
   }
 
   async function uploadToStorage(raw: File): Promise<string | null> {
@@ -459,7 +424,7 @@ export function WorkForm({
       deliverables: toLines(f.deliverables), challenge: f.challenge,
       approach: f.approach, result: f.result, quote_text: f.quote_text,
       quote_author: f.quote_author, awards: toLines(f.awards), press_mentions: toLines(f.press),
-      published: f.published, industryValues: f.industryValues, designerIds: f.designerIds,
+      published: f.published, industryValues: f.industryValues, customIndustryNames: f.customIndustryNames, designerIds: f.designerIds,
       guestDesignerNames: f.guestDesignerNames,
       blocks: blocks.map((b) => ({
         type: b.type,
@@ -678,7 +643,15 @@ export function WorkForm({
                       items={options.industries.map((i) => ({ value: i.value, label: i.label }))}
                       selected={f.industryValues}
                       onToggle={(v) => set("industryValues", toggle(f.industryValues, v))}
-                    />
+                    >
+                      <CustomNameChips
+                        values={f.customIndustryNames}
+                        onChange={(values) => set("customIndustryNames", values)}
+                        nameLabel="其他行業"
+                        placeholder="行業名稱"
+                        onError={setError}
+                      />
+                    </ChipGroup>
                   </Field>
                   <Field label="設計師（可複選）">
                     <ChipGroup
@@ -686,77 +659,13 @@ export function WorkForm({
                       selected={f.designerIds}
                       onToggle={(v) => set("designerIds", toggle(f.designerIds, v))}
                     >
-                      {f.guestDesignerNames.map((name, index) => (
-                        <span
-                          key={`${name}-${index}`}
-                          className="inline-flex max-w-full items-center gap-1 rounded-full border border-temo-gold/40 bg-temo-gold/10 py-1.5 pl-3 pr-2 text-xs text-temo-gold"
-                        >
-                          <span className="truncate">{name}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeGuestDesigner(index)}
-                            aria-label={`移除其他合作設計師 ${name}`}
-                            className="shrink-0 rounded-full p-0.5 transition-colors hover:bg-temo-gold/15 hover:text-temo-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </span>
-                      ))}
-
-                      {showGuestDesignerInput ? (
-                        <div className="inline-flex max-w-full items-stretch overflow-hidden rounded-full border border-temo-gold/50 bg-temo-gold/[0.06]">
-                          <input
-                            autoFocus
-                            className="min-w-0 w-32 bg-transparent px-3 py-1 text-base text-temo-white placeholder:text-white/25 focus:outline-none sm:text-xs"
-                            value={guestDesignerDraft}
-                            onChange={(e) => setGuestDesignerDraft(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-                                e.preventDefault()
-                                addGuestDesigner()
-                              }
-                              if (e.key === "Escape") {
-                                setShowGuestDesignerInput(false)
-                                setGuestDesignerDraft("")
-                                setError("")
-                              }
-                            }}
-                            maxLength={GUEST_DESIGNER_NAME_MAX}
-                            placeholder="設計師名稱"
-                            aria-label="其他合作設計師名稱"
-                          />
-                          <button
-                            type="button"
-                            onClick={addGuestDesigner}
-                            disabled={!guestDesignerDraft.trim() || f.guestDesignerNames.length >= GUEST_DESIGNER_LIMIT}
-                            aria-label="新增其他合作設計師"
-                            className="border-l border-temo-gold/25 px-2.5 text-xs text-temo-gold transition-colors hover:bg-temo-gold/10 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-temo-gold/60"
-                          >
-                            新增
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowGuestDesignerInput(false)
-                              setGuestDesignerDraft("")
-                              setError("")
-                            }}
-                            aria-label="取消新增其他設計師"
-                            className="border-l border-temo-gold/15 px-2 text-temo-warm-gray/45 transition-colors hover:text-temo-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-temo-gold/60"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setShowGuestDesignerInput(true)}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-white/20 px-3 py-1.5 text-xs text-temo-warm-gray/65 transition-colors hover:border-temo-gold/50 hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          其他
-                        </button>
-                      )}
+                      <CustomNameChips
+                        values={f.guestDesignerNames}
+                        onChange={(values) => set("guestDesignerNames", values)}
+                        nameLabel="其他合作設計師"
+                        placeholder="設計師名稱"
+                        onError={setError}
+                      />
                     </ChipGroup>
                   </Field>
                 </section>
@@ -1018,7 +927,7 @@ export function WorkForm({
                 <p>媒體：{mediaSummary.length > 0 ? mediaSummary.join("、") : "尚未補媒體"}</p>
                 <p>文字：{storySummary.length > 0 ? storySummary.join("、") : "尚未補案例文字"}</p>
                 <p>
-                  關聯：{f.industryValues.length} 個行業 · {f.designerIds.length + f.guestDesignerNames.length} 位設計師
+                  關聯：{f.industryValues.length + f.customIndustryNames.length} 個行業 · {f.designerIds.length + f.guestDesignerNames.length} 位設計師
                 </p>
               </div>
             </div>
@@ -1272,5 +1181,121 @@ function ChipGroup({
       })}
       {children}
     </div>
+  )
+}
+
+function CustomNameChips({
+  values,
+  onChange,
+  nameLabel,
+  placeholder,
+  onError,
+}: {
+  values: string[]
+  onChange: (values: string[]) => void
+  nameLabel: string
+  placeholder: string
+  onError: (message: string) => void
+}) {
+  const [draft, setDraft] = useState("")
+  const [open, setOpen] = useState(false)
+
+  function close() {
+    setDraft("")
+    setOpen(false)
+    onError("")
+  }
+
+  function add() {
+    const name = normalizeCustomName(draft)
+    if (!name) return
+    if (name.length > CUSTOM_NAME_MAX) {
+      onError(`${nameLabel}名稱請控制在 ${CUSTOM_NAME_MAX} 個字內`)
+      return
+    }
+    if (values.length >= CUSTOM_NAME_LIMIT) {
+      onError(`每件作品最多可新增 ${CUSTOM_NAME_LIMIT} 個${nameLabel}`)
+      return
+    }
+
+    const key = name.toLocaleLowerCase()
+    if (values.some((existing) => normalizeCustomName(existing).toLocaleLowerCase() === key)) {
+      onError(`這個${nameLabel}已經新增過了`)
+      return
+    }
+
+    onChange([...values, name])
+    close()
+  }
+
+  return (
+    <>
+      {values.map((name, index) => (
+        <span
+          key={`${name}-${index}`}
+          className="inline-flex max-w-full items-center gap-1 rounded-full border border-temo-gold/40 bg-temo-gold/10 py-1.5 pl-3 pr-2 text-xs text-temo-gold"
+        >
+          <span className="truncate">{name}</span>
+          <button
+            type="button"
+            onClick={() => {
+              onChange(values.filter((_, i) => i !== index))
+              onError("")
+            }}
+            aria-label={`移除${nameLabel} ${name}`}
+            className="shrink-0 rounded-full p-0.5 transition-colors hover:bg-temo-gold/15 hover:text-temo-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </span>
+      ))}
+
+      {open ? (
+        <div className="inline-flex max-w-full items-stretch overflow-hidden rounded-full border border-temo-gold/50 bg-temo-gold/[0.06]">
+          <input
+            autoFocus
+            className="w-32 min-w-0 bg-transparent px-3 py-1 text-base text-temo-white placeholder:text-white/25 focus:outline-none sm:text-xs"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                e.preventDefault()
+                add()
+              }
+              if (e.key === "Escape") close()
+            }}
+            maxLength={CUSTOM_NAME_MAX}
+            placeholder={placeholder}
+            aria-label={`${nameLabel}名稱`}
+          />
+          <button
+            type="button"
+            onClick={add}
+            disabled={!draft.trim() || values.length >= CUSTOM_NAME_LIMIT}
+            aria-label={`新增${nameLabel}`}
+            className="border-l border-temo-gold/25 px-2.5 text-xs text-temo-gold transition-colors hover:bg-temo-gold/10 disabled:cursor-not-allowed disabled:opacity-35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-temo-gold/60"
+          >
+            新增
+          </button>
+          <button
+            type="button"
+            onClick={close}
+            aria-label={`取消新增${nameLabel}`}
+            className="border-l border-temo-gold/15 px-2 text-temo-warm-gray/45 transition-colors hover:text-temo-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-temo-gold/60"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-white/20 px-3 py-1.5 text-xs text-temo-warm-gray/65 transition-colors hover:border-temo-gold/50 hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          其他
+        </button>
+      )}
+    </>
   )
 }

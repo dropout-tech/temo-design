@@ -108,6 +108,11 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
     press: (w.press_mentions ?? []).join("\n"),
     published: w.published ?? true,
     industryValues: (w.work_industries ?? []).map((r: any) => r.industry_value),
+    customIndustryNames: Array.isArray(w.custom_industry_names)
+      ? w.custom_industry_names
+          .map((name: unknown) => String(name).trim())
+          .filter(Boolean)
+      : [],
     designerIds: (w.work_designers ?? []).map((r: any) => r.designer_id),
     guestDesignerNames: Array.isArray(w.guest_designer_names)
       ? w.guest_designer_names

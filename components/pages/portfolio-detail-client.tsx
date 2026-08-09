@@ -32,7 +32,8 @@ export type DetailRelated = {
 }
 
 export type DetailIndustry = {
-  value: string
+  /** 只有固定行業分類有 value／篩選連結；作品專屬行業只顯示名稱 */
+  value?: string
   label: string
 }
 
@@ -832,14 +833,23 @@ function MobileFilterNav({ project }: { project: DetailProject }) {
             <p className="mb-2 text-[9px] tracking-[0.24em] text-temo-warm-gray/45">行業</p>
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
               {industries.map((industry) => (
-                <Link
-                  key={industry.value}
-                  href={`/portfolio?industry=${encodeURIComponent(industry.value)}`}
-                  className="inline-flex min-h-11 items-center gap-1.5 px-1 py-2 text-xs leading-snug text-temo-white underline decoration-temo-warm-gray/25 underline-offset-4 transition-colors hover:text-temo-gold hover:decoration-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
-                >
-                  {industry.label}
-                  <ArrowUpRight className="h-3 w-3 shrink-0 text-temo-gold" aria-hidden="true" />
-                </Link>
+                industry.value ? (
+                  <Link
+                    key={industry.value}
+                    href={`/portfolio?industry=${encodeURIComponent(industry.value)}`}
+                    className="inline-flex min-h-11 items-center gap-1.5 px-1 py-2 text-xs leading-snug text-temo-white underline decoration-temo-warm-gray/25 underline-offset-4 transition-colors hover:text-temo-gold hover:decoration-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+                  >
+                    {industry.label}
+                    <ArrowUpRight className="h-3 w-3 shrink-0 text-temo-gold" aria-hidden="true" />
+                  </Link>
+                ) : (
+                  <span
+                    key={`custom-${industry.label}`}
+                    className="inline-flex min-h-11 items-center px-1 py-2 text-xs leading-snug text-temo-white"
+                  >
+                    {industry.label}
+                  </span>
+                )
               ))}
             </div>
           </div>
@@ -848,9 +858,9 @@ function MobileFilterNav({ project }: { project: DetailProject }) {
             label="行業"
             value={industries[0]?.label || project.industryLabels[0] || "未分類"}
             href={
-              industries[0]
+              industries[0]?.value
                 ? `/portfolio?industry=${encodeURIComponent(industries[0].value)}`
-                : "/portfolio"
+                : undefined
             }
           />
         )}
@@ -866,18 +876,28 @@ function MobileFilterLink({
 }: {
   label: string
   value: string
-  href: string
+  href?: string
 }) {
-  return (
-    <Link
-      href={href}
-      className="group flex min-h-14 min-w-0 flex-col items-center justify-center px-1 py-1 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
-    >
+  const content = (
+    <>
       <span className="text-[9px] tracking-[0.22em] text-temo-warm-gray/45">{label}</span>
       <span className="mt-1 line-clamp-2 text-[11px] font-medium leading-snug text-temo-white group-hover:text-temo-gold">
         {value}
       </span>
+    </>
+  )
+
+  return href ? (
+    <Link
+      href={href}
+      className="group flex min-h-14 min-w-0 flex-col items-center justify-center px-1 py-1 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+    >
+      {content}
     </Link>
+  ) : (
+    <div className="flex min-h-14 min-w-0 flex-col items-center justify-center px-1 py-1 text-center">
+      {content}
+    </div>
   )
 }
 
@@ -1217,13 +1237,22 @@ function RelatedNav({ project }: { project: DetailProject }) {
         {project.industries && project.industries.length > 0 && (
           <NavGroup label="行業">
             {project.industries.map((t) => (
-              <Link
-                key={t.value}
-                href={`/portfolio?industry=${t.value}`}
-                className={pillClass}
-              >
-                {t.label}
-              </Link>
+              t.value ? (
+                <Link
+                  key={t.value}
+                  href={`/portfolio?industry=${encodeURIComponent(t.value)}`}
+                  className={pillClass}
+                >
+                  {t.label}
+                </Link>
+              ) : (
+                <span
+                  key={`custom-${t.label}`}
+                  className="inline-flex items-center rounded-full border border-temo-warm-gray/20 px-3.5 py-2.5 text-xs text-temo-warm-gray/80 md:px-3 md:py-1.5"
+                >
+                  {t.label}
+                </span>
+              )
             ))}
           </NavGroup>
         )}

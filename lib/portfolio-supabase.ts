@@ -168,10 +168,32 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       year: r.year ?? "",
     }))
 
-  const industries = (w.work_industries ?? [])
+  const linkedIndustries = (w.work_industries ?? [])
     .map((r: any) => r.industries)
     .filter(Boolean)
     .map((i: any) => ({ value: i.value, label: i.label }))
+
+  // 自訂行業只存顯示名稱；獨立查詢可讓 migration 尚未套用時仍正常讀取舊作品。
+  let customIndustryNames: string[] = []
+  try {
+    const { data: customIndustryRow, error: customIndustryErr } = await supa
+      .from("works")
+      .select("custom_industry_names")
+      .eq("slug", slug)
+      .maybeSingle()
+    if (!customIndustryErr && Array.isArray((customIndustryRow as any)?.custom_industry_names)) {
+      customIndustryNames = (customIndustryRow as any).custom_industry_names
+        .map((name: unknown) => String(name).trim())
+        .filter(Boolean)
+    }
+  } catch {
+    customIndustryNames = []
+  }
+
+  const industries = [
+    ...linkedIndustries,
+    ...customIndustryNames.map((label) => ({ label })),
+  ]
 
   // 聯絡欄位用獨立查詢，讓前端在 migration 套用前仍能顯示作品，
   // 只是暫時隱藏尚不存在的客戶聯絡資料。
