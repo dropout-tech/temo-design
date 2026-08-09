@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -146,18 +147,17 @@ function TodayStage({
 }: {
   onSelect: (idx: number) => void
 }) {
-  const [mounted, setMounted] = useState(false)
   // 桌機版構圖鎖在 1834×1062 的設計畫布上，用 scale 依螢幕 cover 縮放 → 換任何螢幕比例都不跑版
   // 水平靠左（保護左側 TODAY 文字不被裁）、垂直置中（超寬螢幕的裁切平均分到上下空白帶，漢字不被切）
   const [canvas, setCanvas] = useState({ scale: 1, offsetY: 0, textShift: 0 })
 
   useEffect(() => {
-    const t = setTimeout(() => setMounted(true), 100)
-    return () => clearTimeout(t)
-  }, [])
+    const desktopQuery = window.matchMedia("(min-width: 768px)")
+    let resizeFrame = 0
 
-  useEffect(() => {
     function update() {
+      if (!desktopQuery.matches) return
+
       // cover：取寬/高兩個縮放比的較大者，確保畫布永遠鋪滿視窗、不留空邊
       const scale = Math.max(window.innerWidth / 1834, window.innerHeight / 1062)
       const offsetY = (window.innerHeight - 1062 * scale) / 2
@@ -166,33 +166,30 @@ function TodayStage({
       const textShift = Math.max(0, (88 - offsetY) / scale - 157)
       setCanvas({ scale, offsetY, textShift })
     }
+
+    function scheduleUpdate() {
+      cancelAnimationFrame(resizeFrame)
+      resizeFrame = requestAnimationFrame(update)
+    }
+
     update()
-    window.addEventListener("resize", update)
-    return () => window.removeEventListener("resize", update)
+    window.addEventListener("resize", scheduleUpdate, { passive: true })
+    return () => {
+      cancelAnimationFrame(resizeFrame)
+      window.removeEventListener("resize", scheduleUpdate)
+    }
   }, [])
 
   return (
-    <div
-      className="relative w-full h-full overflow-hidden select-none"
-      style={{ opacity: mounted ? 1 : 0, transition: "opacity 0.5s ease" }}
-    >
+    <div className="relative w-full h-full overflow-hidden select-none">
       {/* Layer 1: 水泥背景（手機版底圖；桌機版會被下方縮放畫布蓋滿） */}
-      <div
-        className="absolute inset-0 z-[1] bg-cover bg-center"
-        style={{ backgroundImage: `url('/cement-light.png')` }}
-      />
+      <div className="today-cement-surface absolute inset-0 z-[1] md:hidden" />
 
       {/* ── 桌機版：鎖 1834×1062 比例的設計畫布，cover 縮放（桌機限定） ── */}
       <div
-        className="hidden md:block absolute left-0 z-[2] origin-top-left"
+        className="today-cement-surface hidden md:block absolute left-0 z-[2] origin-top-left"
         style={{ width: 1834, height: 1062, top: canvas.offsetY, transform: `scale(${canvas.scale})` }}
       >
-        {/* 畫布底層水泥：與斜切區塊同張同比例 → 未 hover 時區塊與底圖無縫、隱形 */}
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url('/cement-light.png')` }}
-        />
-
         {/* 4 個可點擊的斜線區塊（每個內含背景 + 漢字 + 編號） */}
         {SECTIONS.map((s, i) => (
           <button
@@ -208,12 +205,6 @@ function TodayStage({
               } as React.CSSProperties
             }
           >
-            {/* 區塊背景（同樣的水泥紋，跟著 hover 一起抬起） */}
-            <span
-              aria-hidden
-              className="absolute inset-0 bg-cover bg-center pointer-events-none"
-              style={{ backgroundImage: `url('/cement-light.png')` }}
-            />
             {/* 漢字（上下兩排） */}
             <span
               aria-hidden
@@ -257,7 +248,7 @@ function TodayStage({
           style={{
             left: 50,
             top: 157,
-            fontFamily: "'Barlow', sans-serif",
+            fontFamily: "var(--font-barlow), sans-serif",
             fontWeight: 900,
             fontSize: 150,
             lineHeight: 1,
@@ -272,7 +263,7 @@ function TodayStage({
           style={{
             left: 50,
             top: 309,
-            fontFamily: "'Barlow', sans-serif",
+            fontFamily: "var(--font-barlow), sans-serif",
             fontWeight: 900,
             fontSize: 44,
             lineHeight: 1,
@@ -303,7 +294,7 @@ function TodayStage({
             left: 49,
             top: 470,
             width: 371,
-            fontFamily: "'Barlow', sans-serif",
+            fontFamily: "var(--font-barlow), sans-serif",
             fontWeight: 700,
             fontSize: 16,
             lineHeight: 1.13,
@@ -324,14 +315,14 @@ function TodayStage({
         {/* 標題區 */}
         <div className="text-[#2a2a28]">
           <p
-            className="text-[17vw] leading-none font-black tracking-[-0.01em] text-[#F2F2F2]"
-            style={{ fontFamily: "'Barlow', sans-serif", textShadow: "0 2px 18px rgba(0,0,0,0.25)" }}
+            className="text-[17vw] leading-none tracking-[-0.01em] text-[rgba(222,222,222,0.92)]"
+            style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 900 }}
           >
             TODAY
           </p>
           <p
-            className="mt-3 text-sm font-bold tracking-[0.09em] text-[#F2F2F2]"
-            style={{ fontFamily: "'Barlow', sans-serif", textShadow: "0 1px 8px rgba(0,0,0,0.3)" }}
+            className="mt-3 text-sm tracking-[0.09em] text-[rgba(222,222,222,0.92)]"
+            style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 900 }}
           >
             SOMETHING MORE...
           </p>
@@ -341,6 +332,18 @@ function TodayStage({
           >
             今天我想來點...
           </p>
+
+          <div
+            className="mt-5 max-w-[21rem] space-y-2.5 text-[11px] leading-[1.4] tracking-[0.04em] text-[#363634]"
+            style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 700 }}
+          >
+            <p>
+              At TEMO, we believe that design is not merely about appearance—it is a form of healing and a solution.
+            </p>
+            <p>
+              With a people-centered philosophy at our core, we see designers not simply as makers who craft a brand&apos;s exterior, but as &ldquo;brand doctors&rdquo; who diagnose through insight and prescribe through creativity.
+            </p>
+          </div>
         </div>
 
         {/* 4 個服務選項 — 斜切平行四邊形帶，呼應桌機版斜線構圖 */}
@@ -357,11 +360,6 @@ function TodayStage({
               {/* 帶狀水泥背景 + 依序加深，做出遠近層次 */}
               <span
                 aria-hidden
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: "url('/cement-light.png')" }}
-              />
-              <span
-                aria-hidden
                 className="absolute inset-0"
                 style={{ background: `rgba(20,18,16,${0.05 + i * 0.04})` }}
               />
@@ -376,7 +374,7 @@ function TodayStage({
               </span>
               <span
                 className="relative text-lg font-black tracking-[0.12em] text-[#F2F2F2]"
-                style={{ fontFamily: "'Barlow', sans-serif" }}
+                style={{ fontFamily: "var(--font-barlow), sans-serif" }}
               >
                 {s.num}
               </span>
@@ -391,15 +389,36 @@ function TodayStage({
         aria-label="TEMO DESIGN — 回首頁"
         className="absolute top-5 left-6 z-40 flex items-center h-12 hover:opacity-80 transition-opacity"
       >
-        <img
-          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-17-gxNRwXn7tMwIRkd2cGdAdl3qzorZib.png"
+        <Image
+          src="/temo-logo-mark.png"
           alt="TEMO DESIGN"
-          className="h-full w-auto object-contain"
+          width={58}
+          height={136}
+          priority
+          className="h-[34px] w-auto object-contain"
         />
       </Link>
 
       {/* Hover 行為的 CSS（用 :hover 偽類，inline style 做不到）*/}
       <style>{`
+        .today-cement-surface {
+          background-image: image-set(
+            url('/cement-light-mobile.avif') type('image/avif'),
+            url('/cement-light-mobile.webp') type('image/webp'),
+            url('/cement-light.png') type('image/png')
+          );
+          background-position: center;
+          background-size: cover;
+        }
+        @media (min-width: 768px) {
+          .today-cement-surface {
+            background-image: image-set(
+              url('/cement-light-desktop.avif') type('image/avif'),
+              url('/cement-light-desktop.webp') type('image/webp'),
+              url('/cement-light.png') type('image/png')
+            );
+          }
+        }
         .tg-char-pair {
           position: absolute;
           inset: 0;
@@ -407,7 +426,7 @@ function TodayStage({
           padding: 0;
           margin: 0;
           border: 0;
-          background: transparent;
+          background-color: transparent;
           cursor: pointer;
           pointer-events: auto;
           clip-path: var(--tg-clip);
@@ -417,6 +436,13 @@ function TodayStage({
             clip-path 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .tg-char-pair:hover {
+          background-image: image-set(
+            url('/cement-light-desktop.avif') type('image/avif'),
+            url('/cement-light-desktop.webp') type('image/webp'),
+            url('/cement-light.png') type('image/png')
+          );
+          background-position: center;
+          background-size: cover;
           transform: translateY(-10px);
           filter: brightness(1.13) drop-shadow(0 14px 22px rgba(0, 0, 0, 0.4));
           clip-path: var(--tg-clip-hover);
@@ -433,7 +459,7 @@ function TodayStage({
         }
         .tg-num {
           position: absolute;
-          font-family: 'Barlow', sans-serif;
+          font-family: var(--font-barlow), sans-serif;
           font-weight: 900;
           font-size: 60px;
           line-height: 1;
