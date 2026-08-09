@@ -334,7 +334,7 @@ function TodayStage({
           </p>
 
           <div
-            className="mt-5 max-w-[21rem] space-y-2.5 text-[11px] leading-[1.4] tracking-[0.04em] text-[#363634]"
+            className="mt-5 max-w-[21rem] space-y-2.5 text-[11px] leading-[1.4] tracking-[0.04em] text-[rgba(222,222,222,0.92)]"
             style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 700 }}
           >
             <p>
