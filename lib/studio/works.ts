@@ -74,9 +74,7 @@ export async function getWorkOptions() {
   const supabase = await createClient()
   const [categories, clients, members, industries] = await Promise.all([
     supabase.from("category_groups").select("value,label").order("sort"),
-    // select("*") 讓後台在聯絡欄位 migration 尚未套用時仍能載入既有客戶清單；
-    // migration 完成後會自動帶回 address / phone / website。
-    supabase.from("clients").select("*").order("name"),
+    supabase.from("clients").select("id,name").order("name"),
     supabase.from("designers").select("id,name,name_zh,category").order("sort"),
     supabase.from("industries").select("value,label").order("sort"),
   ])

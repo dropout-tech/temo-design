@@ -1,8 +1,9 @@
 "use client"
 
 import { useRef, useState, useTransition } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Loader2, Upload, Trash2, ArrowLeft, X, GripVertical, Minus, Move, Plus, RotateCcw } from "lucide-react"
+import { Loader2, Upload, Trash2, ArrowLeft, ExternalLink, X, GripVertical, Minus, Move, Plus, RotateCcw } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { downscaleImage } from "@/lib/downscale-image"
 import { isVideoUrl } from "@/lib/video"
@@ -29,9 +30,6 @@ type Options = {
   clients: {
     id: string
     name: string
-    address?: string | null
-    phone?: string | null
-    website?: string | null
   }[]
   designers: { id: string; name: string; name_zh: string | null }[]
   industries: { value: string; label: string }[]
@@ -485,15 +483,6 @@ export function WorkForm({
 }) {
   const router = useRouter()
   const [f, setF] = useState<WorkFormInitial>(initial ?? EMPTY)
-  const initialClient = options.clients.find((client) => client.id === initial?.client_id)
-  const [clientName, setClientName] = useState(initialClient?.name ?? "")
-  const [clientNameDirty, setClientNameDirty] = useState(false)
-  const [clientContact, setClientContact] = useState({
-    address: initialClient?.address ?? "",
-    phone: initialClient?.phone ?? "",
-    website: initialClient?.website ?? "",
-  })
-  const [clientContactDirty, setClientContactDirty] = useState(false)
   const [heroUrl, setHeroUrl] = useState(initial?.hero_url ?? "")
   const [clientLogos, setClientLogos] = useState<string[]>(initial?.client_logo_urls ?? [])
   const [clientLogoDraft, setClientLogoDraft] = useState("")
@@ -505,19 +494,6 @@ export function WorkForm({
 
   const set = <K extends keyof WorkFormInitial>(k: K, v: WorkFormInitial[K]) =>
     setF((prev) => ({ ...prev, [k]: v }))
-
-  function selectClient(id: string) {
-    set("client_id", id)
-    const client = options.clients.find((item) => item.id === id)
-    setClientName(client?.name ?? "")
-    setClientNameDirty(false)
-    setClientContact({
-      address: client?.address ?? "",
-      phone: client?.phone ?? "",
-      website: client?.website ?? "",
-    })
-    setClientContactDirty(false)
-  }
 
   function toggle(list: string[], v: string) {
     return list.includes(v) ? list.filter((x) => x !== v) : [...list, v]
@@ -661,12 +637,6 @@ export function WorkForm({
     const input: WorkInput = {
       slug: f.slug, title: f.title, subtitle: f.subtitle,
       category_group: f.category_group, year: f.year, client_id: f.client_id,
-      client_name: clientName,
-      client_name_dirty: clientNameDirty,
-      client_address: clientContact.address,
-      client_phone: clientContact.phone,
-      client_website: clientContact.website,
-      client_contact_dirty: clientContactDirty,
       cover_url: f.cover_url, cover_zoom: f.cover_zoom, cover_position_x: f.cover_position_x,
       cover_position_y: f.cover_position_y, hero_url: heroUrl, client_logo_urls: clientLogos, video_url: f.video_url, size: f.size,
       description: f.description, services: toLines(f.services),
@@ -834,82 +804,37 @@ export function WorkForm({
                   </div>
                   <Field
                     label="選擇客戶"
-                    hint="從既有客戶資料選擇；選定後可在下方修改名稱與聯絡資料。"
+                    hint="這裡只建立作品與客戶的關聯；客戶名稱與聯絡資料請到獨立管理頁更新。"
                   >
-                    <select className={inputCls} value={f.client_id} onChange={(e) => selectClient(e.target.value)}>
+                    <select className={inputCls} value={f.client_id} onChange={(e) => set("client_id", e.target.value)}>
                       <option value="">（未選）</option>
                       {options.clients.map((c) => (
                         <option key={c.id} value={c.id} className="bg-[#201d1a]">{c.name}</option>
                       ))}
                     </select>
                   </Field>
-                  {f.client_id && (
-                    <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4 space-y-4">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-medium text-temo-white">客戶資料</p>
-                          {(clientNameDirty || clientContactDirty) && (
-                            <span className="rounded-full bg-temo-gold/10 px-2 py-0.5 text-[10px] text-temo-gold">
-                              尚未儲存
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-1 text-[11px] leading-relaxed text-temo-warm-gray/45">
-                          由你按「儲存作品」後才會更新；名稱與聯絡資料會套用到所有使用這位客戶的作品。
-                        </p>
-                      </div>
-                      <Field label="客戶名稱 *">
-                        <input
-                          className={inputCls}
-                          value={clientName}
-                          onChange={(e) => {
-                            setClientName(e.target.value)
-                            setClientNameDirty(true)
-                          }}
-                          maxLength={100}
-                          autoComplete="organization"
-                          placeholder="輸入客戶或品牌名稱"
-                        />
-                      </Field>
-                      <Field label="地址">
-                        <input
-                          className={inputCls}
-                          value={clientContact.address}
-                          onChange={(e) => {
-                            setClientContact((prev) => ({ ...prev, address: e.target.value }))
-                            setClientContactDirty(true)
-                          }}
-                          placeholder="例如：台北市信義區…"
-                        />
-                      </Field>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Field label="電話">
-                          <input
-                            className={inputCls}
-                            type="tel"
-                            value={clientContact.phone}
-                            onChange={(e) => {
-                              setClientContact((prev) => ({ ...prev, phone: e.target.value }))
-                              setClientContactDirty(true)
-                            }}
-                            placeholder="02-1234-5678"
-                          />
-                        </Field>
-                        <Field label="官方網站">
-                          <input
-                            className={inputCls}
-                            inputMode="url"
-                            value={clientContact.website}
-                            onChange={(e) => {
-                              setClientContact((prev) => ({ ...prev, website: e.target.value }))
-                              setClientContactDirty(true)
-                            }}
-                            placeholder="https://example.com"
-                          />
-                        </Field>
-                      </div>
-                    </div>
-                  )}
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={f.client_id ? `/studio/clients?client=${f.client_id}` : "/studio/clients"}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex min-h-11 items-center gap-2 rounded-sm border border-white/10 px-4 py-2.5 text-xs text-temo-warm-gray/70 transition-colors hover:border-temo-gold/40 hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/50"
+                    >
+                      {f.client_id ? "編輯所選客戶" : "管理客戶資料"}
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => router.refresh()}
+                      className="inline-flex min-h-11 items-center gap-2 rounded-sm px-4 py-2.5 text-xs text-temo-warm-gray/55 transition-colors hover:bg-white/[0.04] hover:text-temo-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/50"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      更新客戶清單
+                    </button>
+                  </div>
+                  <p className="-mt-3 text-[11px] leading-relaxed text-temo-warm-gray/40">
+                    客戶資料會在新分頁開啟；回來後可更新清單，不會清除目前填寫的作品內容。
+                  </p>
                   <Field label="行業分類（可複選）">
                     <ChipGroup
                       items={options.industries.map((i) => ({ value: i.value, label: i.label }))}

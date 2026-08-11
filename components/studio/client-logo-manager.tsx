@@ -1,8 +1,9 @@
 "use client"
 
 import { useRef, useState, useTransition } from "react"
+import Link from "next/link"
 import Image from "next/image"
-import { Loader2, Plus, Trash2, Check, Upload, ImageIcon, GripVertical } from "lucide-react"
+import { ArrowLeft, Loader2, Plus, Trash2, Check, Upload, ImageIcon, GripVertical } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { downscaleImage } from "@/lib/downscale-image"
 import { saveClientLogo, deleteClientLogo, reorderClientLogos } from "@/app/studio/(app)/clients/actions"
@@ -55,12 +56,18 @@ export function ClientLogoManager({ initial }: { initial: Row[] }) {
 
   return (
     <div className="px-6 md:px-10 py-10 md:py-14 max-w-5xl">
-      <div className="flex items-end justify-between mb-8 gap-4">
+      <Link
+        href="/studio/clients"
+        className="mb-5 inline-flex min-h-11 items-center gap-2 text-sm text-temo-warm-gray/60 transition-colors hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/50"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        返回客戶資料
+      </Link>
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between mb-8">
         <div>
-          <p className="text-[10px] tracking-[0.5em] text-temo-gold uppercase mb-2">Clients</p>
-          <h1 className="text-3xl md:text-4xl font-bold text-temo-white">客戶 Logo</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-temo-white">客戶 Logo 牆</h1>
           <p className="text-temo-warm-gray/60 text-sm mt-1">
-            共 {rows.length} 個 · 顯示在「關於我們」的客戶牆，拖曳 <span className="text-temo-warm-gray/80">⠿ 把手</span> 排序
+            這裡只控制「關於我們」頁面的 Logo 牆，與作品使用的客戶資料分開。共 {rows.length} 個，可拖曳把手排序。
             {orderPending && (
               <span className="inline-flex items-center gap-1.5 text-[11px] text-temo-warm-gray/50 ml-2">
                 <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
@@ -76,7 +83,7 @@ export function ClientLogoManager({ initial }: { initial: Row[] }) {
         <button
           type="button"
           onClick={addRow}
-          className="inline-flex items-center gap-2 px-5 py-3 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.15em] uppercase rounded-sm hover:brightness-110 transition-all"
+          className="inline-flex min-h-11 items-center justify-center gap-2 px-5 py-3 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.12em] rounded-sm hover:brightness-110 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-temo-black"
         >
           <Plus className="w-4 h-4" /> 新增 Logo
         </button>

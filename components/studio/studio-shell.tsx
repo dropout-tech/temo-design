@@ -25,7 +25,18 @@ import type { LucideIcon } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
-type NavItem = { href: string; label: string; icon: LucideIcon; exact?: boolean }
+type NavItem = {
+  href: string
+  label: string
+  icon: LucideIcon
+  exact?: boolean
+  relatedPaths?: string[]
+}
+
+function navItemIsActive(pathname: string, item: NavItem) {
+  const primaryMatch = item.exact ? pathname === item.href : pathname.startsWith(item.href)
+  return primaryMatch || item.relatedPaths?.some((path) => pathname.startsWith(path)) === true
+}
 
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
@@ -36,6 +47,12 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "內容管理",
     items: [
       { href: "/studio/works", label: "作品", icon: FolderKanban },
+      {
+        href: "/studio/clients",
+        label: "客戶資料",
+        icon: Building2,
+        relatedPaths: ["/studio/client-logos"],
+      },
       { href: "/studio/categories", label: "作品分類", icon: Tags },
       { href: "/studio/landings", label: "服務落地頁", icon: Presentation },
       { href: "/studio/designers", label: "團隊成員", icon: Users },
@@ -53,7 +70,6 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "網站結構",
     items: [
       { href: "/studio/navigation", label: "選單 / 頁尾", icon: Menu },
-      { href: "/studio/clients", label: "客戶 Logo", icon: Building2 },
       { href: "/studio/awards", label: "得獎紀錄", icon: Award },
       { href: "/studio/press", label: "媒體報導", icon: Newspaper },
       { href: "/studio/settings", label: "網站設定", icon: Settings },
@@ -75,9 +91,7 @@ export function StudioShell({
   const [mobileOpen, setMobileOpen] = useState(false)
   const activeLabel = useMemo(() => {
     for (const group of NAV_GROUPS) {
-      const match = group.items.find((item) =>
-        item.exact ? pathname === item.href : pathname.startsWith(item.href)
-      )
+      const match = group.items.find((item) => navItemIsActive(pathname, item))
       if (match) return match.label
     }
     return "後台"
@@ -103,7 +117,7 @@ export function StudioShell({
             {group.label}
           </p>
           {group.items.map((item) => {
-            const active = item.exact ? pathname === item.href : pathname.startsWith(item.href)
+            const active = navItemIsActive(pathname, item)
             return (
               <Link
                 key={item.href}

@@ -60,7 +60,7 @@ export default async function StudioDashboard() {
   const stats = [
     { label: "作品", value: works.length, helper: `${draftWorks.length} 件草稿`, icon: FolderKanban, href: "/studio/works" },
     { label: "團隊成員", value: data.designers, helper: "關於頁團隊", icon: Users, href: "/studio/designers" },
-    { label: "客戶 Logo", value: data.clients, helper: "關於頁牆面", icon: Building2, href: "/studio/clients" },
+    { label: "客戶資料", value: data.clients, helper: "作品關聯主檔", icon: Building2, href: "/studio/clients" },
     { label: "FAQ", value: data.faqs, helper: "常見問答", icon: HelpCircle, href: "/studio/faqs" },
   ]
   const quickActions = [
