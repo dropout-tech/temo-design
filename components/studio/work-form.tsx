@@ -486,6 +486,8 @@ export function WorkForm({
   const router = useRouter()
   const [f, setF] = useState<WorkFormInitial>(initial ?? EMPTY)
   const initialClient = options.clients.find((client) => client.id === initial?.client_id)
+  const [clientName, setClientName] = useState(initialClient?.name ?? "")
+  const [clientNameDirty, setClientNameDirty] = useState(false)
   const [clientContact, setClientContact] = useState({
     address: initialClient?.address ?? "",
     phone: initialClient?.phone ?? "",
@@ -507,6 +509,8 @@ export function WorkForm({
   function selectClient(id: string) {
     set("client_id", id)
     const client = options.clients.find((item) => item.id === id)
+    setClientName(client?.name ?? "")
+    setClientNameDirty(false)
     setClientContact({
       address: client?.address ?? "",
       phone: client?.phone ?? "",
@@ -657,6 +661,8 @@ export function WorkForm({
     const input: WorkInput = {
       slug: f.slug, title: f.title, subtitle: f.subtitle,
       category_group: f.category_group, year: f.year, client_id: f.client_id,
+      client_name: clientName,
+      client_name_dirty: clientNameDirty,
       client_address: clientContact.address,
       client_phone: clientContact.phone,
       client_website: clientContact.website,
@@ -826,7 +832,10 @@ export function WorkForm({
                       </select>
                     </Field>
                   </div>
-                  <Field label="客戶">
+                  <Field
+                    label="選擇客戶"
+                    hint="從既有客戶資料選擇；選定後可在下方修改名稱與聯絡資料。"
+                  >
                     <select className={inputCls} value={f.client_id} onChange={(e) => selectClient(e.target.value)}>
                       <option value="">（未選）</option>
                       {options.clients.map((c) => (
@@ -837,11 +846,31 @@ export function WorkForm({
                   {f.client_id && (
                     <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4 space-y-4">
                       <div>
-                        <p className="text-sm font-medium text-temo-white">客戶聯絡資料</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-medium text-temo-white">客戶資料</p>
+                          {(clientNameDirty || clientContactDirty) && (
+                            <span className="rounded-full bg-temo-gold/10 px-2 py-0.5 text-[10px] text-temo-gold">
+                              尚未儲存
+                            </span>
+                          )}
+                        </div>
                         <p className="mt-1 text-[11px] leading-relaxed text-temo-warm-gray/45">
-                          這些資料屬於客戶本身，其他使用同一客戶的作品也會共用；留空時前台不顯示。
+                          由你按「儲存作品」後才會更新；名稱與聯絡資料會套用到所有使用這位客戶的作品。
                         </p>
                       </div>
+                      <Field label="客戶名稱 *">
+                        <input
+                          className={inputCls}
+                          value={clientName}
+                          onChange={(e) => {
+                            setClientName(e.target.value)
+                            setClientNameDirty(true)
+                          }}
+                          maxLength={100}
+                          autoComplete="organization"
+                          placeholder="輸入客戶或品牌名稱"
+                        />
+                      </Field>
                       <Field label="地址">
                         <input
                           className={inputCls}

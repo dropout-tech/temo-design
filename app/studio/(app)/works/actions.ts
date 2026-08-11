@@ -14,6 +14,8 @@ export type WorkInput = {
   category_group: string
   year: string
   client_id: string
+  client_name: string
+  client_name_dirty: boolean
   client_address: string
   client_phone: string
   client_website: string
@@ -135,6 +137,12 @@ export async function saveWork(
   if (!input.title.trim() || !normalizedSlug) {
     return { error: "標題與網址 slug 為必填" }
   }
+  if (input.client_id && input.client_name_dirty && !input.client_name.trim()) {
+    return { error: "客戶名稱不能留空；若這件作品不需要客戶，請在選單改為「未選」" }
+  }
+  if (input.client_name.trim().length > 100) {
+    return { error: "客戶名稱請控制在 100 個字內" }
+  }
   const customIndustryNames = normalizeCustomNames(input.customIndustryNames)
   if (customIndustryNames.length > CUSTOM_NAME_LIMIT) {
     return { error: `每件作品最多可新增 ${CUSTOM_NAME_LIMIT} 個其他行業` }
@@ -224,17 +232,30 @@ export async function saveWork(
     if (error) return { error: error.message }
   }
 
-  // 客戶聯絡資料屬於客戶本身，因此同一客戶的其他作品會共用這些欄位。
-  if (input.client_id && input.client_contact_dirty) {
+  // 客戶資料屬於客戶本身，因此同一客戶的其他作品會共用這些欄位。
+  // 只有使用者實際修改並按下「儲存作品」時才更新，不因選擇客戶而自動寫入。
+  if (input.client_id && (input.client_name_dirty || input.client_contact_dirty)) {
+    const clientUpdate: {
+      name?: string
+      address?: string | null
+      phone?: string | null
+      website?: string | null
+    } = {}
+
+    if (input.client_name_dirty) {
+      clientUpdate.name = input.client_name.trim()
+    }
+    if (input.client_contact_dirty) {
+      clientUpdate.address = input.client_address.trim() || null
+      clientUpdate.phone = input.client_phone.trim() || null
+      clientUpdate.website = input.client_website.trim() || null
+    }
+
     const { error } = await supabase
       .from("clients")
-      .update({
-        address: input.client_address.trim() || null,
-        phone: input.client_phone.trim() || null,
-        website: input.client_website.trim() || null,
-      })
+      .update(clientUpdate)
       .eq("id", input.client_id)
-    if (error) return { error: `客戶聯絡資料儲存失敗：${error.message}` }
+    if (error) return { error: `客戶資料儲存失敗：${error.message}` }
   }
 
   // 後台與前台一起刷新（前台立即反映，不必等 ISR 60 秒）
