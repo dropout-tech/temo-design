@@ -80,7 +80,7 @@ export function HeroSection() {
 
           {/* Right — description (sits close to title, left-aligned) */}
           <div
-            className="w-full md:max-w-[440px] lg:max-w-[480px] space-y-4 flex-shrink"
+            className="relative -top-8 w-full space-y-4 flex-shrink md:top-0 md:max-w-[440px] lg:max-w-[480px]"
             style={{
               transition: "opacity 1s ease 0.3s",
               opacity: visible ? 1 : 0,
@@ -100,7 +100,7 @@ export function HeroSection() {
 
         {/* ── FULL-WIDTH DIVIDER ───────────────────────────────────────── */}
         <div
-          className="h-px bg-white/20 -mx-6 sm:-mx-8 md:-mx-24 lg:-mx-32 xl:-mx-40"
+          className="relative -top-8 h-px bg-white/20 -mx-6 sm:-mx-8 md:top-0 md:-mx-24 lg:-mx-32 xl:-mx-40"
           style={{
             transition: "opacity 1s ease 0.5s",
             opacity: visible ? 1 : 0,
@@ -108,7 +108,7 @@ export function HeroSection() {
         />
 
         {/* ── BOTTOM BLOCK: tagline left, circle CTA right ────────────── */}
-        <div className="relative flex flex-col md:flex-row md:items-center gap-8 md:gap-12 flex-1 pb-8 md:pb-10">
+        <div className="relative -top-8 flex flex-col gap-8 flex-1 pb-8 md:top-0 md:flex-row md:items-center md:gap-12 md:pb-10">
           {/* Left — tagline + social */}
           <div
             className="flex-1 flex flex-col justify-between min-h-[160px]"
