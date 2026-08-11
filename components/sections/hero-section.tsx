@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { ChevronRight, Instagram, Facebook } from "lucide-react"
 
 const socialLinks = [
@@ -67,9 +68,12 @@ export function HeroSection() {
         >
           {/* Left — logo image (TEMO / DESIGN already split vertically) */}
           <div className="flex-shrink-0">
-            <img
+            <Image
               src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/%E6%87%B6-76grBtgC5j14MJ6i6SK7dP9HfdTgDw.png"
               alt="TEMO DESIGN"
+              width={880}
+              height={480}
+              priority
               className="w-full h-auto max-w-[440px] object-contain"
             />
           </div>

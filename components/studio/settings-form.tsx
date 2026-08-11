@@ -11,6 +11,30 @@ const inputCls =
   "w-full px-4 py-3 bg-white/[0.03] border border-white/10 text-temo-white text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:bg-white/[0.05] focus:outline-none transition-all rounded-sm"
 const labelCls = "block text-[11px] tracking-[0.2em] text-temo-warm-gray/70 uppercase mb-2"
 
+function SettingsField({
+  label,
+  value,
+  placeholder,
+  onChange,
+}: {
+  label: string
+  value: string
+  placeholder?: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div>
+      <label className={labelCls}>{label}</label>
+      <input
+        className={inputCls}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+      />
+    </div>
+  )
+}
+
 export function SettingsForm({ initial }: { initial: SettingsInput }) {
   const [f, setF] = useState<SettingsInput>(initial)
   const [pending, startTransition] = useTransition()
@@ -52,13 +76,6 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
     })
   }
 
-  const Field = ({ label, k, placeholder }: { label: string; k: keyof SettingsInput; placeholder?: string }) => (
-    <div>
-      <label className={labelCls}>{label}</label>
-      <input className={inputCls} value={f[k]} onChange={(e) => set(k, e.target.value)} placeholder={placeholder} />
-    </div>
-  )
-
   return (
     <form onSubmit={submit} className="px-6 md:px-10 py-10 md:py-14 max-w-2xl space-y-8">
       <div>
@@ -68,16 +85,16 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
       </div>
 
       <div className="space-y-5">
-        <Field label="品牌名稱" k="name" />
+        <SettingsField label="品牌名稱" value={f.name} onChange={(value) => set("name", value)} />
         <div>
           <label className={labelCls}>品牌簡述</label>
           <textarea className={inputCls + " min-h-20 resize-y"} value={f.description} onChange={(e) => set("description", e.target.value)} />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <Field label="Email" k="email" placeholder="info@temo.design" />
-          <Field label="電話" k="phone" placeholder="0913-322-070" />
+          <SettingsField label="Email" value={f.email} onChange={(value) => set("email", value)} placeholder="info@temo.design" />
+          <SettingsField label="電話" value={f.phone} onChange={(value) => set("phone", value)} placeholder="0913-322-070" />
         </div>
-        <Field label="地址" k="address" />
+        <SettingsField label="地址" value={f.address} onChange={(value) => set("address", value)} />
       </div>
 
       {/* 營業時間 */}
@@ -100,7 +117,7 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
       {/* LINE 官方帳號 */}
       <div className="space-y-5 pt-4 border-t border-white/[0.06]">
         <p className="text-[10px] tracking-[0.4em] text-temo-gold uppercase">LINE 官方帳號</p>
-        <Field label="LINE 連結" k="line_url" placeholder="https://lin.ee/xxxxxx" />
+        <SettingsField label="LINE 連結" value={f.line_url} onChange={(value) => set("line_url", value)} placeholder="https://lin.ee/xxxxxx" />
         <div>
           <label className={labelCls}>LINE QR 圖片</label>
           <div className="flex items-center gap-4">

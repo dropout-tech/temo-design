@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { ArrowLeft, ArrowRight, Check, Send, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
+import type { BriefSectionDbRow } from "@/lib/brief-supabase-types"
 import {
   type BriefQuestion,
   type BriefQuestionType,
@@ -237,7 +238,7 @@ export function QuoteBriefForm() {
       .order("sort")
       .then(({ data }) => {
         if (!data || data.length === 0) return
-        const mapped: BriefSection[] = (data as any[]).map((s) => ({
+        const mapped: BriefSection[] = (data as unknown as BriefSectionDbRow[]).map((s) => ({
           id: s.id,
           title: s.title,
           titleEn: s.title_en ?? "",
@@ -245,8 +246,8 @@ export function QuoteBriefForm() {
           appliesTo: s.applies_to ?? undefined,
           questions: (s.brief_questions ?? [])
             .slice()
-            .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
-            .map((q: any) => ({
+            .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+            .map((q) => ({
               id: q.qid,
               label: q.label,
               hint: q.hint ?? undefined,

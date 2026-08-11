@@ -1,6 +1,9 @@
 // FAQ / 見證 / 網站設定的讀取層（前台與後台顯示共用，走公開 anon，RLS 允許公開讀）。
 import "server-only"
 import { createPublicClient } from "@/lib/supabase/public"
+import type { CategoryLanding } from "@/lib/category-landing-data"
+import type { BriefSection } from "@/lib/quote-brief-questions"
+import type { BriefSectionDbRow } from "@/lib/brief-supabase-types"
 
 export type Faq = {
   id: string
@@ -45,6 +48,24 @@ export type SiteSettings = {
   business_hours: string | null
   line_url: string | null
   line_qr_url: string | null
+}
+
+type CategoryLandingDbRow = {
+  slug: string
+  num: CategoryLanding["num"]
+  title_en: string[] | null
+  tagline_zh: string | null
+  tagline_en: string | null
+  cta_label: string | null
+  cta_href: string | null
+  portfolio_group: CategoryLanding["portfolioGroup"] | null
+  hide_filters: boolean | null
+}
+
+type CategoryGroupDbRow = {
+  value: string
+  label: string
+  landing_slug: string | null
 }
 
 export async function getFaqs(): Promise<Faq[]> {
@@ -100,7 +121,6 @@ export async function getPressLinks(): Promise<PressLink[]> {
 }
 
 /** 服務分類落地頁（/services/[slug]）：組成前台元件既有的 CategoryLanding 形狀 */
-import type { CategoryLanding } from "@/lib/category-landing-data"
 
 export async function getCategoryLandings(): Promise<CategoryLanding[]> {
   const supa = createPublicClient()
@@ -109,7 +129,7 @@ export async function getCategoryLandings(): Promise<CategoryLanding[]> {
     .select("slug, num, title_en, tagline_zh, tagline_en, cta_label, cta_href, portfolio_group, hide_filters, sort")
     .order("sort")
   if (!data) return []
-  return (data as any[]).map((c) => ({
+  return (data as unknown as CategoryLandingDbRow[]).map((c) => ({
     slug: c.slug,
     num: c.num,
     titleEn: c.title_en ?? [],
@@ -127,7 +147,6 @@ export async function getCategoryLanding(slug: string): Promise<CategoryLanding 
 }
 
 /** 報價設計需求單（問卷）：組成前台元件既有的 BriefSection[] 形狀 */
-import type { BriefSection, BriefQuestionType } from "@/lib/quote-brief-questions"
 
 export async function getBriefSections(): Promise<BriefSection[]> {
   const supa = createPublicClient()
@@ -138,7 +157,7 @@ export async function getBriefSections(): Promise<BriefSection[]> {
     )
     .order("sort")
   if (!data) return []
-  return (data as any[]).map((s) => ({
+  return (data as unknown as BriefSectionDbRow[]).map((s) => ({
     id: s.id,
     title: s.title,
     titleEn: s.title_en ?? "",
@@ -146,12 +165,12 @@ export async function getBriefSections(): Promise<BriefSection[]> {
     appliesTo: s.applies_to ?? undefined,
     questions: (s.brief_questions ?? [])
       .slice()
-      .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
-      .map((q: any) => ({
+      .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+      .map((q) => ({
         id: q.qid,
         label: q.label,
         hint: q.hint ?? undefined,
-        type: q.type as BriefQuestionType,
+        type: q.type,
         required: q.required ?? undefined,
         options: q.options ?? undefined,
         placeholder: q.placeholder ?? undefined,
@@ -191,7 +210,7 @@ export async function getCategoryGroups(): Promise<Facet[]> {
     .select("value, label, landing_slug")
     .order("sort")
   if (!withLanding.error && withLanding.data) {
-    return (withLanding.data as any[]).map((r) => ({
+    return (withLanding.data as unknown as CategoryGroupDbRow[]).map((r) => ({
       value: r.value,
       label: r.label,
       landingSlug: r.landing_slug ?? null,

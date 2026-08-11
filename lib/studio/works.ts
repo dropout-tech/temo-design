@@ -27,6 +27,48 @@ export type WorkForEditWithBlocks = WorkFormInitial & {
   blocks?: WorkBlockRow[]
 }
 
+type WorkIndustryRelationRow = { industry_value: string }
+type WorkDesignerRelationRow = { designer_id: string }
+type WorkGalleryRow = {
+  src: string
+  alt: string | null
+  caption: string | null
+  sort: number | null
+}
+
+type WorkEditRow = {
+  slug: string | null
+  title: string | null
+  subtitle: string | null
+  category_group: string | null
+  year: string | null
+  client_id: string | null
+  cover_url: string | null
+  cover_zoom: number | null
+  cover_position_x: number | null
+  cover_position_y: number | null
+  hero_url: string | null
+  client_logo_url: string | null
+  video_url: string | null
+  size: WorkFormInitial["size"] | null
+  description: string | null
+  services: string[] | null
+  deliverables: string[] | null
+  challenge: string | null
+  approach: string | null
+  result: string | null
+  quote_text: string | null
+  quote_author: string | null
+  awards: string[] | null
+  press_mentions: string[] | null
+  published: boolean | null
+  custom_industry_names: string[] | null
+  guest_designer_names: string[] | null
+  work_industries: WorkIndustryRelationRow[] | null
+  work_designers: WorkDesignerRelationRow[] | null
+  work_gallery: WorkGalleryRow[] | null
+}
+
 /** 作品表單需要的下拉/多選選項 */
 export async function getWorkOptions() {
   const supabase = await createClient()
@@ -63,11 +105,11 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
     .eq("id", id)
     .single()
   if (!data) return null
-  const w = data as Record<string, any>
+  const w = data as unknown as WorkEditRow
   const coverCrop = normalizeCoverCrop({
-    zoom: w.cover_zoom,
-    positionX: w.cover_position_x,
-    positionY: w.cover_position_y,
+    zoom: w.cover_zoom ?? undefined,
+    positionX: w.cover_position_x ?? undefined,
+    positionY: w.cover_position_y ?? undefined,
   })
 
   // ── blocks：獨立查詢 work_blocks（migration 未套用/表不存在/查詢失敗 → 回空陣列，表單走既有 gallery 欄位）──
@@ -116,20 +158,20 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
     awards: (w.awards ?? []).join("\n"),
     press: (w.press_mentions ?? []).join("\n"),
     published: w.published ?? true,
-    industryValues: (w.work_industries ?? []).map((r: any) => r.industry_value),
+    industryValues: (w.work_industries ?? []).map((r) => r.industry_value),
     customIndustryNames: Array.isArray(w.custom_industry_names)
       ? w.custom_industry_names
           .map((name: unknown) => String(name).trim())
           .filter(Boolean)
       : [],
-    designerIds: (w.work_designers ?? []).map((r: any) => r.designer_id),
+    designerIds: (w.work_designers ?? []).map((r) => r.designer_id),
     guestDesignerNames: Array.isArray(w.guest_designer_names)
       ? w.guest_designer_names
           .map((name: unknown) => String(name).trim())
           .filter(Boolean)
       : [],
     gallery: (w.work_gallery ?? [])
-      .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
-      .map((g: any) => ({ src: g.src, alt: g.alt ?? undefined, caption: g.caption ?? undefined })),
+      .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+      .map((g) => ({ src: g.src, alt: g.alt ?? undefined, caption: g.caption ?? undefined })),
   }
 }

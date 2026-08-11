@@ -30,6 +30,113 @@ export type WorkDetailWithBlocks = DetailProject & {
   blocks?: WorkBlock[]
 }
 
+type SlugRow = { slug: string }
+
+type DesignerDbRow = {
+  slug: string | null
+  name: string
+  name_zh: string | null
+  role: string | null
+  photo_url: string | null
+  instagram?: string | null
+  bio?: string[] | null
+}
+
+type ClientDbRow = {
+  slug: string
+  name: string
+  brief?: string | null
+}
+
+type IndustryDbRow = { value: string; label: string }
+type WorkIndustryDbRow = {
+  industry_value?: Work["industries"][number]
+  industries?: IndustryDbRow | null
+}
+type WorkDesignerDbRow = { sort: number | null; designers: DesignerDbRow | null }
+type WorkGalleryDbRow = {
+  src: string
+  alt: string | null
+  caption: string | null
+  sort: number | null
+}
+
+type WorkListDbRow = {
+  slug: string
+  title: string
+  subtitle: string | null
+  year: string | null
+  cover_url: string | null
+  cover_zoom: number | null
+  cover_position_x: number | null
+  cover_position_y: number | null
+  video_url: string | null
+  size: Work["size"] | null
+  description: string | null
+  category_group: Work["categoryGroup"]
+  clients: Pick<ClientDbRow, "slug" | "name"> | null
+  work_industries: WorkIndustryDbRow[] | null
+  work_designers: WorkDesignerDbRow[] | null
+}
+
+type WorkDetailDbRow = {
+  id: string
+  slug: string
+  title: string
+  subtitle: string | null
+  year: string | null
+  cover_url: string | null
+  video_url: string | null
+  description: string | null
+  services: string[] | null
+  deliverables: string[] | null
+  challenge: string | null
+  approach: string | null
+  result: string | null
+  quote_text: string | null
+  quote_author: string | null
+  awards: string[] | null
+  category_group: string | null
+  category_groups: { value: string; label: string } | null
+  clients: ClientDbRow | null
+  work_industries: WorkIndustryDbRow[] | null
+  work_designers: WorkDesignerDbRow[] | null
+  work_gallery: WorkGalleryDbRow[] | null
+}
+
+type RelatedWorkDbRow = {
+  slug: string
+  title: string
+  subtitle: string | null
+  cover_url: string | null
+  year: string | null
+  category_group: string | null
+  category_groups: { label: string } | null
+}
+
+type ClientContactDbRow = {
+  address: string | null
+  phone: string | null
+  website: string | null
+}
+
+type WorkBlockDbRow = {
+  id: string
+  type: WorkBlock["type"]
+  src: string | null
+  alt: string | null
+  width: number | null
+  height: number | null
+  src2: string | null
+  alt2: string | null
+  width2: number | null
+  height2: number | null
+  text_content: string | null
+  video_url: string | null
+  caption: string | null
+  caption_mobile: string | null
+}
+
 // 注意：hero_url 刻意不放進這個主查詢——migration 0015 套用前 works 表沒有這個欄位，
 // 若混進同一個 select 會讓 PostgREST 連整筆查詢一起失敗。hero_url 改用獨立查詢（見下方），
 // 查不到就 fallback 到 cover_url，行為與 migration 套用前完全一致。
@@ -51,7 +158,7 @@ export async function getPublishedWorkSlugs(): Promise<string[]> {
     .select("slug")
     .eq("published", true)
     .order("sort")
-  return (data ?? []).map((r: any) => r.slug as string)
+  return ((data ?? []) as unknown as SlugRow[]).map((row) => row.slug)
 }
 
 // ── 團隊 / 設計師 ──────────────────────────────────────────────────────────
@@ -64,7 +171,7 @@ export async function getDesignerSlugs(): Promise<string[]> {
     .eq("has_page", true)
     .not("slug", "is", null)
     .order("sort")
-  return (data ?? []).map((r: any) => r.slug as string)
+  return ((data ?? []) as unknown as SlugRow[]).map((row) => row.slug)
 }
 
 /** 單一設計師，映射成前台 Designer 形狀（expertise 目前留空，前台會自動隱藏該區） */
@@ -76,9 +183,9 @@ export async function getDesignerBySlug(slug: string): Promise<Designer | null> 
     .eq("slug", slug)
     .maybeSingle()
   if (!data) return null
-  const d: any = data
+  const d = data as unknown as DesignerDbRow
   return {
-    slug: d.slug,
+    slug: d.slug ?? slug,
     name: d.name,
     nameZh: d.name_zh ?? undefined,
     role: d.role ?? "",
@@ -109,11 +216,11 @@ export async function getAllWorks(): Promise<Work[]> {
     .eq("published", true)
     .order("sort")
 
-  return (data ?? []).map((w: any, idx: number) => {
+  return ((data ?? []) as unknown as WorkListDbRow[]).map((w, idx) => {
     const coverCrop = normalizeCoverCrop({
-      zoom: w.cover_zoom,
-      positionX: w.cover_position_x,
-      positionY: w.cover_position_y,
+      zoom: w.cover_zoom ?? undefined,
+      positionX: w.cover_position_x ?? undefined,
+      positionY: w.cover_position_y ?? undefined,
     })
 
     return {
@@ -122,18 +229,20 @@ export async function getAllWorks(): Promise<Work[]> {
       title: w.title,
       subtitle: w.subtitle ?? "",
       categoryGroup: w.category_group,
-      industries: (w.work_industries ?? []).map((r: any) => r.industry_value),
+      industries: (w.work_industries ?? [])
+        .map((relation) => relation.industry_value)
+        .filter((value): value is Work["industries"][number] => Boolean(value)),
       year: w.year ?? "",
       clientSlug: w.clients?.slug ?? "",
       clientName: w.clients?.name ?? undefined,
       designerSlugs: (w.work_designers ?? [])
-        .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
-        .map((r: any) => r.designers?.slug)
-        .filter(Boolean),
+        .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+        .map((relation) => relation.designers?.slug)
+        .filter((value): value is string => Boolean(value)),
       designerNames: (w.work_designers ?? [])
-        .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
-        .filter((r: any) => r.designers?.slug)
-        .map((r: any) => r.designers?.name_zh || r.designers?.name || r.designers?.slug),
+        .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+        .filter((relation) => relation.designers?.slug)
+        .map((relation) => relation.designers?.name_zh || relation.designers?.name || relation.designers?.slug || ""),
       cover: w.cover_url ?? "/placeholder.jpg",
       coverZoom: coverCrop.zoom,
       coverPositionX: coverCrop.positionX,
@@ -142,7 +251,7 @@ export async function getAllWorks(): Promise<Work[]> {
       size: w.size ?? "medium",
       description: w.description ?? "",
     }
-  }) as Work[]
+  })
 }
 
 /** 給詳情頁：單一作品完整資料，映射成 DetailProject（+ hero / blocks） */
@@ -155,7 +264,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     .eq("published", true)
     .maybeSingle()
   if (error || !data) return null
-  const w: any = data
+  const w = data as unknown as WorkDetailDbRow
 
   // 相關作品：同執行項目優先，其次補其他
   const { data: relData } = await supa
@@ -164,14 +273,14 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     .eq("published", true)
     .neq("slug", slug)
     .order("sort")
-  const related = (relData ?? [])
+  const related = ((relData ?? []) as unknown as RelatedWorkDbRow[])
     .sort(
-      (a: any, b: any) =>
+      (a, b) =>
         (a.category_group === w.category_group ? 0 : 1) -
         (b.category_group === w.category_group ? 0 : 1)
     )
     .slice(0, 3)
-    .map((r: any) => ({
+    .map((r) => ({
       slug: r.slug,
       title: r.title,
       subtitle: r.subtitle ?? "",
@@ -181,9 +290,9 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     }))
 
   const linkedIndustries = (w.work_industries ?? [])
-    .map((r: any) => r.industries)
-    .filter(Boolean)
-    .map((i: any) => ({ value: i.value, label: i.label }))
+    .map((relation) => relation.industries)
+    .filter((industry): industry is IndustryDbRow => Boolean(industry))
+    .map((industry) => ({ value: industry.value, label: industry.label }))
 
   // 自訂行業只存顯示名稱；獨立查詢可讓 migration 尚未套用時仍正常讀取舊作品。
   let customIndustryNames: string[] = []
@@ -193,8 +302,9 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       .select("custom_industry_names")
       .eq("slug", slug)
       .maybeSingle()
-    if (!customIndustryErr && Array.isArray((customIndustryRow as any)?.custom_industry_names)) {
-      customIndustryNames = (customIndustryRow as any).custom_industry_names
+    const customNames = (customIndustryRow as unknown as { custom_industry_names?: unknown })?.custom_industry_names
+    if (!customIndustryErr && Array.isArray(customNames)) {
+      customIndustryNames = customNames
         .map((name: unknown) => String(name).trim())
         .filter(Boolean)
     }
@@ -218,7 +328,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
         .eq("slug", w.clients.slug)
         .maybeSingle()
       if (!clientError && clientRow) {
-        const contact = clientRow as any
+        const contact = clientRow as unknown as ClientContactDbRow
         clientContact = {
           address: contact.address ?? undefined,
           phone: contact.phone ?? undefined,
@@ -231,10 +341,10 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
   }
 
   const linkedDesigners = (w.work_designers ?? [])
-    .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
-    .map((r: any) => r.designers)
-    .filter(Boolean)
-    .map((d: any) => ({
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+    .map((relation) => relation.designers)
+    .filter((designer): designer is DesignerDbRow => Boolean(designer))
+    .map((d) => ({
       slug: d.slug ?? "",
       name: d.name,
       nameZh: d.name_zh ?? undefined,
@@ -250,8 +360,9 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       .select("guest_designer_names")
       .eq("slug", slug)
       .maybeSingle()
-    if (!guestErr && Array.isArray((guestRow as any)?.guest_designer_names)) {
-      guestDesignerNames = (guestRow as any).guest_designer_names
+    const guestNames = (guestRow as unknown as { guest_designer_names?: unknown })?.guest_designer_names
+    if (!guestErr && Array.isArray(guestNames)) {
+      guestDesignerNames = guestNames
         .map((name: unknown) => String(name).trim())
         .filter(Boolean)
     }
@@ -269,8 +380,8 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
   ]
 
   const gallery = (w.work_gallery ?? [])
-    .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
-    .map((g: any) => ({ src: g.src, alt: g.alt ?? undefined, caption: g.caption ?? undefined }))
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+    .map((g) => ({ src: g.src, alt: g.alt ?? undefined, caption: g.caption ?? undefined }))
 
   // ── hero_url：獨立查詢，欄位不存在（migration 未套用）時安靜 fallback 到 cover ──
   let heroUrl: string | null = null
@@ -280,7 +391,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       .select("hero_url")
       .eq("slug", slug)
       .maybeSingle()
-    if (!heroErr) heroUrl = (heroRow as any)?.hero_url ?? null
+    if (!heroErr) heroUrl = (heroRow as unknown as { hero_url?: string | null })?.hero_url ?? null
   } catch {
     heroUrl = null
   }
@@ -297,7 +408,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       .eq("slug", slug)
       .maybeSingle()
     if (!logoErr) {
-      const raw = (logoRow as any)?.client_logo_url
+      const raw = (logoRow as unknown as { client_logo_url?: unknown })?.client_logo_url
       if (typeof raw === "string") {
         clientLogos = raw
           .split("\n")
@@ -317,7 +428,10 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       .select("press_mentions")
       .eq("slug", slug)
       .maybeSingle()
-    if (!pressErr) pressMentions = ((pressRow as any)?.press_mentions ?? []) as string[]
+    const mentions = (pressRow as unknown as { press_mentions?: unknown })?.press_mentions
+    if (!pressErr && Array.isArray(mentions)) {
+      pressMentions = mentions.map((mention) => String(mention))
+    }
   } catch {
     pressMentions = []
   }
@@ -331,7 +445,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       .eq("work_id", w.id)
       .order("sort")
     if (!blockErr && Array.isArray(blockRows)) {
-      blocks = blockRows.map((b: any) => ({
+      blocks = (blockRows as unknown as WorkBlockDbRow[]).map((b) => ({
         id: b.id,
         type: b.type,
         src: b.src ?? null,
@@ -352,7 +466,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     blocks = []
   }
   if (blocks.length === 0 && gallery.length > 0) {
-    blocks = gallery.map((g: any, idx: number) => ({
+    blocks = gallery.map((g, idx) => ({
       id: `gallery-${idx}`,
       type: "image" as const,
       src: g.src,
@@ -376,7 +490,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     subtitle: w.subtitle ?? "",
     categoryLabel: w.category_groups?.label ?? "",
     categoryGroup: w.category_group ?? undefined,
-    industryLabels: industries.map((i: any) => i.label),
+    industryLabels: industries.map((industry) => industry.label),
     industries,
     year: w.year ?? "",
     clientName: w.clients?.name ?? undefined,

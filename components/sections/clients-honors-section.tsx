@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import { useCallback } from "react"
 import { ArrowUpRight, Newspaper } from "lucide-react"
 import { useInView } from "@/hooks/use-in-view"
 import { optimizeLogoUrl } from "@/lib/image-url"
@@ -179,10 +180,13 @@ export function ClientsHonorsSection({
   const { ref, isInView } = useInView<HTMLElement>({ once: true, amount: 0.1 })
   // 捲離畫面時暫停跑馬燈動畫，省 GPU（動畫預設會一直跑，就算看不到也在燒效能）
   const { ref: playRef, isInView: playing } = useInView<HTMLElement>({ once: false, amount: 0, rootMargin: "300px" })
-  const setSectionRef = (el: HTMLElement | null) => {
-    ;(ref as { current: HTMLElement | null }).current = el
-    ;(playRef as { current: HTMLElement | null }).current = el
-  }
+  const setSectionRef = useCallback(
+    (element: HTMLElement | null) => {
+      ref(element)
+      playRef(element)
+    },
+    [playRef, ref]
+  )
   const hasLogos = clientLogos.length > 0
   // logo 數量夠多才分兩排；否則單排避免重複太密
   const half = Math.ceil(clientLogos.length / 2)

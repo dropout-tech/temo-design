@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useInView } from "@/hooks/use-in-view"
+import { useMediaQuery } from "@/hooks/use-media-query"
 import Link from "next/link"
 
 type ChartType = "bars" | "scatter" | "ring" | "radar"
@@ -206,14 +207,7 @@ export function StatsSection() {
   const { ref, isInView } = useInView<HTMLElement>({ once: true, amount: 0.25 })
   const [hovered, setHovered] = useState<number | null>(null)
   // 觸控裝置沒有 hover，改為全部顯示（金色數字 + 說明文字）
-  const [noHover, setNoHover] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia("(hover: none)")
-    setNoHover(mq.matches)
-    const onChange = (e: MediaQueryListEvent) => setNoHover(e.matches)
-    mq.addEventListener("change", onChange)
-    return () => mq.removeEventListener("change", onChange)
-  }, [])
+  const noHover = useMediaQuery("(hover: none)")
   const progress = useProgress(isInView, 1600)
 
   return (

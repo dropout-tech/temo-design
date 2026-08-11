@@ -481,7 +481,6 @@ function CardFanStage({
   serviceIdx: number
   onBack: () => void
 }) {
-  const service = SERVICES[serviceIdx]
   const [mounted, setMounted] = useState(false)
   const [activeCard, setActiveCard] = useState<number | null>(null)
   const [switchingService, setSwitchingService] = useState(false)
@@ -489,9 +488,15 @@ function CardFanStage({
   const current = SERVICES[currentIdx]
 
   useEffect(() => {
-    setMounted(false)
-    const t = setTimeout(() => setMounted(true), 80)
-    return () => clearTimeout(t)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const frame = requestAnimationFrame(() => {
+      setMounted(false)
+      timer = setTimeout(() => setMounted(true), 80)
+    })
+    return () => {
+      cancelAnimationFrame(frame)
+      if (timer) clearTimeout(timer)
+    }
   }, [currentIdx])
 
   function goToService(idx: number) {
@@ -725,7 +730,7 @@ function CardFanStage({
 
 export function ExploreClient() {
   const [stage, setStage] = useState<"today" | "cards">("today")
-  const [selectedService, setSelectedService] = useState(0)
+  const [selectedService] = useState(0)
   const [transitioning, setTransitioning] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()

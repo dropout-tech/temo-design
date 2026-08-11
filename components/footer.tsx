@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useEffect, useState } from "react"
 import { Mail, Phone, MapPin } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
@@ -92,9 +93,11 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           {/* Brand Column */}
           <div className="flex flex-col gap-6">
-            <img
+            <Image
               src="/temo-logo-wordmark.png"
               alt="TEMO DESIGN"
+              width={240}
+              height={56}
               className="h-14 w-auto self-start"
             />
             <p className="text-temo-warm-gray text-sm leading-relaxed max-w-xs">

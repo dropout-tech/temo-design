@@ -13,7 +13,7 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    const mountFrame = requestAnimationFrame(() => setMounted(true))
 
     const startTime = Date.now()
     const MIN_DISPLAY_MS = 2000 // at least show reveal + first full shimmer
@@ -50,6 +50,7 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
     }, 30)
 
     return () => {
+      cancelAnimationFrame(mountFrame)
       clearInterval(timer)
       window.removeEventListener("load", handleLoad)
     }

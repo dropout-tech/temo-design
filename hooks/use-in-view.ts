@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 
 interface UseInViewOptions {
   once?: boolean
@@ -12,11 +12,10 @@ export function useInView<T extends Element = HTMLDivElement>(
   options: UseInViewOptions = {}
 ) {
   const { once = true, amount = 0.15, rootMargin = "0px" } = options
-  const ref = useRef<T>(null)
+  const [element, ref] = useState<T | null>(null)
   const [isInView, setIsInView] = useState(false)
 
   useEffect(() => {
-    const element = ref.current
     if (!element) return
 
     const observer = new IntersectionObserver(
@@ -33,7 +32,7 @@ export function useInView<T extends Element = HTMLDivElement>(
 
     observer.observe(element)
     return () => observer.unobserve(element)
-  }, [once, amount, rootMargin])
+  }, [element, once, amount, rootMargin])
 
   return { ref, isInView }
 }

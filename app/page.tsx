@@ -20,7 +20,8 @@ export default function HomePage() {
     // Check if user has already seen the loading screen
     const hasSeenLoading = sessionStorage.getItem("temo-loading-seen")
     if (hasSeenLoading) {
-      setShowLoading(false)
+      const frame = requestAnimationFrame(() => setShowLoading(false))
+      return () => cancelAnimationFrame(frame)
     }
   }, [])
 

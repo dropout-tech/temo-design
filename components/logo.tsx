@@ -1,6 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import Image from "next/image"
 
 interface LogoProps {
   variant?: "horizontal" | "vertical" | "icon"
@@ -102,9 +103,11 @@ export function LogoImage({
   const logoSrc = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-18-GwVEoFGOieDzs3vzcMFigK5HoGrmX3.png"
   
   return (
-    <img 
+    <Image
       src={logoSrc}
       alt="TEMO DESIGN"
+      width={200}
+      height={40}
       className={cn(
         "h-10 w-auto object-contain",
         color === "dark" && "invert",

@@ -9,6 +9,8 @@ import { StatsSection } from "@/components/sections/stats-section"
 import { ClientsHonorsSection, type ClientLogoItem, type PressLinkItem } from "@/components/sections/clients-honors-section"
 import { ArrowUpRight, ChevronDown, Instagram, Facebook, Globe, Phone, Mail, MapPin, X } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 type Person = {
   name: string
@@ -323,9 +325,12 @@ function DesignerCard({ person, onClick }: { person: Person; onClick?: () => voi
           transition: "box-shadow 0.4s ease",
         }}
       >
-        <img
+        <Image
           src={person.image}
           alt={person.name}
+          fill
+          sizes="(max-width: 768px) 100vw, 340px"
+          unoptimized
           className="w-full h-full object-cover transition-all duration-500 filter grayscale group-hover:grayscale-0 pointer-coarse:grayscale-0"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
@@ -395,9 +400,12 @@ function DesignerDetailPanel({
             <div className="grid md:grid-cols-[auto_1fr] gap-10 md:gap-16 p-8 md:p-16 lg:p-20 min-h-full">
               {/* Portrait */}
               <div className="relative w-full max-w-[340px] md:w-[340px] aspect-[3/4] md:h-[560px] md:aspect-auto rounded-[110px] md:rounded-[180px] overflow-hidden bg-white/5 mx-auto md:mx-0">
-                <img
+                <Image
                   src={person.image}
                   alt={person.name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 340px"
+                  unoptimized
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -537,14 +545,7 @@ export function AboutPageClient({
   const shouldMarquee = currentList.length >= 4
 
   // 觸控裝置沒有 hover：跑馬燈改用原生橫向滑動，不跑滑鼠感應動畫
-  const [noHover, setNoHover] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia("(hover: none)")
-    setNoHover(mq.matches)
-    const onChange = (e: MediaQueryListEvent) => setNoHover(e.matches)
-    mq.addEventListener("change", onChange)
-    return () => mq.removeEventListener("change", onChange)
-  }, [])
+  const noHover = useMediaQuery("(hover: none)")
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80)

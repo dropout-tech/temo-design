@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState, useEffect } from "react"
+import Image from "next/image"
 import { useInView } from "@/hooks/use-in-view"
 
 const logoMeanings = [
@@ -196,9 +197,11 @@ export function LogoMeaningSection() {
             transform: isInView ? "scale(1)" : "scale(0.88)",
           }}
         >
-          <img
+          <Image
             src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-17-7KdvO1A2YbJzYmo4y1zm35MCjefkkC.png"
             alt="TEMO DESIGN Logo"
+            width={480}
+            height={480}
             className="h-56 md:h-80 lg:h-96 w-auto"
             style={{ animation: "logoFadeLoop 4s ease-in-out infinite" }}
           />

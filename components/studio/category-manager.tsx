@@ -242,7 +242,8 @@ function FacetItem({
   const timeouts = useRef<ReturnType<typeof setTimeout>[]>([])
 
   useEffect(() => {
-    return () => timeouts.current.forEach(clearTimeout)
+    const activeTimeouts = timeouts.current
+    return () => activeTimeouts.forEach(clearTimeout)
   }, [])
 
   function flashSaved() {

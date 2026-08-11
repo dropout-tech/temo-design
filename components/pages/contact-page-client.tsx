@@ -76,14 +76,15 @@ export function ContactPageClient({
       }
     }
     if (hasAny) {
-      setFormData((prev) => ({ ...prev, ...next }))
-      setActiveTab("contact")
-      setPrefilled(true)
-      requestAnimationFrame(() => {
+      const frame = requestAnimationFrame(() => {
+        setFormData((prev) => ({ ...prev, ...next }))
+        setActiveTab("contact")
+        setPrefilled(true)
         document
           .getElementById("contact-form-anchor")
           ?.scrollIntoView({ behavior: "smooth", block: "start" })
       })
+      return () => cancelAnimationFrame(frame)
     }
   }, [])
 

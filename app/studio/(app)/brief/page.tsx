@@ -13,7 +13,7 @@ export default async function StudioBriefPage() {
     )
     .order("sort")
 
-  const sections: BriefSectionRow[] = ((data ?? []) as any[]).map((s) => ({
+  const sections = ((data ?? []) as unknown as BriefSectionRow[]).map((s) => ({
     id: s.id,
     title: s.title,
     title_en: s.title_en,
@@ -22,7 +22,7 @@ export default async function StudioBriefPage() {
     sort: s.sort,
     brief_questions: (s.brief_questions ?? [])
       .slice()
-      .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0)),
+      .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)),
   }))
 
   return <BriefManager sections={sections} />

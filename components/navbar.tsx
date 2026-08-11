@@ -2,8 +2,9 @@
 
 import { useState, useEffect, type FormEvent } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
-import { X, AlignJustify, Search, ArrowRight } from "lucide-react"
+import { X, Search } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
@@ -117,9 +118,11 @@ export function Navbar({
           <div className="relative flex h-[68px] items-center justify-between gap-6">
             {/* Logo */}
             <Link href="/" className="shrink-0 flex items-center h-12 relative z-10" aria-label="TEMO DESIGN">
-              <img
+              <Image
                 src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-17-gxNRwXn7tMwIRkd2cGdAdl3qzorZib.png"
                 alt="TEMO DESIGN"
+                width={192}
+                height={48}
                 className="h-full w-auto object-contain"
               />
             </Link>
@@ -266,9 +269,11 @@ export function Navbar({
           {/* Top bar */}
           <div className="flex items-center justify-between">
             <Link href="/" onClick={() => setMenuOpen(false)} aria-label="TEMO DESIGN">
-              <img
+              <Image
                 src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-17-gxNRwXn7tMwIRkd2cGdAdl3qzorZib.png"
                 alt="TEMO DESIGN"
+                width={192}
+                height={48}
                 className="h-12 w-auto object-contain"
               />
             </Link>

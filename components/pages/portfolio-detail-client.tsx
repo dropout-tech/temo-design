@@ -110,7 +110,7 @@ interface PortfolioDetailClientProps {
 
 export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
   const [heroVisible, setHeroVisible] = useState(false)
-  const { ref: bodyRef, isInView: bodyInView } = useInView<HTMLDivElement>({
+  const { ref: bodyRef, isInView: bodyInView } = useInView<HTMLElement>({
     once: true,
     amount: 0.05,
   })

@@ -84,7 +84,8 @@ export function StudioShell({
   }, [pathname])
 
   useEffect(() => {
-    setMobileOpen(false)
+    const frame = requestAnimationFrame(() => setMobileOpen(false))
+    return () => cancelAnimationFrame(frame)
   }, [pathname])
 
   async function logout() {
