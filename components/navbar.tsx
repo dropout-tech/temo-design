@@ -265,7 +265,7 @@ export function Navbar({
         />
 
         {/* Content */}
-        <div className="relative w-full flex flex-col justify-between px-8 sm:px-16 py-10 overflow-y-auto">
+        <div className="relative flex w-full flex-col justify-between overflow-y-auto px-5 py-6 min-[360px]:px-8 min-[360px]:py-10 sm:px-16">
           {/* Top bar */}
           <div className="flex items-center justify-between">
             <Link href="/" onClick={() => setMenuOpen(false)} aria-label="TEMO DESIGN">
@@ -288,7 +288,7 @@ export function Navbar({
 
           {/* Search */}
           <div
-            className="mt-8"
+            className="mt-6 min-[360px]:mt-8"
             style={{
               transition: `opacity 0.4s ease ${menuOpen ? "0.08s" : "0s"}`,
               opacity: menuOpen ? 1 : 0,
@@ -305,7 +305,7 @@ export function Navbar({
           </div>
 
           {/* Nav items */}
-          <nav className="flex flex-col gap-1 my-auto pt-8 pb-4">
+          <nav className="mt-8 mb-auto flex flex-col gap-1 pt-0 pb-4 min-[360px]:mt-10 sm:my-auto sm:pt-8">
             {menuLinks.map((item, i) => {
               const active = pathname === item.href
               return (
@@ -321,13 +321,13 @@ export function Navbar({
                     href={item.href}
                     onClick={() => setMenuOpen(false)}
                     className={cn(
-                      "group flex items-baseline gap-3 py-2.5 border-b border-white/5 transition-colors",
+                      "group flex items-baseline gap-2.5 py-3 border-b border-white/5 transition-colors min-[360px]:gap-3.5 min-[360px]:py-3.5 sm:gap-3 sm:py-2.5",
                       active ? "text-temo-gold" : "text-white/80 hover:text-white"
                     )}
                   >
-                    <span className="text-[10px] text-white/20 w-5 tabular-nums tracking-wider">{String(i + 1).padStart(2, "0")}</span>
-                    <span className="text-3xl sm:text-5xl font-bold tracking-tight leading-tight">{item.label}</span>
-                    <span className="text-base text-white/30 group-hover:text-white/50 transition-colors">{item.labelZh}</span>
+                    <span className="w-5 text-[10px] tabular-nums tracking-wider text-white/20 min-[360px]:w-6 min-[360px]:text-[11px] sm:w-5 sm:text-[10px]">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="text-2xl font-bold leading-tight tracking-tight min-[360px]:text-[clamp(2rem,8.4vw,2.25rem)] sm:text-5xl">{item.label}</span>
+                    <span className="shrink-0 whitespace-nowrap text-base text-white/30 transition-colors group-hover:text-white/50 min-[360px]:text-lg sm:text-base">{item.labelZh}</span>
                   </Link>
                 </div>
               )
