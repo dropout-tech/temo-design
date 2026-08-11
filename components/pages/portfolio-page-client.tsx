@@ -516,12 +516,25 @@ export function PortfolioGrid({
 }) {
   const [hoveredId, setHoveredId] = useState<number | null>(null)
   const [visible, setVisible] = useState(false)
+  const masonryRef = useRef<HTMLDivElement>(null)
+  const [masonryWidth, setMasonryWidth] = useState(0)
   const catLabel = useMemo(() => makeCatLabel(categoryGroups), [categoryGroups])
   const indLabel = useMemo(() => makeIndLabel(industries), [industries])
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 100)
     return () => clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    const element = masonryRef.current
+    if (!element) return
+
+    const updateWidth = () => setMasonryWidth(element.clientWidth)
+    updateWidth()
+    const observer = new ResizeObserver(updateWidth)
+    observer.observe(element)
+    return () => observer.disconnect()
   }, [])
 
   // 預先計算每件作品的搜尋字串，避免每次輸入都重算
@@ -553,6 +566,39 @@ export function PortfolioGrid({
       return true
     })
   }, [works, filters, haystacks, allowedGroups])
+
+  // 依排序逐件放進當下最短欄：既保留真正的錯落高度，也讓 DOM／鍵盤順序
+  // 與後台拖曳順序一致。舊的 CSS columns 會把 1、2、3 全塞進左欄，
+  // 視覺上反而變成 1、4、7 在第一排，後台排序很難預測。
+  const masonryLayout = useMemo(() => {
+    if (masonryWidth <= 0 || filtered.length === 0) return null
+
+    const gap = 16
+    const columnCount = masonryWidth >= 900 ? 3 : masonryWidth >= 560 ? 2 : 1
+    const columnWidth = (masonryWidth - gap * (columnCount - 1)) / columnCount
+    const columnHeights = Array.from({ length: columnCount }, () => 0)
+    const placements = filtered.map((work) => {
+      let column = 0
+      for (let index = 1; index < columnCount; index += 1) {
+        if (columnHeights[index] < columnHeights[column]) column = index
+      }
+
+      const ratio = work.size === "large" ? 5 / 4 : work.size === "small" ? 3 / 4 : 1
+      const height = columnWidth * ratio
+      const placement = {
+        left: column * (columnWidth + gap),
+        top: columnHeights[column],
+        width: columnWidth,
+      }
+      columnHeights[column] += height + gap
+      return placement
+    })
+
+    return {
+      height: Math.max(...columnHeights) - gap,
+      placements,
+    }
+  }, [filtered, masonryWidth])
 
   return (
     <section
@@ -603,30 +649,47 @@ export function PortfolioGrid({
 
         {/* Masonry-style grid */}
         {filtered.length > 0 && (
-          <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
+          <div
+            ref={masonryRef}
+            className={cn(
+              masonryLayout ? "relative" : "columns-1 gap-4 space-y-4 sm:columns-2 lg:columns-3"
+            )}
+            style={masonryLayout ? { height: masonryLayout.height } : undefined}
+          >
             {filtered.map((work, i) => (
               <div
                 key={work.id}
-                className="break-inside-avoid"
-                style={{
-                  transition: `opacity 0.6s ease ${i * 0.05}s, transform 0.6s ease ${i * 0.05}s`,
-                  opacity: visible ? 1 : 0,
-                  transform: visible ? "translateY(0)" : "translateY(20px)",
-                }}
+                className={masonryLayout ? "absolute" : "break-inside-avoid"}
+                style={
+                  masonryLayout
+                    ? {
+                        left: masonryLayout.placements[i].left,
+                        top: masonryLayout.placements[i].top,
+                        width: masonryLayout.placements[i].width,
+                      }
+                    : undefined
+                }
               >
-                <Link
-                  href={`/portfolio/${work.slug}`}
-                  className="relative w-full group overflow-hidden block text-left"
-                  onMouseEnter={() => setHoveredId(work.id)}
-                  onMouseLeave={() => setHoveredId(null)}
-                  aria-label={`查看 ${work.title}`}
+                <div
+                  style={{
+                    transition: `opacity 0.6s ease ${i * 0.05}s, transform 0.6s ease ${i * 0.05}s`,
+                    opacity: visible ? 1 : 0,
+                    transform: visible ? "translateY(0)" : "translateY(20px)",
+                  }}
                 >
-                  <div
-                    className={cn(
-                      "relative overflow-hidden",
-                      work.size === "large" ? "aspect-[4/5]" : work.size === "medium" ? "aspect-square" : "aspect-[4/3]"
-                    )}
+                  <Link
+                    href={`/portfolio/${work.slug}`}
+                    className="relative w-full group overflow-hidden block text-left"
+                    onMouseEnter={() => setHoveredId(work.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                    aria-label={`查看 ${work.title}`}
                   >
+                    <div
+                      className={cn(
+                        "relative overflow-hidden",
+                        work.size === "large" ? "aspect-[4/5]" : work.size === "medium" ? "aspect-square" : "aspect-[4/3]"
+                      )}
+                    >
                     <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-[1.03]">
                       <Image
                         src={proxyImage(work.cover)}
@@ -675,6 +738,7 @@ export function PortfolioGrid({
                     </div>
                   </div>
                 </Link>
+                </div>
               </div>
             ))}
           </div>

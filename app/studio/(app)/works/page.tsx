@@ -12,6 +12,7 @@ type WorkRow = {
   cover_url: string | null
   year: string | null
   published: boolean
+  size: "large" | "medium" | "small"
   sort: number
   category_groups: { label: string } | null
   clients: { name: string } | null
@@ -22,7 +23,7 @@ async function getWorks(): Promise<WorkRow[]> {
   const { data } = await supabase
     .from("works")
     .select(
-      "id, slug, title, subtitle, cover_url, year, published, sort, category_groups(label), clients(name)"
+      "id, slug, title, subtitle, cover_url, year, published, size, sort, category_groups(label), clients(name)"
     )
     .order("sort")
   return (data as unknown as WorkRow[]) ?? []

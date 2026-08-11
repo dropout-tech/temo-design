@@ -157,9 +157,18 @@ export async function saveWork(
     const { error } = await supabase.from("works").update(row).eq("id", id)
     if (error) return { error: error.message }
   } else {
+    // 新作品一律接在目前排序最後，避免沿用 DB 預設 100 造成多筆同順位。
+    const { data: lastWork, error: sortError } = await supabase
+      .from("works")
+      .select("sort")
+      .order("sort", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (sortError) return { error: sortError.message }
+
     const { data, error } = await supabase
       .from("works")
-      .insert(row)
+      .insert({ ...row, sort: (lastWork?.sort ?? 0) + 1 })
       .select("id")
       .single()
     if (error) return { error: error.message }
@@ -260,5 +269,65 @@ export async function setWorkPublished(
   revalidatePath("/portfolio")
   if (data?.slug) revalidatePath(`/portfolio/${data.slug}`)
 
+  return {}
+}
+
+export async function setWorkCardSize(
+  id: string,
+  size: "large" | "medium" | "small"
+): Promise<{ error?: string }> {
+  if (!["large", "medium", "small"].includes(size)) {
+    return { error: "不支援的卡片版型" }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.from("works").update({ size }).eq("id", id)
+  if (error) return { error: error.message }
+
+  revalidatePath("/studio/works")
+  revalidatePath("/portfolio")
+  revalidatePath("/services/[slug]", "page")
+  return {}
+}
+
+/** 作品管理拖曳排序：列表必須是完整且不重複的作品 ID，避免篩選中誤改隱藏項目的相對順序。 */
+export async function reorderWorks(ids: string[]): Promise<{ error?: string }> {
+  if (ids.length === 0 || new Set(ids).size !== ids.length) {
+    return { error: "排序資料不完整，請重新整理後再試" }
+  }
+
+  const supabase = await createClient()
+  const { data: current, error: listError } = await supabase.from("works").select("id, sort")
+  if (listError) return { error: listError.message }
+
+  const currentIds = new Set((current ?? []).map((row) => row.id))
+  if (currentIds.size !== ids.length || ids.some((id) => !currentIds.has(id))) {
+    return { error: "作品清單已更新，請重新整理後再排序" }
+  }
+
+  const previousSort = new Map((current ?? []).map((row) => [row.id, row.sort]))
+  for (const [index, id] of ids.entries()) {
+    const { error } = await supabase
+      .from("works")
+      .update({ sort: index + 1 })
+      .eq("id", id)
+
+    if (error) {
+      // 最佳努力回復原順序，避免只寫入一半造成前台順序難以理解。
+      await Promise.all(
+        ids.map((workId) =>
+          supabase
+            .from("works")
+            .update({ sort: previousSort.get(workId) ?? 100 })
+            .eq("id", workId)
+        )
+      )
+      return { error: error.message }
+    }
+  }
+
+  revalidatePath("/studio/works")
+  revalidatePath("/portfolio")
+  revalidatePath("/services/[slug]", "page")
   return {}
 }
