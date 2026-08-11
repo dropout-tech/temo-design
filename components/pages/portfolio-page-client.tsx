@@ -20,6 +20,7 @@ import {
   type Work,
   type CategoryGroupValue,
 } from "@/lib/portfolio-data"
+import { getCoverCropStyle } from "@/lib/cover-crop"
 
 export type { Work }
 
@@ -626,14 +627,21 @@ export function PortfolioGrid({
                       work.size === "large" ? "aspect-[4/5]" : work.size === "medium" ? "aspect-square" : "aspect-[4/3]"
                     )}
                   >
-                    <Image
-                      src={proxyImage(work.cover)}
-                      alt={work.title}
-                      fill
-                      className="object-cover transition-transform duration-700 group-hover:scale-105"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      referrerPolicy="no-referrer"
-                    />
+                    <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-[1.03]">
+                      <Image
+                        src={proxyImage(work.cover)}
+                        alt={work.title}
+                        fill
+                        className="object-cover"
+                        style={getCoverCropStyle({
+                          zoom: work.coverZoom,
+                          positionX: work.coverPositionX,
+                          positionY: work.coverPositionY,
+                        })}
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
 
                     <div
                       className="absolute inset-0 transition-opacity duration-400"

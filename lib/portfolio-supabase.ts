@@ -3,6 +3,7 @@ import "server-only"
 import { createPublicClient } from "@/lib/supabase/public"
 import type { DetailProject } from "@/components/pages/portfolio-detail-client"
 import type { Work, Designer } from "@/lib/portfolio-data"
+import { normalizeCoverCrop } from "@/lib/cover-crop"
 
 // ─── 作品內容區塊（Adobe Portfolio 式：圖片/文字/YouTube 影片，可同列雙圖） ─────
 // 這是後台表單與前台渲染共用的合約型別，欄位形狀不得隨意更動。
@@ -100,7 +101,7 @@ export async function getAllWorks(): Promise<Work[]> {
   const { data } = await supa
     .from("works")
     .select(
-      `slug, title, subtitle, year, cover_url, video_url, size, description, category_group,
+      `slug, title, subtitle, year, cover_url, cover_zoom, cover_position_x, cover_position_y, video_url, size, description, category_group,
        clients ( slug, name ),
        work_industries ( industry_value ),
        work_designers ( sort, designers ( slug, name, name_zh ) )`
@@ -108,29 +109,40 @@ export async function getAllWorks(): Promise<Work[]> {
     .eq("published", true)
     .order("sort")
 
-  return (data ?? []).map((w: any, idx: number) => ({
-    id: idx + 1,
-    slug: w.slug,
-    title: w.title,
-    subtitle: w.subtitle ?? "",
-    categoryGroup: w.category_group,
-    industries: (w.work_industries ?? []).map((r: any) => r.industry_value),
-    year: w.year ?? "",
-    clientSlug: w.clients?.slug ?? "",
-    clientName: w.clients?.name ?? undefined,
-    designerSlugs: (w.work_designers ?? [])
-      .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
-      .map((r: any) => r.designers?.slug)
-      .filter(Boolean),
-    designerNames: (w.work_designers ?? [])
-      .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
-      .filter((r: any) => r.designers?.slug)
-      .map((r: any) => r.designers?.name_zh || r.designers?.name || r.designers?.slug),
-    cover: w.cover_url ?? "/placeholder.jpg",
-    videoUrl: w.video_url ?? undefined,
-    size: w.size ?? "medium",
-    description: w.description ?? "",
-  })) as Work[]
+  return (data ?? []).map((w: any, idx: number) => {
+    const coverCrop = normalizeCoverCrop({
+      zoom: w.cover_zoom,
+      positionX: w.cover_position_x,
+      positionY: w.cover_position_y,
+    })
+
+    return {
+      id: idx + 1,
+      slug: w.slug,
+      title: w.title,
+      subtitle: w.subtitle ?? "",
+      categoryGroup: w.category_group,
+      industries: (w.work_industries ?? []).map((r: any) => r.industry_value),
+      year: w.year ?? "",
+      clientSlug: w.clients?.slug ?? "",
+      clientName: w.clients?.name ?? undefined,
+      designerSlugs: (w.work_designers ?? [])
+        .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
+        .map((r: any) => r.designers?.slug)
+        .filter(Boolean),
+      designerNames: (w.work_designers ?? [])
+        .sort((a: any, b: any) => (a.sort ?? 0) - (b.sort ?? 0))
+        .filter((r: any) => r.designers?.slug)
+        .map((r: any) => r.designers?.name_zh || r.designers?.name || r.designers?.slug),
+      cover: w.cover_url ?? "/placeholder.jpg",
+      coverZoom: coverCrop.zoom,
+      coverPositionX: coverCrop.positionX,
+      coverPositionY: coverCrop.positionY,
+      videoUrl: w.video_url ?? undefined,
+      size: w.size ?? "medium",
+      description: w.description ?? "",
+    }
+  }) as Work[]
 }
 
 /** 給詳情頁：單一作品完整資料，映射成 DetailProject（+ hero / blocks） */

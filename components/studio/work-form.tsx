@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, Upload, Trash2, ArrowLeft, X, GripVertical, Plus } from "lucide-react"
+import { Loader2, Upload, Trash2, ArrowLeft, X, GripVertical, Minus, Move, Plus, RotateCcw } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { downscaleImage } from "@/lib/downscale-image"
 import { isVideoUrl } from "@/lib/video"
@@ -13,6 +13,16 @@ import { saveWork, deleteWork, type WorkInput } from "@/app/studio/(app)/works/a
 import type { WorkBlockRow } from "@/lib/studio/works"
 import { RichTextEditor, looksLikeHtml, plainTextToHtml } from "@/components/studio/rich-text-editor"
 import { normalizeWorkSlug } from "@/lib/work-slug"
+import {
+  COVER_POSITION_MAX,
+  COVER_POSITION_MIN,
+  COVER_ZOOM_MAX,
+  COVER_ZOOM_MIN,
+  DEFAULT_COVER_CROP,
+  getCoverCropStyle,
+  normalizeCoverCrop,
+  type CoverCrop,
+} from "@/lib/cover-crop"
 
 type Options = {
   categories: { value: string; label: string }[]
@@ -35,6 +45,9 @@ export type WorkFormInitial = {
   year: string
   client_id: string
   cover_url: string
+  cover_zoom: number
+  cover_position_x: number
+  cover_position_y: number
   /** 內頁首圖，選填，留空＝沿用封面圖 */
   hero_url?: string
   /** 客戶 LOGO，選填可多張（一件作品可能有多位客戶）；顯示於作品內頁右側資訊欄最頂端 */
@@ -66,7 +79,8 @@ export type WorkFormInitial = {
 
 const EMPTY: WorkFormInitial = {
   slug: "", title: "", subtitle: "", category_group: "", year: "", client_id: "",
-  cover_url: "", hero_url: "", client_logo_urls: [], video_url: "", size: "medium", description: "", services: "",
+  cover_url: "", cover_zoom: DEFAULT_COVER_CROP.zoom, cover_position_x: DEFAULT_COVER_CROP.positionX,
+  cover_position_y: DEFAULT_COVER_CROP.positionY, hero_url: "", client_logo_urls: [], video_url: "", size: "medium", description: "", services: "",
   deliverables: "", challenge: "", approach: "", result: "", quote_text: "",
   quote_author: "", awards: "", press: "", published: true, industryValues: [], customIndustryNames: [], designerIds: [],
   guestDesignerNames: [],
@@ -222,6 +236,226 @@ function Field({ label, children, hint }: { label: string; children: React.React
   )
 }
 
+function CoverCropEditor({
+  src,
+  size,
+  crop: cropInput,
+  onChange,
+}: {
+  src: string
+  size: WorkFormInitial["size"]
+  crop: CoverCrop
+  onChange: (crop: CoverCrop) => void
+}) {
+  const frameRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<{
+    pointerId: number
+    clientX: number
+    clientY: number
+    positionX: number
+    positionY: number
+  } | null>(null)
+  const crop = normalizeCoverCrop(cropInput)
+  const aspectLabel = size === "large" ? "直式 4:5" : size === "small" ? "橫式 4:3" : "正方形 1:1"
+
+  function update(patch: Partial<CoverCrop>) {
+    onChange(normalizeCoverCrop({ ...crop, ...patch }))
+  }
+
+  function onPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.button !== 0) return
+    event.currentTarget.setPointerCapture(event.pointerId)
+    dragRef.current = {
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      positionX: crop.positionX,
+      positionY: crop.positionY,
+    }
+  }
+
+  function onPointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current
+    const frame = frameRef.current
+    if (!drag || drag.pointerId !== event.pointerId || !frame) return
+    const rect = frame.getBoundingClientRect()
+    const sensitivity = 100 / crop.zoom
+    update({
+      positionX: drag.positionX - ((event.clientX - drag.clientX) / rect.width) * sensitivity,
+      positionY: drag.positionY - ((event.clientY - drag.clientY) / rect.height) * sensitivity,
+    })
+  }
+
+  function endPointer(event: React.PointerEvent<HTMLDivElement>) {
+    if (dragRef.current?.pointerId !== event.pointerId) return
+    dragRef.current = null
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+  }
+
+  function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    const step = event.shiftKey ? 5 : 1
+    if (event.key === "ArrowLeft") update({ positionX: crop.positionX - step })
+    else if (event.key === "ArrowRight") update({ positionX: crop.positionX + step })
+    else if (event.key === "ArrowUp") update({ positionY: crop.positionY - step })
+    else if (event.key === "ArrowDown") update({ positionY: crop.positionY + step })
+    else return
+    event.preventDefault()
+  }
+
+  return (
+    <div className="space-y-4 rounded-lg border border-white/10 bg-white/[0.025] p-4 md:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-temo-white">調整作品探索的封面構圖</p>
+          <p className="mt-1 text-xs leading-relaxed text-temo-warm-gray/55">
+            直接拖曳圖片調整位置；下方可精準縮放與移動。
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-[11px] text-temo-warm-gray/60">
+          <span className="rounded-full bg-white/[0.06] px-2.5 py-1">{aspectLabel}</span>
+          <span className="rounded-full bg-temo-gold/10 px-2.5 py-1 text-temo-gold">
+            {Math.round(crop.zoom * 100)}%
+          </span>
+        </div>
+      </div>
+
+      <div
+        ref={frameRef}
+        role="application"
+        tabIndex={0}
+        aria-label="封面構圖預覽。可拖曳圖片，或使用方向鍵調整位置。"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endPointer}
+        onPointerCancel={endPointer}
+        onKeyDown={onKeyDown}
+        className={cn(
+          "relative mx-auto w-full max-w-md cursor-grab touch-none select-none overflow-hidden rounded-lg bg-black outline-none ring-offset-2 ring-offset-temo-black active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-temo-gold/70",
+          size === "large" ? "aspect-[4/5] max-w-sm" : size === "small" ? "aspect-[4/3]" : "aspect-square max-w-sm"
+        )}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt="作品探索封面構圖預覽"
+          draggable={false}
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+          style={getCoverCropStyle(crop)}
+        />
+        <div className="pointer-events-none absolute inset-0 grid grid-cols-3 grid-rows-3 opacity-50" aria-hidden="true">
+          {Array.from({ length: 9 }).map((_, index) => (
+            <span key={index} className="border-[0.5px] border-white/25" />
+          ))}
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 bg-black/65 px-3 py-2 text-[11px] text-white/85">
+          <Move className="h-3.5 w-3.5" />
+          拖曳圖片調整位置
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <CropRange
+          label="縮放"
+          value={crop.zoom}
+          min={COVER_ZOOM_MIN}
+          max={COVER_ZOOM_MAX}
+          step={0.01}
+          displayValue={`${Math.round(crop.zoom * 100)}%`}
+          onChange={(zoom) => update({ zoom })}
+        />
+        <CropRange
+          label="水平位置"
+          value={crop.positionX}
+          min={COVER_POSITION_MIN}
+          max={COVER_POSITION_MAX}
+          step={1}
+          displayValue={`${Math.round(crop.positionX)}%`}
+          onChange={(positionX) => update({ positionX })}
+        />
+        <CropRange
+          label="垂直位置"
+          value={crop.positionY}
+          min={COVER_POSITION_MIN}
+          max={COVER_POSITION_MAX}
+          step={1}
+          displayValue={`${Math.round(crop.positionY)}%`}
+          onChange={(positionY) => update({ positionY })}
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] pt-4">
+        <p className="text-[11px] leading-relaxed text-temo-warm-gray/45">
+          前台會使用相同的卡片比例、縮放與位置設定。
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => update({ zoom: Math.max(COVER_ZOOM_MIN, crop.zoom - 0.1) })}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/10 text-temo-warm-gray/70 transition-colors hover:border-temo-gold/40 hover:text-temo-gold"
+            aria-label="縮小封面"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => update({ zoom: Math.min(COVER_ZOOM_MAX, crop.zoom + 0.1) })}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/10 text-temo-warm-gray/70 transition-colors hover:border-temo-gold/40 hover:text-temo-gold"
+            aria-label="放大封面"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange(DEFAULT_COVER_CROP)}
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-white/10 px-3 text-xs text-temo-warm-gray/70 transition-colors hover:border-temo-gold/40 hover:text-temo-gold"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            回到置中
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function CropRange({
+  label,
+  value,
+  min,
+  max,
+  step,
+  displayValue,
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  step: number
+  displayValue: string
+  onChange: (value: number) => void
+}) {
+  return (
+    <label className="block rounded-md bg-black/25 p-3">
+      <span className="mb-2 flex items-center justify-between gap-3 text-xs">
+        <span className="text-temo-warm-gray/65">{label}</span>
+        <span className="tabular-nums text-temo-white">{displayValue}</span>
+      </span>
+      <input
+        type="range"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="h-2 w-full cursor-pointer accent-temo-gold"
+      />
+    </label>
+  )
+}
+
 const toLines = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean)
 const CUSTOM_NAME_MAX = 100
 const CUSTOM_NAME_LIMIT = 20
@@ -307,7 +541,15 @@ export function WorkForm({
     setUploading(true)
     setError("")
     const url = await uploadToStorage(file)
-    if (url) set("cover_url", url)
+    if (url) {
+      setF((prev) => ({
+        ...prev,
+        cover_url: url,
+        cover_zoom: DEFAULT_COVER_CROP.zoom,
+        cover_position_x: DEFAULT_COVER_CROP.positionX,
+        cover_position_y: DEFAULT_COVER_CROP.positionY,
+      }))
+    }
     setUploading(false)
     e.target.value = ""
   }
@@ -419,7 +661,8 @@ export function WorkForm({
       client_phone: clientContact.phone,
       client_website: clientContact.website,
       client_contact_dirty: clientContactDirty,
-      cover_url: f.cover_url, hero_url: heroUrl, client_logo_urls: clientLogos, video_url: f.video_url, size: f.size,
+      cover_url: f.cover_url, cover_zoom: f.cover_zoom, cover_position_x: f.cover_position_x,
+      cover_position_y: f.cover_position_y, hero_url: heroUrl, client_logo_urls: clientLogos, video_url: f.video_url, size: f.size,
       description: f.description, services: toLines(f.services),
       deliverables: toLines(f.deliverables), challenge: f.challenge,
       approach: f.approach, result: f.result, quote_text: f.quote_text,
@@ -676,21 +919,47 @@ export function WorkForm({
               <section className="space-y-5">
                 <SectionTitle>封面與影片</SectionTitle>
                 <Field label="封面圖">
-                  <div className="flex items-start gap-4">
-                    <div className="w-32 h-32 rounded-lg overflow-hidden bg-white/[0.04] border border-white/10 shrink-0">
-                      {f.cover_url && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={f.cover_url} alt="封面預覽" className="w-full h-full object-cover" />
-                      )}
-                    </div>
-                    <div className="flex-1 space-y-2">
+                  <div className="space-y-4">
+                    <div className="grid gap-3 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
                       <label className={cn("inline-flex items-center gap-2 px-4 py-2.5 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
                         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                         {uploading ? "上傳中…" : "上傳圖片"}
                         <input type="file" accept="image/*" className="hidden" onChange={onFile} disabled={uploading} />
                       </label>
-                      <input className={inputCls} value={f.cover_url} onChange={(e) => set("cover_url", e.target.value)} placeholder="或直接貼圖片網址 /images/portfolio/xxx.jpg" />
+                      <input
+                        className={inputCls}
+                        value={f.cover_url}
+                        onChange={(e) =>
+                          setF((prev) => ({
+                            ...prev,
+                            cover_url: e.target.value,
+                            cover_zoom: DEFAULT_COVER_CROP.zoom,
+                            cover_position_x: DEFAULT_COVER_CROP.positionX,
+                            cover_position_y: DEFAULT_COVER_CROP.positionY,
+                          }))
+                        }
+                        placeholder="或直接貼圖片網址 /images/portfolio/xxx.jpg"
+                      />
                     </div>
+                    {f.cover_url && (
+                      <CoverCropEditor
+                        src={f.cover_url}
+                        size={f.size}
+                        crop={{
+                          zoom: f.cover_zoom,
+                          positionX: f.cover_position_x,
+                          positionY: f.cover_position_y,
+                        }}
+                        onChange={(crop) =>
+                          setF((prev) => ({
+                            ...prev,
+                            cover_zoom: crop.zoom,
+                            cover_position_x: crop.positionX,
+                            cover_position_y: crop.positionY,
+                          }))
+                        }
+                      />
+                    )}
                   </div>
                 </Field>
                 <Field label="內頁首圖（選填，可放影片）" hint="留空＝沿用封面圖；作品內頁最上方顯示的大圖。也可直接上傳影片（會靜音循環播放）：建議 MP4 格式、1080p、20 秒內、50MB 以下，越小網頁越順">

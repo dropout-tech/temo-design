@@ -162,6 +162,12 @@ export type Work = {
   /** 設計師顯示名稱，與 designerSlugs 同序（DB 來源才有） */
   designerNames?: string[]
   cover: string
+  /** 作品探索卡片的封面縮放倍率；舊資料未提供時為 1。 */
+  coverZoom?: number
+  /** 作品探索卡片的封面水平焦點百分比；舊資料未提供時為 50。 */
+  coverPositionX?: number
+  /** 作品探索卡片的封面垂直焦點百分比；舊資料未提供時為 50。 */
+  coverPositionY?: number
   /** 作品影片連結（YouTube / Vimeo，選填）。有值時：列表卡片顯示 ▶ 標記、詳情頁嵌入播放器。 */
   videoUrl?: string
   size: "large" | "medium" | "small"

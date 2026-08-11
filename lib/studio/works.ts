@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import type { WorkFormInitial } from "@/components/studio/work-form"
+import { normalizeCoverCrop } from "@/lib/cover-crop"
 
 // work_blocks 的原始 DB 欄位形狀（後台表單之後直接讀寫這個形狀即可，不做欄位改名）。
 export type WorkBlockRow = {
@@ -63,6 +64,11 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
     .single()
   if (!data) return null
   const w = data as Record<string, any>
+  const coverCrop = normalizeCoverCrop({
+    zoom: w.cover_zoom,
+    positionX: w.cover_position_x,
+    positionY: w.cover_position_y,
+  })
 
   // ── blocks：獨立查詢 work_blocks（migration 未套用/表不存在/查詢失敗 → 回空陣列，表單走既有 gallery 欄位）──
   let blocks: WorkBlockRow[] = []
@@ -94,6 +100,9 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
     year: w.year ?? "",
     client_id: w.client_id ?? "",
     cover_url: w.cover_url ?? "",
+    cover_zoom: coverCrop.zoom,
+    cover_position_x: coverCrop.positionX,
+    cover_position_y: coverCrop.positionY,
     video_url: w.video_url ?? "",
     size: w.size ?? "medium",
     description: w.description ?? "",

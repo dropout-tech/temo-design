@@ -8,6 +8,7 @@ import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { cn } from "@/lib/utils"
 import { getCategoryLabel, type Designer, type Work } from "@/lib/portfolio-data"
+import { getCoverCropStyle } from "@/lib/cover-crop"
 
 export function TeamMemberClient({
   designer,
@@ -178,13 +179,20 @@ export function TeamMemberClient({
                           : "aspect-[4/3]"
                       )}
                     >
-                      <Image
-                        src={work.cover}
-                        alt={work.title}
-                        fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      />
+                      <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-[1.03]">
+                        <Image
+                          src={work.cover}
+                          alt={work.title}
+                          fill
+                          className="object-cover"
+                          style={getCoverCropStyle({
+                            zoom: work.coverZoom,
+                            positionX: work.coverPositionX,
+                            positionY: work.coverPositionY,
+                          })}
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        />
+                      </div>
                       <div
                         className="absolute inset-0 opacity-50 group-hover:opacity-100 transition-opacity duration-400"
                         style={{
