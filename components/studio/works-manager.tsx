@@ -246,26 +246,6 @@ export function WorksManager({ initialWorks }: { initialWorks: StudioWorkRow[] }
                   .filter(Boolean)
                   .join(" · ") || "尚未補分類資訊"}
               </p>
-              <span className="text-temo-warm-gray/20" aria-hidden="true">·</span>
-              <label className="relative inline-flex items-center gap-1.5 text-[11px] text-temo-warm-gray/45">
-                <span>探索卡片</span>
-                <select
-                  aria-label={`${work.title} 的探索卡片版型`}
-                  value={work.size}
-                  disabled={sizePending && sizePendingId === work.id}
-                  onChange={(event) =>
-                    changeCardSize(work, event.target.value as StudioWorkRow["size"])
-                  }
-                  className="min-h-9 rounded-sm border border-white/10 bg-temo-black/60 px-2 py-1.5 text-[11px] text-temo-warm-gray/75 outline-none transition-colors hover:border-white/25 focus:border-temo-gold/60 disabled:opacity-50"
-                >
-                  <option value="large">直式高卡 4:5</option>
-                  <option value="medium">正方卡 1:1</option>
-                  <option value="small">橫式矮卡 4:3</option>
-                </select>
-                {sizePending && sizePendingId === work.id && (
-                  <Loader2 className="w-3 h-3 animate-spin" aria-label="儲存卡片版型" />
-                )}
-              </label>
             </div>
 
             <p className="text-[11px] text-temo-warm-gray/30 font-mono truncate mt-1">
@@ -274,13 +254,37 @@ export function WorksManager({ initialWorks }: { initialWorks: StudioWorkRow[] }
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 md:justify-end">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
+          <label
+            className="inline-flex min-h-9 w-full items-center justify-between gap-2 rounded-sm border border-white/10 bg-temo-black/35 px-2.5 transition-colors hover:border-white/25 focus-within:border-temo-gold/60 sm:w-auto sm:justify-start"
+            title="決定作品探索頁的卡片外框比例；圖片構圖請到「編輯 → 媒體」調整。"
+          >
+            <span className="text-[10px] font-medium tracking-[0.08em] text-temo-warm-gray/45">
+              卡片比例
+            </span>
+            <select
+              aria-label={`${work.title} 的探索卡片比例`}
+              value={work.size}
+              disabled={sizePending && sizePendingId === work.id}
+              onChange={(event) =>
+                changeCardSize(work, event.target.value as StudioWorkRow["size"])
+              }
+              className="min-h-9 bg-transparent text-xs text-temo-warm-gray/80 outline-none disabled:cursor-wait disabled:opacity-50"
+            >
+              <option value="large">直式 4:5</option>
+              <option value="medium">正方 1:1</option>
+              <option value="small">橫式 4:3</option>
+            </select>
+            {sizePending && sizePendingId === work.id && (
+              <Loader2 className="h-3 w-3 animate-spin text-temo-gold" aria-label="儲存卡片比例" />
+            )}
+          </label>
           <button
             type="button"
             disabled={publishPending}
             onClick={() => togglePublished(work)}
             className={cn(
-              "inline-flex items-center gap-1.5 px-3 py-2 text-xs border rounded-sm transition-colors disabled:opacity-60",
+              "inline-flex min-h-9 items-center justify-center gap-1.5 px-3 py-2 text-xs border rounded-sm transition-colors disabled:opacity-60 sm:justify-start",
               work.published
                 ? "border-temo-gold/35 text-temo-gold hover:bg-temo-gold/10"
                 : "border-white/10 text-temo-warm-gray/65 hover:text-temo-white hover:border-white/25"
@@ -299,14 +303,14 @@ export function WorksManager({ initialWorks }: { initialWorks: StudioWorkRow[] }
             href={`/portfolio/${work.slug}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs text-temo-warm-gray/65 hover:text-temo-gold border border-white/10 hover:border-temo-gold/40 rounded-sm transition-colors"
+            className="inline-flex min-h-9 items-center justify-center gap-1.5 px-3 py-2 text-xs text-temo-warm-gray/65 hover:text-temo-gold border border-white/10 hover:border-temo-gold/40 rounded-sm transition-colors sm:justify-start"
           >
             <ExternalLink className="w-3.5 h-3.5" />
             前台
           </Link>
           <Link
             href={`/studio/works/${work.id}`}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs text-temo-warm-gray/70 hover:text-temo-gold border border-white/10 hover:border-temo-gold/40 rounded-sm transition-colors"
+            className="inline-flex min-h-9 items-center justify-center gap-1.5 px-3 py-2 text-xs text-temo-warm-gray/70 hover:text-temo-gold border border-white/10 hover:border-temo-gold/40 rounded-sm transition-colors sm:justify-start"
           >
             <Pencil className="w-3.5 h-3.5" />
             編輯
