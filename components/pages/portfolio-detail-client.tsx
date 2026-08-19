@@ -1075,7 +1075,7 @@ function MobileProjectDetails({
       )}
 
       {(project.services?.length || project.deliverables?.length || project.designers.length > 0) && (
-        <section className="space-y-7 border-b border-temo-warm-gray/15 py-10">
+        <section className="space-y-10 border-b border-temo-warm-gray/15 py-10">
           {project.services && project.services.length > 0 && (
             <MobileEditorialMeta title="服務範疇" items={project.services} />
           )}
@@ -1145,15 +1145,29 @@ function MobileProjectDetails({
   )
 }
 
-function MobileSectionHeading({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-sm font-medium tracking-[0.18em] text-temo-gold">{children}</h2>
+function MobileSectionHeading({
+  children,
+  align = "left",
+}: {
+  children: React.ReactNode
+  align?: "left" | "center"
+}) {
+  return (
+    <h2
+      className={`text-sm font-medium tracking-[0.18em] text-temo-gold ${
+        align === "center" ? "text-center" : "text-left"
+      }`}
+    >
+      {children}
+    </h2>
+  )
 }
 
 function MobileEditorialMeta({ title, items }: { title: string; items: string[] }) {
   return (
-    <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-start gap-x-4">
-      <MobileSectionHeading>{title}</MobileSectionHeading>
-      <p className="-mt-1 text-[17px] leading-[1.75] tracking-wide text-temo-white/90">
+    <div>
+      <MobileSectionHeading align="center">{title}</MobileSectionHeading>
+      <p className="mx-auto mt-3 max-w-sm text-center text-xs leading-[1.85] tracking-[0.06em] text-temo-warm-gray/70">
         {items.join(" · ")}
       </p>
     </div>
@@ -1162,9 +1176,9 @@ function MobileEditorialMeta({ title, items }: { title: string; items: string[] 
 
 function MobileEditorialPeople({ designers }: { designers: DetailDesigner[] }) {
   return (
-    <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-start gap-x-4">
-      <MobileSectionHeading>參與人員</MobileSectionHeading>
-      <ul className="-mt-2 space-y-3">
+    <div>
+      <MobileSectionHeading align="center">設計師</MobileSectionHeading>
+      <ul className="mx-auto mt-5 max-w-sm space-y-3">
         {designers.map((designer) => (
           <li key={designer.slug}>
             <Link
