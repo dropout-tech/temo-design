@@ -6,6 +6,16 @@ import { createClient } from "@/lib/supabase/server"
 import { sanitizeRichText, richTextIsEmpty } from "@/lib/sanitize-rich-text"
 import { normalizeWorkSlug } from "@/lib/work-slug"
 import { normalizeCoverCrop } from "@/lib/cover-crop"
+import {
+  BUTTON_DEFAULTS,
+  DIVIDER_DEFAULTS,
+  WORK_BLOCK_LIMITS,
+  clampInteger,
+  getSafeWorkBlockHref,
+  isButtonFontWeight,
+  isHexColor,
+  normalizeHexColor,
+} from "@/lib/work-block-config"
 
 export type WorkInput = {
   slug: string
@@ -43,7 +53,7 @@ export type WorkInput = {
   /** 作品專屬的外部／單次合作設計師顯示名稱 */
   guestDesignerNames: string[]
   blocks: {
-    type: "image" | "video" | "text"
+    type: "image" | "video" | "text" | "divider" | "button"
     src: string
     alt: string
     width: number | null
@@ -56,6 +66,18 @@ export type WorkInput = {
     video_url: string
     caption: string
     caption_mobile: string
+    divider_color: string
+    divider_width: number
+    divider_thickness: number
+    button_text: string
+    button_url: string
+    button_open_new_tab: boolean
+    button_width: number
+    button_height: number
+    button_text_color: string
+    button_background_color: string
+    button_font_size: number
+    button_font_weight: number
   }[]
 }
 
@@ -146,6 +168,30 @@ export async function saveWork(
     return { error: `其他合作設計師名稱請控制在 ${CUSTOM_NAME_MAX} 個字內` }
   }
 
+  for (const [index, block] of input.blocks.entries()) {
+    if (block.type === "button") {
+      if (!block.button_text.trim()) {
+        return { error: `第 ${index + 1} 個按鈕區塊尚未填寫按鈕文字` }
+      }
+      if (block.button_text.trim().length > 120) {
+        return { error: `第 ${index + 1} 個按鈕區塊文字請控制在 120 個字內` }
+      }
+      if (!getSafeWorkBlockHref(block.button_url)) {
+        return { error: `第 ${index + 1} 個按鈕區塊需要有效的網頁、站內、Email 或電話連結` }
+      }
+      if (block.button_url.trim().length > 2048) {
+        return { error: `第 ${index + 1} 個按鈕區塊的連結過長` }
+      }
+      if (!isHexColor(block.button_text_color) || !isHexColor(block.button_background_color)) {
+        return { error: `第 ${index + 1} 個按鈕區塊的顏色格式不正確` }
+      }
+    }
+
+    if (block.type === "divider" && !isHexColor(block.divider_color)) {
+      return { error: `第 ${index + 1} 個分隔線區塊的顏色格式不正確` }
+    }
+  }
+
   const row = toRow(input)
   let workId = id
 
@@ -197,6 +243,7 @@ export async function saveWork(
     const { error } = await supabase.from("work_blocks").insert(
       input.blocks.map((b, i) => {
         const cleanText = b.type === "text" ? sanitizeRichText(b.text_content) : b.text_content.trim()
+        const safeButtonUrl = b.type === "button" ? getSafeWorkBlockHref(b.button_url) : null
         return {
           work_id: workId!,
           type: b.type,
@@ -213,6 +260,70 @@ export async function saveWork(
           video_url: b.video_url.trim() || null,
           caption: b.caption.trim() || null,
           caption_mobile: b.caption_mobile.trim() || null,
+          divider_color:
+            b.type === "divider" ? normalizeHexColor(b.divider_color, DIVIDER_DEFAULTS.color) : null,
+          divider_width:
+            b.type === "divider"
+              ? clampInteger(
+                  b.divider_width,
+                  WORK_BLOCK_LIMITS.dividerWidth.min,
+                  WORK_BLOCK_LIMITS.dividerWidth.max,
+                  DIVIDER_DEFAULTS.width
+                )
+              : null,
+          divider_thickness:
+            b.type === "divider"
+              ? clampInteger(
+                  b.divider_thickness,
+                  WORK_BLOCK_LIMITS.dividerThickness.min,
+                  WORK_BLOCK_LIMITS.dividerThickness.max,
+                  DIVIDER_DEFAULTS.thickness
+                )
+              : null,
+          button_text: b.type === "button" ? b.button_text.trim() : null,
+          button_url: safeButtonUrl,
+          button_open_new_tab: b.type === "button" ? Boolean(b.button_open_new_tab) : null,
+          button_width:
+            b.type === "button"
+              ? clampInteger(
+                  b.button_width,
+                  WORK_BLOCK_LIMITS.buttonWidth.min,
+                  WORK_BLOCK_LIMITS.buttonWidth.max,
+                  BUTTON_DEFAULTS.width
+                )
+              : null,
+          button_height:
+            b.type === "button"
+              ? clampInteger(
+                  b.button_height,
+                  WORK_BLOCK_LIMITS.buttonHeight.min,
+                  WORK_BLOCK_LIMITS.buttonHeight.max,
+                  BUTTON_DEFAULTS.height
+                )
+              : null,
+          button_text_color:
+            b.type === "button"
+              ? normalizeHexColor(b.button_text_color, BUTTON_DEFAULTS.textColor)
+              : null,
+          button_background_color:
+            b.type === "button"
+              ? normalizeHexColor(b.button_background_color, BUTTON_DEFAULTS.backgroundColor)
+              : null,
+          button_font_size:
+            b.type === "button"
+              ? clampInteger(
+                  b.button_font_size,
+                  WORK_BLOCK_LIMITS.buttonFontSize.min,
+                  WORK_BLOCK_LIMITS.buttonFontSize.max,
+                  BUTTON_DEFAULTS.fontSize
+                )
+              : null,
+          button_font_weight:
+            b.type === "button"
+              ? isButtonFontWeight(b.button_font_weight)
+                ? Number(b.button_font_weight)
+                : BUTTON_DEFAULTS.fontWeight
+              : null,
           sort: i,
         }
       })

@@ -15,6 +15,15 @@ import type { WorkBlockRow } from "@/lib/studio/works"
 import { RichTextEditor, looksLikeHtml, plainTextToHtml } from "@/components/studio/rich-text-editor"
 import { normalizeWorkSlug } from "@/lib/work-slug"
 import {
+  BUTTON_DEFAULTS,
+  BUTTON_FONT_WEIGHTS,
+  DIVIDER_DEFAULTS,
+  WORK_BLOCK_LIMITS,
+  getSafeWorkBlockHref,
+  isHexColor,
+  normalizeHexColor,
+} from "@/lib/work-block-config"
+import {
   COVER_POSITION_MAX,
   COVER_POSITION_MIN,
   COVER_ZOOM_MAX,
@@ -86,7 +95,7 @@ const EMPTY: WorkFormInitial = {
 }
 
 // ── 內容區塊：表單內部工作形狀。用本地 key 給 React list，送出時才轉成 WorkInput 的 blocks。──
-type BlockType = "image" | "video" | "text"
+type BlockType = "image" | "video" | "text" | "divider" | "button"
 
 type FormBlock = {
   key: string
@@ -105,6 +114,18 @@ type FormBlock = {
   video_url: string
   caption: string
   caption_mobile: string
+  divider_color: string
+  divider_width: number
+  divider_thickness: number
+  button_text: string
+  button_url: string
+  button_open_new_tab: boolean
+  button_width: number
+  button_height: number
+  button_text_color: string
+  button_background_color: string
+  button_font_size: number
+  button_font_weight: number
 }
 
 function newKey() {
@@ -116,6 +137,18 @@ function emptyBlock(type: BlockType, dual = false): FormBlock {
     key: newKey(), type, dual, src: "", alt: "", width: undefined, height: undefined,
     src2: "", alt2: "", width2: undefined, height2: undefined,
     text_content: "", video_url: "", caption: "", caption_mobile: "",
+    divider_color: DIVIDER_DEFAULTS.color,
+    divider_width: DIVIDER_DEFAULTS.width,
+    divider_thickness: DIVIDER_DEFAULTS.thickness,
+    button_text: BUTTON_DEFAULTS.text,
+    button_url: "",
+    button_open_new_tab: true,
+    button_width: BUTTON_DEFAULTS.width,
+    button_height: BUTTON_DEFAULTS.height,
+    button_text_color: BUTTON_DEFAULTS.textColor,
+    button_background_color: BUTTON_DEFAULTS.backgroundColor,
+    button_font_size: BUTTON_DEFAULTS.fontSize,
+    button_font_weight: BUTTON_DEFAULTS.fontWeight,
   }
 }
 
@@ -140,6 +173,18 @@ function blockRowToForm(b: WorkBlockRow): FormBlock {
     video_url: b.video_url ?? "",
     caption: b.caption ?? "",
     caption_mobile: b.caption_mobile ?? "",
+    divider_color: b.divider_color ?? DIVIDER_DEFAULTS.color,
+    divider_width: b.divider_width ?? DIVIDER_DEFAULTS.width,
+    divider_thickness: b.divider_thickness ?? DIVIDER_DEFAULTS.thickness,
+    button_text: b.button_text ?? BUTTON_DEFAULTS.text,
+    button_url: b.button_url ?? "",
+    button_open_new_tab: b.button_open_new_tab ?? true,
+    button_width: b.button_width ?? BUTTON_DEFAULTS.width,
+    button_height: b.button_height ?? BUTTON_DEFAULTS.height,
+    button_text_color: b.button_text_color ?? BUTTON_DEFAULTS.textColor,
+    button_background_color: b.button_background_color ?? BUTTON_DEFAULTS.backgroundColor,
+    button_font_size: b.button_font_size ?? BUTTON_DEFAULTS.fontSize,
+    button_font_weight: b.button_font_weight ?? BUTTON_DEFAULTS.fontWeight,
   }
 }
 
@@ -165,6 +210,18 @@ function initialBlocksFrom(initial?: WorkFormInitial): FormBlock[] {
       video_url: "",
       caption: g.caption ?? "",
       caption_mobile: "",
+      divider_color: DIVIDER_DEFAULTS.color,
+      divider_width: DIVIDER_DEFAULTS.width,
+      divider_thickness: DIVIDER_DEFAULTS.thickness,
+      button_text: BUTTON_DEFAULTS.text,
+      button_url: "",
+      button_open_new_tab: true,
+      button_width: BUTTON_DEFAULTS.width,
+      button_height: BUTTON_DEFAULTS.height,
+      button_text_color: BUTTON_DEFAULTS.textColor,
+      button_background_color: BUTTON_DEFAULTS.backgroundColor,
+      button_font_size: BUTTON_DEFAULTS.fontSize,
+      button_font_weight: BUTTON_DEFAULTS.fontWeight,
     }))
   }
   return []
@@ -634,6 +691,28 @@ export function WorkForm({
   function submit(e: React.FormEvent) {
     e.preventDefault()
     setError("")
+
+    const invalidButtonIndex = blocks.findIndex(
+      (block) =>
+        block.type === "button" &&
+        (!block.button_text.trim() ||
+          !getSafeWorkBlockHref(block.button_url) ||
+          !isHexColor(block.button_text_color) ||
+          !isHexColor(block.button_background_color))
+    )
+    const invalidDividerIndex = blocks.findIndex(
+      (block) => block.type === "divider" && !isHexColor(block.divider_color)
+    )
+    if (invalidButtonIndex >= 0 || invalidDividerIndex >= 0) {
+      setActiveTab("blocks")
+      setError(
+        invalidButtonIndex >= 0
+          ? `第 ${invalidButtonIndex + 1} 個按鈕尚未填妥文字、有效連結與顏色。`
+          : `第 ${invalidDividerIndex + 1} 個分隔線顏色格式不正確。`
+      )
+      return
+    }
+
     const input: WorkInput = {
       slug: f.slug, title: f.title, subtitle: f.subtitle,
       category_group: f.category_group, year: f.year, client_id: f.client_id,
@@ -659,6 +738,18 @@ export function WorkForm({
         video_url: b.video_url,
         caption: b.caption,
         caption_mobile: b.caption_mobile,
+        divider_color: b.divider_color,
+        divider_width: b.divider_width,
+        divider_thickness: b.divider_thickness,
+        button_text: b.button_text,
+        button_url: b.button_url,
+        button_open_new_tab: b.button_open_new_tab,
+        button_width: b.button_width,
+        button_height: b.button_height,
+        button_text_color: b.button_text_color,
+        button_background_color: b.button_background_color,
+        button_font_size: b.button_font_size,
+        button_font_weight: b.button_font_weight,
       })),
     }
     startTransition(async () => {
@@ -1011,7 +1102,7 @@ export function WorkForm({
               <section className="space-y-5">
                 <SectionTitle>內容區塊</SectionTitle>
                 <p className="text-xs text-temo-warm-gray/50 -mt-2">
-                  自由編排作品內頁的內容，由上而下依序呈現。可新增單圖、雙圖並排、文字段落、影片區塊，並用上移／下移調整順序。
+                  自由編排作品內頁的內容，由上而下依序呈現。可新增圖片、文字、影片、分隔線與連結按鈕，並用拖曳或上移／下移調整順序。
                 </p>
 
                 <BlockAddBar
@@ -1200,8 +1291,13 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <p className="text-[10px] tracking-[0.4em] text-temo-gold uppercase pb-2 border-b border-white/[0.06]">{children}</p>
 }
 
-const blockTypeLabel = (b: { type: "image" | "video" | "text"; dual: boolean }) =>
-  b.type === "image" ? (b.dual ? "雙圖" : "單圖") : b.type === "video" ? "影片" : "文字"
+const blockTypeLabel = (b: { type: BlockType; dual: boolean }) => {
+  if (b.type === "image") return b.dual ? "雙圖" : "單圖"
+  if (b.type === "video") return "影片"
+  if (b.type === "text") return "文字"
+  if (b.type === "divider") return "分隔線"
+  return "按鈕"
+}
 
 function BlockAddBar({
   label,
@@ -1217,6 +1313,8 @@ function BlockAddBar({
     { label: "雙圖", type: "image", dual: true },
     { label: "文字", type: "text" },
     { label: "影片", type: "video" },
+    { label: "分隔線", type: "divider" },
+    { label: "按鈕", type: "button" },
   ]
 
   return (
@@ -1377,7 +1475,250 @@ function BlockCard({
           <ResponsiveCaptionFields block={block} contextLabel="影片說明" onChange={onChange} />
         </div>
       )}
+
+      {block.type === "divider" && (
+        <div className="space-y-4">
+          <div className="rounded-md bg-black/25 px-4 py-8" aria-label="分隔線預覽">
+            <div
+              role="separator"
+              className="mx-auto border-0"
+              style={{
+                width: `${block.divider_width}%`,
+                borderTopStyle: "solid",
+                borderTopWidth: `${block.divider_thickness}px`,
+                borderTopColor: isHexColor(block.divider_color)
+                  ? block.divider_color
+                  : DIVIDER_DEFAULTS.color,
+              }}
+            />
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <ColorField
+              label="線條顏色"
+              value={block.divider_color}
+              fallback={DIVIDER_DEFAULTS.color}
+              onChange={(divider_color) => onChange({ divider_color })}
+            />
+            <RangeField
+              label="線條寬度"
+              value={block.divider_width}
+              min={WORK_BLOCK_LIMITS.dividerWidth.min}
+              max={WORK_BLOCK_LIMITS.dividerWidth.max}
+              suffix="%"
+              onChange={(divider_width) => onChange({ divider_width })}
+            />
+            <RangeField
+              label="線條粗細"
+              value={block.divider_thickness}
+              min={WORK_BLOCK_LIMITS.dividerThickness.min}
+              max={WORK_BLOCK_LIMITS.dividerThickness.max}
+              suffix="px"
+              onChange={(divider_thickness) => onChange({ divider_thickness })}
+            />
+          </div>
+        </div>
+      )}
+
+      {block.type === "button" && (
+        <div className="space-y-5">
+          <div className="flex min-h-36 items-center justify-center overflow-hidden rounded-md bg-black/25 p-5" aria-label="按鈕預覽">
+            <div
+              className="inline-flex max-w-full items-center justify-center overflow-hidden rounded-sm px-4 text-center leading-tight transition-transform"
+              style={{
+                width: `${block.button_width}px`,
+                minHeight: `${block.button_height}px`,
+                color: isHexColor(block.button_text_color)
+                  ? block.button_text_color
+                  : BUTTON_DEFAULTS.textColor,
+                backgroundColor: isHexColor(block.button_background_color)
+                  ? block.button_background_color
+                  : BUTTON_DEFAULTS.backgroundColor,
+                fontSize: `${block.button_font_size}px`,
+                fontWeight: block.button_font_weight,
+              }}
+            >
+              <span className="break-words">{block.button_text.trim() || "按鈕文字"}</span>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="按鈕文字">
+              <input
+                className={inputCls}
+                value={block.button_text}
+                maxLength={120}
+                aria-label="按鈕文字"
+                onChange={(e) => onChange({ button_text: e.target.value })}
+                placeholder="例如：前往品牌官網"
+              />
+            </Field>
+            <Field label="超連結（必填）" hint="支援 http(s)://、站內 /portfolio、mailto: 與 tel: 連結">
+              <input
+                className={inputCls}
+                value={block.button_url}
+                maxLength={2048}
+                inputMode="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                aria-label="按鈕超連結"
+                onChange={(e) => onChange({ button_url: e.target.value })}
+                placeholder="https://example.com"
+                aria-invalid={Boolean(block.button_url.trim() && !getSafeWorkBlockHref(block.button_url))}
+              />
+              {block.button_url.trim() && !getSafeWorkBlockHref(block.button_url) && (
+                <p className="mt-1.5 text-[11px] text-red-400/85">
+                  請輸入網頁、站內路徑、Email 或電話連結；不接受 javascript 等不安全協定。
+                </p>
+              )}
+            </Field>
+          </div>
+
+          <label className="flex w-fit cursor-pointer items-center gap-2.5 text-sm text-temo-warm-gray/75">
+            <input
+              type="checkbox"
+              checked={block.button_open_new_tab}
+              onChange={(e) => onChange({ button_open_new_tab: e.target.checked })}
+              className="h-4 w-4 accent-temo-gold"
+            />
+            點擊後在新分頁開啟
+          </label>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <RangeField
+              label="按鈕寬度"
+              value={block.button_width}
+              min={WORK_BLOCK_LIMITS.buttonWidth.min}
+              max={WORK_BLOCK_LIMITS.buttonWidth.max}
+              suffix="px"
+              onChange={(button_width) => onChange({ button_width })}
+            />
+            <RangeField
+              label="按鈕高度"
+              value={block.button_height}
+              min={WORK_BLOCK_LIMITS.buttonHeight.min}
+              max={WORK_BLOCK_LIMITS.buttonHeight.max}
+              suffix="px"
+              onChange={(button_height) => onChange({ button_height })}
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <ColorField
+              label="文字顏色"
+              value={block.button_text_color}
+              fallback={BUTTON_DEFAULTS.textColor}
+              onChange={(button_text_color) => onChange({ button_text_color })}
+            />
+            <ColorField
+              label="按鈕顏色"
+              value={block.button_background_color}
+              fallback={BUTTON_DEFAULTS.backgroundColor}
+              onChange={(button_background_color) => onChange({ button_background_color })}
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <RangeField
+              label="文字大小"
+              value={block.button_font_size}
+              min={WORK_BLOCK_LIMITS.buttonFontSize.min}
+              max={WORK_BLOCK_LIMITS.buttonFontSize.max}
+              suffix="px"
+              onChange={(button_font_size) => onChange({ button_font_size })}
+            />
+            <label className="block rounded-md bg-black/25 p-3">
+              <span className="mb-2 block text-xs text-temo-warm-gray/65">文字粗細</span>
+              <select
+                className={cn(inputCls, "bg-temo-black py-2.5")}
+                value={block.button_font_weight}
+                onChange={(e) => onChange({ button_font_weight: Number(e.target.value) })}
+              >
+                {BUTTON_FONT_WEIGHTS.map((weight) => (
+                  <option key={weight} value={weight}>
+                    {weight} {weight === 400 ? "（一般）" : weight === 600 ? "（半粗體）" : weight === 700 ? "（粗體）" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+function RangeField({
+  label,
+  value,
+  min,
+  max,
+  suffix,
+  onChange,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  suffix: string
+  onChange: (value: number) => void
+}) {
+  return (
+    <label className="block rounded-md bg-black/25 p-3">
+      <span className="mb-2 flex items-center justify-between gap-3 text-xs">
+        <span className="text-temo-warm-gray/65">{label}</span>
+        <span className="tabular-nums text-temo-white">{value}{suffix}</span>
+      </span>
+      <input
+        type="range"
+        value={value}
+        min={min}
+        max={max}
+        step={1}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="h-2 w-full cursor-pointer accent-temo-gold"
+      />
+    </label>
+  )
+}
+
+function ColorField({
+  label,
+  value,
+  fallback,
+  onChange,
+}: {
+  label: string
+  value: string
+  fallback: string
+  onChange: (value: string) => void
+}) {
+  const valid = isHexColor(value)
+
+  return (
+    <label className="block rounded-md bg-black/25 p-3">
+      <span className="mb-2 block text-xs text-temo-warm-gray/65">{label}</span>
+      <span className="flex items-center gap-2">
+        <input
+          type="color"
+          value={normalizeHexColor(value, fallback)}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-11 w-12 shrink-0 cursor-pointer rounded-sm border border-white/10 bg-transparent p-1"
+          aria-label={`${label}選色器`}
+        />
+        <input
+          value={value}
+          maxLength={7}
+          onChange={(event) => onChange(event.target.value)}
+          className={cn(inputCls, "py-2.5 font-mono uppercase", !valid && "border-red-400/60")}
+          placeholder="#C7A96B"
+          spellCheck={false}
+          aria-invalid={!valid}
+          aria-label={`${label} HEX 色碼`}
+        />
+      </span>
+      {!valid && <span className="mt-1.5 block text-[11px] text-red-400/85">請輸入 3 或 6 碼 HEX 色碼。</span>}
+    </label>
   )
 }
 

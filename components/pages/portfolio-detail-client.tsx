@@ -12,6 +12,15 @@ import { isVideoUrl } from "@/lib/video"
 import { isUploadedVideoUrl } from "@/lib/media-url"
 import { proxyImage } from "@/lib/portfolio-data"
 import type { WorkBlock } from "@/lib/portfolio-supabase"
+import {
+  BUTTON_DEFAULTS,
+  DIVIDER_DEFAULTS,
+  WORK_BLOCK_LIMITS,
+  clampInteger,
+  getSafeWorkBlockHref,
+  isButtonFontWeight,
+  normalizeHexColor,
+} from "@/lib/work-block-config"
 
 export type DetailDesigner = {
   /** 只有正式團隊成員有 slug／個人頁；單次合作設計師只顯示名稱 */
@@ -685,6 +694,88 @@ function BlockItem({
         <VideoEmbed url={block.videoUrl} title={projectTitle} />
         <ResponsiveBlockCaption desktop={block.caption} mobile={block.captionMobile} />
       </figure>
+    )
+  }
+
+  if (block.type === "divider") {
+    const width = clampInteger(
+      block.dividerWidth,
+      WORK_BLOCK_LIMITS.dividerWidth.min,
+      WORK_BLOCK_LIMITS.dividerWidth.max,
+      DIVIDER_DEFAULTS.width
+    )
+    const thickness = clampInteger(
+      block.dividerThickness,
+      WORK_BLOCK_LIMITS.dividerThickness.min,
+      WORK_BLOCK_LIMITS.dividerThickness.max,
+      DIVIDER_DEFAULTS.thickness
+    )
+
+    return (
+      <div className="py-2 md:py-4">
+        <hr
+          className="mx-auto border-0"
+          style={{
+            width: `${width}%`,
+            borderTopStyle: "solid",
+            borderTopWidth: `${thickness}px`,
+            borderTopColor: normalizeHexColor(block.dividerColor, DIVIDER_DEFAULTS.color),
+          }}
+        />
+      </div>
+    )
+  }
+
+  if (block.type === "button") {
+    const href = getSafeWorkBlockHref(block.buttonUrl)
+    const label = block.buttonText?.trim()
+    if (!href || !label) return null
+
+    const width = clampInteger(
+      block.buttonWidth,
+      WORK_BLOCK_LIMITS.buttonWidth.min,
+      WORK_BLOCK_LIMITS.buttonWidth.max,
+      BUTTON_DEFAULTS.width
+    )
+    const height = clampInteger(
+      block.buttonHeight,
+      WORK_BLOCK_LIMITS.buttonHeight.min,
+      WORK_BLOCK_LIMITS.buttonHeight.max,
+      BUTTON_DEFAULTS.height
+    )
+    const fontSize = clampInteger(
+      block.buttonFontSize,
+      WORK_BLOCK_LIMITS.buttonFontSize.min,
+      WORK_BLOCK_LIMITS.buttonFontSize.max,
+      BUTTON_DEFAULTS.fontSize
+    )
+    const fontWeight = isButtonFontWeight(block.buttonFontWeight)
+      ? Number(block.buttonFontWeight)
+      : BUTTON_DEFAULTS.fontWeight
+    const openNewTab = block.buttonOpenNewTab ?? true
+
+    return (
+      <div className="flex justify-center py-1 md:py-2">
+        <a
+          href={href}
+          target={openNewTab ? "_blank" : undefined}
+          rel={openNewTab ? "noopener noreferrer" : undefined}
+          className="inline-flex max-w-full items-center justify-center overflow-hidden rounded-sm px-5 text-center leading-tight transition-[filter,transform] duration-200 hover:brightness-110 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold focus-visible:ring-offset-4 focus-visible:ring-offset-temo-black motion-reduce:transition-none"
+          style={{
+            width: `${width}px`,
+            minHeight: `${height}px`,
+            color: normalizeHexColor(block.buttonTextColor, BUTTON_DEFAULTS.textColor),
+            backgroundColor: normalizeHexColor(
+              block.buttonBackgroundColor,
+              BUTTON_DEFAULTS.backgroundColor
+            ),
+            fontSize: `${fontSize}px`,
+            fontWeight,
+          }}
+        >
+          <span className="break-words">{label}</span>
+        </a>
+      </div>
     )
   }
 

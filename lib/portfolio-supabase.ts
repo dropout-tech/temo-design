@@ -9,7 +9,7 @@ import { normalizeCoverCrop } from "@/lib/cover-crop"
 // 這是後台表單與前台渲染共用的合約型別，欄位形狀不得隨意更動。
 export type WorkBlock = {
   id: string
-  type: "image" | "video" | "text"
+  type: "image" | "video" | "text" | "divider" | "button"
   src?: string | null
   alt?: string | null
   width?: number | null
@@ -22,6 +22,18 @@ export type WorkBlock = {
   videoUrl?: string | null // 對應 DB 欄 video_url
   caption?: string | null
   captionMobile?: string | null // 對應 DB 欄 caption_mobile；空值時前台沿用 caption
+  dividerColor?: string | null
+  dividerWidth?: number | null
+  dividerThickness?: number | null
+  buttonText?: string | null
+  buttonUrl?: string | null
+  buttonOpenNewTab?: boolean | null
+  buttonWidth?: number | null
+  buttonHeight?: number | null
+  buttonTextColor?: string | null
+  buttonBackgroundColor?: string | null
+  buttonFontSize?: number | null
+  buttonFontWeight?: number | null
 }
 
 // getWorkDetail 在 DetailProject 之上疊加 hero / blocks（都是選填，向下相容既有呼叫端）。
@@ -135,6 +147,18 @@ type WorkBlockDbRow = {
   video_url: string | null
   caption: string | null
   caption_mobile: string | null
+  divider_color: string | null
+  divider_width: number | null
+  divider_thickness: number | null
+  button_text: string | null
+  button_url: string | null
+  button_open_new_tab: boolean | null
+  button_width: number | null
+  button_height: number | null
+  button_text_color: string | null
+  button_background_color: string | null
+  button_font_size: number | null
+  button_font_weight: number | null
 }
 
 // 注意：hero_url 刻意不放進這個主查詢——migration 0015 套用前 works 表沒有這個欄位，
@@ -460,6 +484,18 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
         videoUrl: b.video_url ?? null,
         caption: b.caption ?? null,
         captionMobile: b.caption_mobile ?? null,
+        dividerColor: b.divider_color ?? null,
+        dividerWidth: b.divider_width ?? null,
+        dividerThickness: b.divider_thickness ?? null,
+        buttonText: b.button_text ?? null,
+        buttonUrl: b.button_url ?? null,
+        buttonOpenNewTab: b.button_open_new_tab ?? null,
+        buttonWidth: b.button_width ?? null,
+        buttonHeight: b.button_height ?? null,
+        buttonTextColor: b.button_text_color ?? null,
+        buttonBackgroundColor: b.button_background_color ?? null,
+        buttonFontSize: b.button_font_size ?? null,
+        buttonFontWeight: b.button_font_weight ?? null,
       }))
     }
   } catch {

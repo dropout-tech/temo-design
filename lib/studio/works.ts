@@ -5,7 +5,7 @@ import { normalizeCoverCrop } from "@/lib/cover-crop"
 // work_blocks 的原始 DB 欄位形狀（後台表單之後直接讀寫這個形狀即可，不做欄位改名）。
 export type WorkBlockRow = {
   id: string
-  type: "image" | "video" | "text"
+  type: "image" | "video" | "text" | "divider" | "button"
   src?: string | null
   alt?: string | null
   width?: number | null
@@ -18,6 +18,18 @@ export type WorkBlockRow = {
   video_url?: string | null
   caption?: string | null
   caption_mobile?: string | null
+  divider_color?: string | null
+  divider_width?: number | null
+  divider_thickness?: number | null
+  button_text?: string | null
+  button_url?: string | null
+  button_open_new_tab?: boolean | null
+  button_width?: number | null
+  button_height?: number | null
+  button_text_color?: string | null
+  button_background_color?: string | null
+  button_font_size?: number | null
+  button_font_weight?: number | null
   sort?: number | null
 }
 
