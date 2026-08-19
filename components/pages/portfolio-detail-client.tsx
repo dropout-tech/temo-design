@@ -1108,7 +1108,7 @@ function MobileProjectDetails({
 
       {project.description && (
         <section className="border-b border-temo-warm-gray/15 py-12">
-          <MobileSectionHeading>感言或前言</MobileSectionHeading>
+          <MobileSectionHeading>前言</MobileSectionHeading>
           <p className="mt-5 whitespace-pre-line text-base leading-[1.85] text-temo-warm-gray">
             {project.description}
           </p>
