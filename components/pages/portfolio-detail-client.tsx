@@ -801,106 +801,64 @@ function MetaItem({ label, children }: { label: string; children: React.ReactNod
 // ─── 相關導覽列 ──────────────────────────────────────────────────────────────
 
 function MobileFilterNav({ project }: { project: DetailProject }) {
-  const industries = project.industries ?? []
-  const multipleIndustries = industries.length > 1
+  const industries: DetailIndustry[] =
+    project.industries?.length
+      ? project.industries
+      : (project.industryLabels.length > 0
+          ? project.industryLabels
+          : ["未分類"]
+        ).map((label) => ({ label }))
 
   return (
     <nav
       aria-label="作品篩選連結"
-      className="md:hidden px-4 py-5"
+      className="px-4 py-3 md:hidden"
     >
-      <div
-        className={
-          multipleIndustries
-            ? "grid grid-cols-2 gap-x-4 gap-y-5"
-            : "grid grid-cols-3 gap-x-3"
-        }
-      >
-        <MobileFilterLink
-          label="年份"
-          value={project.year || "未設定"}
-          href={project.year ? `/portfolio?year=${encodeURIComponent(project.year)}` : "/portfolio"}
-        />
-        <MobileFilterLink
-          label="執行項目"
-          value={project.categoryLabel || "未分類"}
-          href={
-            project.categoryGroup
-              ? `/portfolio?group=${encodeURIComponent(project.categoryGroup)}`
-              : "/portfolio"
-          }
-        />
-
-        {multipleIndustries ? (
-          <div className="col-span-2 px-1 pt-1 text-center">
-            <p className="mb-2 text-[9px] tracking-[0.24em] text-temo-warm-gray/45">行業</p>
-            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
-              {industries.map((industry) => (
-                industry.value ? (
-                  <Link
-                    key={industry.value}
-                    href={`/portfolio?industry=${encodeURIComponent(industry.value)}`}
-                    className="inline-flex min-h-11 items-center gap-1.5 px-1 py-2 text-xs leading-snug text-temo-white underline decoration-temo-warm-gray/25 underline-offset-4 transition-colors hover:text-temo-gold hover:decoration-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
-                  >
-                    {industry.label}
-                    <ArrowUpRight className="h-3 w-3 shrink-0 text-temo-gold" aria-hidden="true" />
-                  </Link>
-                ) : (
-                  <span
-                    key={`custom-${industry.label}`}
-                    className="inline-flex min-h-11 items-center px-1 py-2 text-xs leading-snug text-temo-white"
-                  >
-                    {industry.label}
-                  </span>
-                )
-              ))}
-            </div>
-          </div>
-        ) : (
-          <MobileFilterLink
-            label="行業"
-            value={industries[0]?.label || project.industryLabels[0] || "未分類"}
+      <div className="flex min-h-11 flex-col items-center justify-center gap-x-4 min-[390px]:flex-row">
+        <div className="flex items-center whitespace-nowrap text-[9px] tracking-[0.3em] text-temo-gold uppercase min-[390px]:text-[10px] min-[390px]:tracking-[0.5em]">
+          <Link
             href={
-              industries[0]?.value
-                ? `/portfolio?industry=${encodeURIComponent(industries[0].value)}`
-                : undefined
+              project.categoryGroup
+                ? `/portfolio?group=${encodeURIComponent(project.categoryGroup)}`
+                : "/portfolio"
             }
-          />
-        )}
+            className="inline-flex min-h-11 items-center transition-colors hover:text-temo-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+          >
+            {project.categoryLabel || "未分類"}
+          </Link>
+          <span className="mx-[0.45em]" aria-hidden="true">·</span>
+          <Link
+            href={project.year ? `/portfolio?year=${encodeURIComponent(project.year)}` : "/portfolio"}
+            className="inline-flex min-h-11 items-center transition-colors hover:text-temo-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+          >
+            {project.year || "未設定"}
+          </Link>
+        </div>
+
+        <div className="flex min-h-11 flex-wrap items-center justify-center gap-x-2 text-center min-[390px]:border-l min-[390px]:border-temo-warm-gray/20 min-[390px]:pl-4">
+          <span className="text-[9px] tracking-[0.22em] text-temo-warm-gray/45">行業</span>
+          {industries.map((industry, index) => (
+            industry.value ? (
+              <Link
+                key={industry.value}
+                href={`/portfolio?industry=${encodeURIComponent(industry.value)}`}
+                className="inline-flex min-h-11 items-center gap-1 text-[11px] leading-snug text-temo-white transition-colors hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+              >
+                {industry.label}
+                <ArrowUpRight className="h-3 w-3 shrink-0 text-temo-gold" aria-hidden="true" />
+              </Link>
+            ) : (
+              <span
+                key={`custom-${industry.label}-${index}`}
+                className="inline-flex min-h-11 items-center text-[11px] leading-snug text-temo-white"
+              >
+                {industry.label}
+              </span>
+            )
+          ))}
+        </div>
       </div>
     </nav>
-  )
-}
-
-function MobileFilterLink({
-  label,
-  value,
-  href,
-}: {
-  label: string
-  value: string
-  href?: string
-}) {
-  const content = (
-    <>
-      <span className="text-[9px] tracking-[0.22em] text-temo-warm-gray/45">{label}</span>
-      <span className="mt-1 line-clamp-2 text-[11px] font-medium leading-snug text-temo-white group-hover:text-temo-gold">
-        {value}
-      </span>
-    </>
-  )
-
-  return href ? (
-    <Link
-      href={href}
-      className="group flex min-h-14 min-w-0 flex-col items-center justify-center px-1 py-1 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
-    >
-      {content}
-    </Link>
-  ) : (
-    <div className="flex min-h-14 min-w-0 flex-col items-center justify-center px-1 py-1 text-center">
-      {content}
-    </div>
   )
 }
 
