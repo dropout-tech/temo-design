@@ -1157,14 +1157,9 @@ export function WorkForm({
                 <Field label="簡述">
                   <textarea className={cn(inputCls, "min-h-20 resize-y")} value={f.description} onChange={(e) => set("description", e.target.value)} />
                 </Field>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <Field label="服務範疇" hint="一行一項">
-                    <textarea className={cn(inputCls, "min-h-24 resize-y")} value={f.services} onChange={(e) => set("services", e.target.value)} placeholder={"品牌策略\nLogo 設計"} />
-                  </Field>
-                  <Field label="交付項目" hint="一行一項">
-                    <textarea className={cn(inputCls, "min-h-24 resize-y")} value={f.deliverables} onChange={(e) => set("deliverables", e.target.value)} />
-                  </Field>
-                </div>
+                <Field label="服務範疇" hint="一行一項">
+                  <textarea className={cn(inputCls, "min-h-24 resize-y")} value={f.services} onChange={(e) => set("services", e.target.value)} placeholder={"品牌策略\nLogo 設計"} />
+                </Field>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)]">
                   <Field label="引言 Quote" hint="顯示於案例敘事區；留空時前台不顯示">
                     <textarea
