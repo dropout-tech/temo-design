@@ -50,7 +50,7 @@ export type WorkInput = {
   /** 作品專屬、未列入固定選項的行業顯示名稱 */
   customIndustryNames: string[]
   designerIds: string[]
-  /** 作品專屬的外部／單次合作設計師顯示名稱 */
+  /** 作品專屬的外部／單次合作夥伴顯示名稱（沿用既有 DB 欄位名） */
   guestDesignerNames: string[]
   blocks: {
     type: "image" | "video" | "text" | "divider" | "button"
@@ -162,10 +162,10 @@ export async function saveWork(
   }
   const guestDesignerNames = normalizeCustomNames(input.guestDesignerNames)
   if (guestDesignerNames.length > CUSTOM_NAME_LIMIT) {
-    return { error: `每件作品最多可新增 ${CUSTOM_NAME_LIMIT} 位其他合作設計師` }
+    return { error: `每件作品最多可新增 ${CUSTOM_NAME_LIMIT} 個合作夥伴` }
   }
   if (guestDesignerNames.some((name) => name.length > CUSTOM_NAME_MAX)) {
-    return { error: `其他合作設計師名稱請控制在 ${CUSTOM_NAME_MAX} 個字內` }
+    return { error: `合作夥伴名稱請控制在 ${CUSTOM_NAME_MAX} 個字內` }
   }
 
   for (const [index, block] of input.blocks.entries()) {

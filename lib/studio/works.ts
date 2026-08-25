@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import type { WorkFormInitial } from "@/components/studio/work-form"
 import { normalizeCoverCrop } from "@/lib/cover-crop"
+import { normalizeCollaboratorNames } from "@/lib/collaborator-names"
 
 // work_blocks 的原始 DB 欄位形狀（後台表單之後直接讀寫這個形狀即可，不做欄位改名）。
 export type WorkBlockRow = {
@@ -84,21 +85,28 @@ type WorkEditRow = {
 /** 作品表單需要的下拉/多選選項 */
 export async function getWorkOptions() {
   const supabase = await createClient()
-  const [categories, clients, members, industries] = await Promise.all([
+  const [categories, clients, members, industries, collaboratorWorks] = await Promise.all([
     supabase.from("category_groups").select("value,label").order("sort"),
     supabase.from("clients").select("id,name").order("name"),
     supabase.from("designers").select("id,name,name_zh,category").order("sort"),
     supabase.from("industries").select("value,label").order("sort"),
+    supabase.from("works").select("guest_designer_names").order("updated_at", { ascending: false }),
   ])
   // designers.category 自 0006/0016 起是後台自由字串（如「DESIGNER 設計團隊」），
   // 不能再精準比對舊代號；取分類含 DESIGNER 者，全對不到時退回全員以免選單空白。
   const allMembers = members.data ?? []
   const designerMembers = allMembers.filter((m) => /designer/i.test(m.category ?? ""))
+  const collaboratorNames = normalizeCollaboratorNames(
+    (collaboratorWorks.data ?? []).flatMap((work) =>
+      Array.isArray(work.guest_designer_names) ? work.guest_designer_names : []
+    )
+  )
   return {
     categories: categories.data ?? [],
     clients: clients.data ?? [],
     designers: designerMembers.length > 0 ? designerMembers : allMembers,
     industries: industries.data ?? [],
+    collaboratorNames,
   }
 }
 

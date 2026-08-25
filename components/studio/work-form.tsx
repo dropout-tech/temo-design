@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useTransition } from "react"
+import { useId, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Loader2, Upload, Trash2, ArrowLeft, ExternalLink, X, GripVertical, Minus, Move, Plus, RotateCcw } from "lucide-react"
@@ -42,6 +42,7 @@ type Options = {
   }[]
   designers: { id: string; name: string; name_zh: string | null }[]
   industries: { value: string; label: string }[]
+  collaboratorNames: string[]
 }
 
 export type WorkFormInitial = {
@@ -76,7 +77,7 @@ export type WorkFormInitial = {
   /** 不在既有行業分類中的作品專屬顯示名稱 */
   customIndustryNames: string[]
   designerIds: string[]
-  /** 不在正式團隊名冊中的單次合作設計師，只在這件作品前台顯示名稱 */
+  /** 不在正式團隊名冊中的臨時合作夥伴，只在作品與後台彙整頁保留名稱 */
   guestDesignerNames: string[]
   /** 舊資料：僅用於表單初始化時的一次性 fallback，不再被編輯或送出 */
   gallery: { src: string; alt?: string; caption?: string }[]
@@ -946,15 +947,22 @@ export function WorkForm({
                       items={options.designers.map((d) => ({ value: d.id, label: d.name_zh ? `${d.name}（${d.name_zh}）` : d.name }))}
                       selected={f.designerIds}
                       onToggle={(v) => set("designerIds", toggle(f.designerIds, v))}
-                    >
+                    />
+                  </Field>
+                  <Field
+                    label="其他合作夥伴（臨時名稱）"
+                    hint="攝影師、顧問或外部團隊都可直接輸入；既有名稱可點選重用，並會自動出現在「合作夥伴」彙整頁。"
+                  >
+                    <div className="flex flex-wrap gap-2">
                       <CustomNameChips
                         values={f.guestDesignerNames}
                         onChange={(values) => set("guestDesignerNames", values)}
-                        nameLabel="其他合作設計師"
-                        placeholder="設計師名稱"
+                        nameLabel="合作夥伴"
+                        placeholder="姓名或團隊名稱"
+                        suggestions={options.collaboratorNames}
                         onError={setError}
                       />
-                    </ChipGroup>
+                    </div>
                   </Field>
                 </section>
               </>
@@ -1246,7 +1254,7 @@ export function WorkForm({
                 <p>媒體：{mediaSummary.length > 0 ? mediaSummary.join("、") : "尚未補媒體"}</p>
                 <p>文字：{storySummary.length > 0 ? storySummary.join("、") : "尚未補案例文字"}</p>
                 <p>
-                  關聯：{f.industryValues.length + f.customIndustryNames.length} 個行業 · {f.designerIds.length + f.guestDesignerNames.length} 位設計師
+                  關聯：{f.industryValues.length + f.customIndustryNames.length} 個行業 · {f.designerIds.length} 位設計師 · {f.guestDesignerNames.length} 個合作夥伴
                 </p>
               </div>
             </div>
@@ -1758,16 +1766,19 @@ function CustomNameChips({
   onChange,
   nameLabel,
   placeholder,
+  suggestions = [],
   onError,
 }: {
   values: string[]
   onChange: (values: string[]) => void
   nameLabel: string
   placeholder: string
+  suggestions?: string[]
   onError: (message: string) => void
 }) {
   const [draft, setDraft] = useState("")
   const [open, setOpen] = useState(false)
+  const suggestionListId = useId()
 
   function close() {
     setDraft("")
@@ -1797,6 +1808,22 @@ function CustomNameChips({
     close()
   }
 
+  function addSuggestion(name: string) {
+    if (values.length >= CUSTOM_NAME_LIMIT) {
+      onError(`每件作品最多可新增 ${CUSTOM_NAME_LIMIT} 個${nameLabel}`)
+      return
+    }
+    onChange([...values, name])
+    onError("")
+  }
+
+  const selectedKeys = new Set(
+    values.map((value) => normalizeCustomName(value).toLocaleLowerCase())
+  )
+  const availableSuggestions = suggestions.filter(
+    (name) => !selectedKeys.has(normalizeCustomName(name).toLocaleLowerCase())
+  )
+
   return (
     <>
       {values.map((name, index) => (
@@ -1819,6 +1846,19 @@ function CustomNameChips({
         </span>
       ))}
 
+      {availableSuggestions.slice(0, 8).map((name) => (
+        <button
+          key={`suggestion-${name}`}
+          type="button"
+          onClick={() => addSuggestion(name)}
+          className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs text-temo-warm-gray/55 transition-colors hover:border-temo-gold/45 hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60"
+          aria-label={`重用${nameLabel} ${name}`}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          <span className="truncate">{name}</span>
+        </button>
+      ))}
+
       {open ? (
         <div className="inline-flex max-w-full items-stretch overflow-hidden rounded-full border border-temo-gold/50 bg-temo-gold/[0.06]">
           <input
@@ -1836,7 +1876,15 @@ function CustomNameChips({
             maxLength={CUSTOM_NAME_MAX}
             placeholder={placeholder}
             aria-label={`${nameLabel}名稱`}
+            list={suggestions.length > 0 ? suggestionListId : undefined}
           />
+          {suggestions.length > 0 && (
+            <datalist id={suggestionListId}>
+              {availableSuggestions.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+          )}
           <button
             type="button"
             onClick={add}

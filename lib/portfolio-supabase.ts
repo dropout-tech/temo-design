@@ -376,8 +376,8 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       photo: d.photo_url ?? "",
     }))
 
-  // 單次合作設計師只存顯示名稱；獨立查詢可讓 migration 尚未套用時仍正常讀取舊作品。
-  let guestDesignerNames: string[] = []
+  // 臨時合作夥伴只存顯示名稱；獨立查詢可讓 migration 尚未套用時仍正常讀取舊作品。
+  let collaboratorNames: string[] = []
   try {
     const { data: guestRow, error: guestErr } = await supa
       .from("works")
@@ -386,22 +386,13 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       .maybeSingle()
     const guestNames = (guestRow as unknown as { guest_designer_names?: unknown })?.guest_designer_names
     if (!guestErr && Array.isArray(guestNames)) {
-      guestDesignerNames = guestNames
+      collaboratorNames = guestNames
         .map((name: unknown) => String(name).trim())
         .filter(Boolean)
     }
   } catch {
-    guestDesignerNames = []
+    collaboratorNames = []
   }
-
-  const designers = [
-    ...linkedDesigners,
-    ...guestDesignerNames.map((name) => ({
-      name,
-      role: "",
-      photo: "",
-    })),
-  ]
 
   const gallery = (w.work_gallery ?? [])
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
@@ -549,7 +540,8 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     quote: w.quote_text ? { text: w.quote_text, author: w.quote_author ?? undefined } : undefined,
     awards: w.awards ?? [],
     pressMentions,
-    designers,
+    designers: linkedDesigners,
+    collaborators: collaboratorNames,
     related,
     blocks,
   }

@@ -23,8 +23,7 @@ import {
 } from "@/lib/work-block-config"
 
 export type DetailDesigner = {
-  /** 只有正式團隊成員有 slug／個人頁；單次合作設計師只顯示名稱 */
-  slug?: string
+  slug: string
   name: string
   nameZh?: string
   role: string
@@ -91,6 +90,8 @@ export type DetailProject = {
   /** 新聞報導：一行一筆「媒體名稱 https://連結」（連結選填），有值才顯示 Press 區塊 */
   pressMentions?: string[]
   designers: DetailDesigner[]
+  /** 作品內直接輸入的外部合作名稱，不建立個人頁或公開連結。 */
+  collaborators?: string[]
   related: DetailRelated[]
   /** 內頁首圖，未提供時退回 cover（本地 demo fallback 資料無此欄位） */
   hero?: string
@@ -146,6 +147,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
     project.services?.length ||
     project.deliverables?.length ||
     project.designers.length ||
+    project.collaborators?.length ||
     project.clientName ||
     project.clientLogos?.length
 
@@ -477,6 +479,18 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                                   {d.name}
                                 </div>
                               )}
+                            </li>
+                          ))}
+                        </ul>
+                      </MetaItem>
+                    )}
+
+                    {project.collaborators && project.collaborators.length > 0 && (
+                      <MetaItem label="合作夥伴 Collaborators">
+                        <ul className="space-y-1.5">
+                          {project.collaborators.map((name) => (
+                            <li key={name} className="text-sm tracking-wider text-temo-white">
+                              {name}
                             </li>
                           ))}
                         </ul>
@@ -1074,13 +1088,16 @@ function MobileProjectDetails({
         </section>
       )}
 
-      {(mobileScopeItems?.length || project.designers.length > 0) && (
+      {(mobileScopeItems?.length || project.designers.length > 0 || project.collaborators?.length) && (
         <section className="space-y-6 border-b border-temo-warm-gray/15 py-6">
           {mobileScopeItems && mobileScopeItems.length > 0 && (
             <MobileEditorialMeta title="服務範疇" items={mobileScopeItems} />
           )}
           {project.designers.length > 0 && (
             <MobileEditorialPeople designers={project.designers} />
+          )}
+          {project.collaborators && project.collaborators.length > 0 && (
+            <MobileEditorialCollaborators names={project.collaborators} />
           )}
         </section>
       )}
@@ -1223,6 +1240,21 @@ function MobileEditorialPeople({ designers }: { designers: DetailDesigner[] }) {
   )
 }
 
+function MobileEditorialCollaborators({ names }: { names: string[] }) {
+  return (
+    <div>
+      <MobileSectionHeading align="center">合作夥伴</MobileSectionHeading>
+      <ul className="mx-auto mt-5 max-w-sm space-y-3">
+        {names.map((name) => (
+          <li key={name} className="text-center text-sm tracking-wide text-temo-white">
+            {name}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function MobilePressMentions({ items }: { items: string[] }) {
   return (
     <section className="border-b border-temo-warm-gray/15 py-10">
@@ -1299,7 +1331,8 @@ function RelatedNav({ project }: { project: DetailProject }) {
     project.categoryGroup ||
     (project.industries && project.industries.length > 0) ||
     project.clientSlug ||
-    project.designers.length > 0
+    project.designers.length > 0 ||
+    Boolean(project.collaborators?.length)
 
   if (!hasAny) return null
 
@@ -1390,6 +1423,19 @@ function RelatedNav({ project }: { project: DetailProject }) {
                 </span>
               )
             )}
+          </NavGroup>
+        )}
+
+        {project.collaborators && project.collaborators.length > 0 && (
+          <NavGroup label="合作夥伴">
+            {project.collaborators.map((name) => (
+              <span
+                key={name}
+                className="inline-flex items-center rounded-full border border-temo-warm-gray/20 px-3.5 py-2.5 text-xs text-temo-warm-gray/80 md:px-3 md:py-1.5"
+              >
+                {name}
+              </span>
+            ))}
           </NavGroup>
         )}
       </div>

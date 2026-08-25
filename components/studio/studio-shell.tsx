@@ -19,6 +19,7 @@ import {
   ClipboardList,
   Presentation,
   ExternalLink,
+  Handshake,
   X,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
@@ -56,6 +57,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { href: "/studio/categories", label: "作品分類", icon: Tags },
       { href: "/studio/landings", label: "服務落地頁", icon: Presentation },
       { href: "/studio/designers", label: "團隊成員", icon: Users },
+      { href: "/studio/collaborators", label: "合作夥伴", icon: Handshake },
       { href: "/studio/faqs", label: "常見問答", icon: HelpCircle },
     ],
   },
