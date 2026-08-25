@@ -817,7 +817,7 @@ export function AboutPageClient({
                 {menuOpen && (
                   <div
                     role="listbox"
-                    className="absolute top-full left-1/2 -translate-x-1/2 mt-3 min-w-[200px] bg-temo-black/95 backdrop-blur-sm border border-white/20 rounded-2xl py-2 z-50 shadow-2xl"
+                    className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-[calc(100vw-2rem)] max-w-lg md:w-auto md:min-w-[320px] bg-temo-black/95 backdrop-blur-sm border border-white/20 rounded-2xl py-2 z-50 shadow-2xl"
                   >
                     {categoryOrder.map((cat) => {
                       const isActive = cat === activeCategory
@@ -831,7 +831,7 @@ export function AboutPageClient({
                             setActiveCategory(cat)
                             setMenuOpen(false)
                           }}
-                          className={`w-full px-6 py-3 text-xs tracking-[0.3em] uppercase text-left whitespace-nowrap transition-colors ${
+                          className={`w-full px-4 md:px-6 py-3 text-xs leading-relaxed tracking-[0.16em] sm:tracking-[0.22em] md:tracking-[0.3em] uppercase text-center md:text-left whitespace-normal break-words md:whitespace-nowrap md:break-normal transition-colors ${
                             isActive
                               ? "text-temo-gold"
                               : "text-white/60 hover:text-white hover:bg-white/5"
