@@ -161,7 +161,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
   return (
     <>
       <Navbar />
-      <main className="pt-20 bg-temo-black text-temo-white">
+      <main className="pt-[68px] bg-temo-black text-temo-white md:pt-20">
         {/* ─── Breadcrumb ───────────────────────────────────────────── */}
         <div className="hidden md:block border-b border-temo-warm-gray/10">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5 flex items-center gap-2 text-xs tracking-wider text-temo-warm-gray/70">
@@ -179,6 +179,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
 
         {/* ─── 相關導覽列：分類 / 細項 / 客戶 / 設計師（皆可點） ─────── */}
         <RelatedNav project={project} />
+        <MobileProjectIntro project={project} />
         <MobileFilterNav project={project} />
 
         {/* ─── Hero ─────────────────────────────────────────────────── */}
@@ -246,7 +247,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                 preload="metadata"
                 className="absolute inset-0 h-full w-full object-cover"
               />
-              <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-temo-black/40 via-transparent to-transparent" />
+              <div className="pointer-events-none absolute inset-0 hidden bg-gradient-to-t from-temo-black/40 via-transparent to-transparent md:block" />
             </div>
           ) : (
             <div
@@ -265,7 +266,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                 sizes="100vw"
                 referrerPolicy="no-referrer"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-temo-black/40 via-transparent to-transparent" />
+              <div className="absolute inset-0 hidden bg-gradient-to-t from-temo-black/40 via-transparent to-transparent md:block" />
             </div>
           )}
         </section>
@@ -891,6 +892,21 @@ function MetaItem({ label, children }: { label: string; children: React.ReactNod
 
 // ─── 相關導覽列 ──────────────────────────────────────────────────────────────
 
+function MobileProjectIntro({ project }: { project: DetailProject }) {
+  return (
+    <header className="px-4 pt-12 md:hidden">
+      <h1 className="text-[26px] font-bold leading-[1.2] tracking-[-0.025em] text-temo-white">
+        {project.title}
+      </h1>
+      {project.subtitle && (
+        <p className="mt-1.5 text-sm leading-relaxed tracking-wide text-temo-warm-gray/60">
+          {project.subtitle}
+        </p>
+      )}
+    </header>
+  )
+}
+
 function MobileFilterNav({ project }: { project: DetailProject }) {
   const industries: DetailIndustry[] =
     project.industries?.length
@@ -900,54 +916,43 @@ function MobileFilterNav({ project }: { project: DetailProject }) {
           : ["未分類"]
         ).map((label) => ({ label }))
 
+  const pillClass =
+    "inline-flex h-5 items-center rounded-full border border-temo-warm-gray/25 px-2.5 text-[9px] leading-none tracking-[0.1em] text-temo-warm-gray/55 transition-colors hover:border-temo-gold/60 hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+
   return (
     <nav
       aria-label="作品篩選連結"
-      className="px-4 py-3 md:hidden"
+      className="mt-3 px-4 pb-5 md:hidden"
     >
-      <div className="flex min-h-11 flex-col items-center justify-center gap-x-4 min-[390px]:flex-row">
-        <div className="flex items-center whitespace-nowrap text-[9px] tracking-[0.3em] text-temo-gold uppercase min-[390px]:text-[10px] min-[390px]:tracking-[0.5em]">
-          <Link
-            href={
-              project.categoryGroup
-                ? `/portfolio?group=${encodeURIComponent(project.categoryGroup)}`
-                : "/portfolio"
-            }
-            className="inline-flex min-h-11 items-center transition-colors hover:text-temo-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
-          >
-            {project.categoryLabel || "未分類"}
-          </Link>
-          <span className="mx-[0.45em]" aria-hidden="true">·</span>
-          <Link
-            href={project.year ? `/portfolio?year=${encodeURIComponent(project.year)}` : "/portfolio"}
-            className="inline-flex min-h-11 items-center transition-colors hover:text-temo-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
-          >
-            {project.year || "未設定"}
-          </Link>
-        </div>
-
-        <div className="flex min-h-11 flex-wrap items-center justify-center gap-x-2 text-center min-[390px]:border-l min-[390px]:border-temo-warm-gray/20 min-[390px]:pl-4">
-          <span className="text-[9px] tracking-[0.22em] text-temo-warm-gray/45">行業</span>
-          {industries.map((industry, index) => (
-            industry.value ? (
-              <Link
-                key={industry.value}
-                href={`/portfolio?industry=${encodeURIComponent(industry.value)}`}
-                className="inline-flex min-h-11 items-center gap-1 text-[11px] leading-snug text-temo-white transition-colors hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
-              >
-                {industry.label}
-                <ArrowUpRight className="h-3 w-3 shrink-0 text-temo-gold" aria-hidden="true" />
-              </Link>
-            ) : (
-              <span
-                key={`custom-${industry.label}-${index}`}
-                className="inline-flex min-h-11 items-center text-[11px] leading-snug text-temo-white"
-              >
-                {industry.label}
-              </span>
-            )
-          ))}
-        </div>
+      <div className="flex flex-wrap items-center gap-2 border-t border-temo-warm-gray/10 pt-3">
+        <Link
+          href={
+            project.categoryGroup
+              ? `/portfolio?group=${encodeURIComponent(project.categoryGroup)}`
+              : "/portfolio"
+          }
+          className={pillClass}
+        >
+          {project.categoryLabel || "未分類"}
+        </Link>
+        {industries.map((industry, index) => (
+          industry.value ? (
+            <Link
+              key={industry.value}
+              href={`/portfolio?industry=${encodeURIComponent(industry.value)}`}
+              className={pillClass}
+            >
+              {industry.label}
+            </Link>
+          ) : (
+            <span
+              key={`custom-${industry.label}-${index}`}
+              className={pillClass}
+            >
+              {industry.label}
+            </span>
+          )
+        ))}
       </div>
     </nav>
   )
@@ -967,24 +972,19 @@ function MobileProjectDetails({
     project.clientLogos?.length || project.clientName || project.clientBrief || hasClientContact
   )
   const websiteHref = toWebsiteHref(project.clientWebsite)
+  const mobileScopeItems = project.deliverables?.length
+    ? project.deliverables
+    : project.services
+  const hasSupplementalContent = Boolean(
+    project.pressMentions?.length || project.awards?.length || project.description || project.quote
+  )
 
   return (
     <article className="md:hidden px-4 pb-20">
-      <header className="border-b border-temo-warm-gray/15 py-10">
-        <h1 className="text-balance text-3xl font-bold leading-tight tracking-[-0.025em] text-temo-white">
-          {project.title}
-        </h1>
-        {project.subtitle && (
-          <p className="mt-3 text-sm leading-relaxed tracking-wide text-temo-warm-gray/65">
-            {project.subtitle}
-          </p>
-        )}
-      </header>
-
       {hasClient && (
-        <section className="border-b border-temo-warm-gray/15 py-10">
+        <section className="border-b border-temo-warm-gray/15 pb-6 pt-10">
           {project.clientLogos && project.clientLogos.length > 0 && (
-            <div className="mb-7 flex flex-wrap items-center justify-center gap-6">
+            <div className="mb-3 flex flex-wrap items-center justify-center gap-6">
               {project.clientLogos.map((logo, index) => (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -995,7 +995,7 @@ function MobileProjectDetails({
                       ? `${project.clientName || project.title} logo ${index + 1}`
                       : `${project.clientName || project.title} logo`
                   }
-                  className="max-h-24 w-auto max-w-[min(70vw,18rem)] object-contain"
+                  className="max-h-[4.5rem] w-auto max-w-[min(80vw,19rem)] object-contain"
                   referrerPolicy="no-referrer"
                 />
               ))}
@@ -1007,16 +1007,16 @@ function MobileProjectDetails({
               {project.clientSlug ? (
                 <Link
                   href={`/portfolio?client=${encodeURIComponent(project.clientSlug)}`}
-                  className="inline-flex min-h-11 items-center justify-center gap-1.5 text-lg font-medium text-temo-white transition-colors hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+                  className="inline-flex min-h-6 items-center justify-center gap-1.5 text-base font-medium text-temo-white transition-colors hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
                 >
                   {project.clientName}
-                  <ArrowUpRight className="h-4 w-4 text-temo-gold" aria-hidden="true" />
+                  <ArrowUpRight className="h-3.5 w-3.5 text-temo-gold" aria-hidden="true" />
                 </Link>
               ) : (
-                <p className="text-lg font-medium text-temo-white">{project.clientName}</p>
+                <p className="text-base font-medium text-temo-white">{project.clientName}</p>
               )}
               {project.clientBrief && (
-                <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-temo-warm-gray/60">
+                <p className="mx-auto mt-2 max-w-md text-sm leading-[1.65] text-temo-warm-gray/65">
                   {project.clientBrief}
                 </p>
               )}
@@ -1024,22 +1024,22 @@ function MobileProjectDetails({
           )}
 
           {hasClientContact && (
-            <div className="mt-8 border-t border-temo-warm-gray/10 pt-7">
+            <div className="mt-4 border-t border-temo-warm-gray/10 pt-4">
               <MobileSectionHeading>客戶資訊</MobileSectionHeading>
-              <dl className="mt-5 space-y-4 text-sm">
+              <dl className="mt-2 text-sm">
                 {project.clientAddress && (
-                  <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3">
+                  <div className="grid min-h-8 grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-3">
                     <dt className="text-temo-warm-gray/45">地址</dt>
                     <dd className="break-words text-temo-white/85">{project.clientAddress}</dd>
                   </div>
                 )}
                 {project.clientPhone && (
-                  <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-3">
-                    <dt className="pt-3 text-temo-warm-gray/45">電話</dt>
+                  <div className="grid min-h-8 grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-3">
+                    <dt className="text-temo-warm-gray/45">電話</dt>
                     <dd>
                       <a
                         href={`tel:${project.clientPhone.replace(/\s+/g, "")}`}
-                        className="inline-flex min-h-11 items-center break-all text-temo-white/85 underline decoration-temo-warm-gray/30 underline-offset-4 hover:text-temo-gold"
+                        className="inline-flex min-h-8 items-center break-all text-temo-white/85 underline decoration-temo-warm-gray/30 underline-offset-4 hover:text-temo-gold"
                       >
                         {project.clientPhone}
                       </a>
@@ -1047,21 +1047,21 @@ function MobileProjectDetails({
                   </div>
                 )}
                 {project.clientWebsite && (
-                  <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-3">
-                    <dt className="pt-3 text-temo-warm-gray/45">官網</dt>
+                  <div className="grid min-h-8 grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-3">
+                    <dt className="text-temo-warm-gray/45">官網</dt>
                     <dd>
                       {websiteHref ? (
                         <a
                           href={websiteHref}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex min-h-11 max-w-full items-center gap-1.5 break-all text-temo-white/85 underline decoration-temo-warm-gray/30 underline-offset-4 hover:text-temo-gold"
+                          className="inline-flex min-h-8 max-w-full items-center gap-1.5 break-all text-temo-white/85 underline decoration-temo-warm-gray/30 underline-offset-4 hover:text-temo-gold"
                         >
                           {project.clientWebsite}
                           <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-temo-gold" aria-hidden="true" />
                         </a>
                       ) : (
-                        <span className="inline-flex min-h-11 items-center break-all text-temo-white/85">
+                        <span className="inline-flex min-h-8 items-center break-all text-temo-white/85">
                           {project.clientWebsite}
                         </span>
                       )}
@@ -1074,19 +1074,27 @@ function MobileProjectDetails({
         </section>
       )}
 
-      {(project.services?.length || project.deliverables?.length || project.designers.length > 0) && (
-        <section className="space-y-10 border-b border-temo-warm-gray/15 py-10">
-          {project.services && project.services.length > 0 && (
-            <MobileEditorialMeta title="服務範疇" items={project.services} />
-          )}
-          {project.deliverables && project.deliverables.length > 0 && (
-            <MobileEditorialMeta title="交付項目" items={project.deliverables} />
+      {(mobileScopeItems?.length || project.designers.length > 0) && (
+        <section className="space-y-6 border-b border-temo-warm-gray/15 py-6">
+          {mobileScopeItems && mobileScopeItems.length > 0 && (
+            <MobileEditorialMeta title="服務範疇" items={mobileScopeItems} />
           )}
           {project.designers.length > 0 && (
             <MobileEditorialPeople designers={project.designers} />
           )}
         </section>
       )}
+
+      <section className={`space-y-12 py-10 ${hasSupplementalContent ? "border-b border-temo-warm-gray/15" : ""}`}>
+        {project.challenge && <MobileNarrative index="01" title="Challenge" body={project.challenge} />}
+        {project.approach && <MobileNarrative index="02" title="Approach" body={project.approach} />}
+        {project.result && <MobileNarrative index="03" title="Result" body={project.result} />}
+        {!hasNarrative && (
+          <p className="text-sm leading-relaxed text-temo-warm-gray/65">
+            本案例的完整介紹將在 CMS 上線後由我們上傳，敬請期待。
+          </p>
+        )}
+      </section>
 
       {project.pressMentions && project.pressMentions.length > 0 && (
         <MobilePressMentions items={project.pressMentions} />
@@ -1116,7 +1124,7 @@ function MobileProjectDetails({
       )}
 
       {project.quote && (
-        <section className="border-b border-temo-warm-gray/15 py-12">
+        <section className="py-12">
           <MobileSectionHeading>客戶引言</MobileSectionHeading>
           <blockquote className="mt-5 border-l border-temo-gold/70 pl-5">
             <p className="text-xl font-light leading-relaxed text-temo-white/90">
@@ -1130,17 +1138,6 @@ function MobileProjectDetails({
           </blockquote>
         </section>
       )}
-
-      <section className="space-y-12 py-12">
-        {project.challenge && <MobileNarrative title="Challenge" body={project.challenge} />}
-        {project.approach && <MobileNarrative title="Approach" body={project.approach} />}
-        {project.result && <MobileNarrative title="Result" body={project.result} />}
-        {!hasNarrative && (
-          <p className="text-sm leading-relaxed text-temo-warm-gray/65">
-            本案例的完整介紹將在 CMS 上線後由我們上傳，敬請期待。
-          </p>
-        )}
-      </section>
     </article>
   )
 }
@@ -1166,8 +1163,8 @@ function MobileSectionHeading({
 function MobileEditorialMeta({ title, items }: { title: string; items: string[] }) {
   return (
     <div>
-      <MobileSectionHeading align="center">{title}</MobileSectionHeading>
-      <p className="mx-auto mt-3 max-w-sm text-center text-xs leading-[1.85] tracking-[0.06em] text-temo-warm-gray/70">
+      <MobileSectionHeading>{title}</MobileSectionHeading>
+      <p className="mt-3 text-xs leading-[1.85] tracking-[0.06em] text-temo-warm-gray/70">
         {items.join(" · ")}
       </p>
     </div>
@@ -1177,14 +1174,11 @@ function MobileEditorialMeta({ title, items }: { title: string; items: string[] 
 function MobileEditorialPeople({ designers }: { designers: DetailDesigner[] }) {
   return (
     <div>
-      <MobileSectionHeading align="center">設計師</MobileSectionHeading>
-      <ul className="mx-auto mt-5 max-w-sm space-y-3">
-        {designers.map((designer) => (
-          <li key={designer.slug}>
-            <Link
-              href={`/team/${designer.slug}`}
-              className="group flex min-h-14 items-center gap-3 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
-            >
+      <MobileSectionHeading>設計師</MobileSectionHeading>
+      <ul className="mt-3 space-y-1">
+        {designers.map((designer, index) => {
+          const person = (
+            <>
               <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-temo-warm-gray/20">
                 <Image
                   src={proxyImage(designer.photo)}
@@ -1204,9 +1198,26 @@ function MobileEditorialPeople({ designers }: { designers: DetailDesigner[] }) {
                 </span>
               </span>
               <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-temo-gold" aria-hidden="true" />
-            </Link>
-          </li>
-        ))}
+            </>
+          )
+
+          return (
+            <li key={designer.slug ?? `guest-${designer.name}-${index}`}>
+              {designer.slug ? (
+                <Link
+                  href={`/team/${designer.slug}`}
+                  className="group flex min-h-13 items-center gap-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+                >
+                  {person}
+                </Link>
+              ) : (
+                <div className="group flex min-h-13 items-center gap-3">
+                  {person}
+                </div>
+              )}
+            </li>
+          )
+        })}
       </ul>
     </div>
   )
@@ -1246,15 +1257,26 @@ function MobilePressMentions({ items }: { items: string[] }) {
   )
 }
 
-function MobileNarrative({ title, body }: { title: string; body: string }) {
+function MobileNarrative({
+  index,
+  title,
+  body,
+}: {
+  index: string
+  title: string
+  body: string
+}) {
   return (
     <div>
-      <h2 className="text-2xl font-bold tracking-[-0.02em] text-temo-white">{title}</h2>
-      <div className="mt-5 space-y-5">
+      <h2 className="flex items-baseline gap-3 text-2xl font-bold tracking-[-0.02em]">
+        <span className="text-temo-gold" aria-hidden="true">{index}</span>
+        <span className="text-temo-white">{title}</span>
+      </h2>
+      <div className="mt-4 space-y-5">
         {body.split("\n\n").map((paragraph, index) => (
           <p
             key={index}
-            className="whitespace-pre-line break-words text-base leading-[1.85] text-temo-warm-gray"
+            className="whitespace-pre-line break-words text-sm leading-[2.05] tracking-[0.015em] text-temo-warm-gray"
           >
             {paragraph}
           </p>
