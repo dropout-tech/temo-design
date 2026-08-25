@@ -6,17 +6,27 @@ interface LoadingScreenProps {
   onComplete: () => void
 }
 
+const DEFAULT_MIN_DISPLAY_MS = 2000
+
+function getMinDisplayMs() {
+  const params = new URLSearchParams(window.location.search)
+  const previewHoldMs = Number(params.get("loadingHoldMs"))
+
+  if (!Number.isFinite(previewHoldMs) || previewHoldMs <= DEFAULT_MIN_DISPLAY_MS) {
+    return DEFAULT_MIN_DISPLAY_MS
+  }
+
+  return Math.min(previewHoldMs, 15000)
+}
+
 export function LoadingScreen({ onComplete }: LoadingScreenProps) {
   // progress value is no longer shown, but still drives the completion timing below
   const [, setProgress] = useState(0)
   const [isExiting, setIsExiting] = useState(false)
-  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    const mountFrame = requestAnimationFrame(() => setMounted(true))
-
     const startTime = Date.now()
-    const MIN_DISPLAY_MS = 2000 // at least show reveal + first full shimmer
+    const minDisplayMs = getMinDisplayMs()
     let pageLoaded = document.readyState === "complete"
 
     const handleLoad = () => {
@@ -27,7 +37,7 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
     const timer = setInterval(() => {
       setProgress((prev) => {
         const elapsed = Date.now() - startTime
-        const minTimeElapsed = elapsed >= MIN_DISPLAY_MS
+        const minTimeElapsed = elapsed >= minDisplayMs
         const canComplete = pageLoaded && minTimeElapsed
 
         if (prev >= 100) {
@@ -50,7 +60,6 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
     }, 30)
 
     return () => {
-      cancelAnimationFrame(mountFrame)
       clearInterval(timer)
       window.removeEventListener("load", handleLoad)
     }
@@ -78,22 +87,17 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
 
       {/* Logo artwork is unchanged; the stacked masks create a darker chrome reflection. */}
       <div
-        style={{
-          transition: "opacity 0.6s ease",
-          opacity: mounted ? 1 : 0,
-        }}
         className="logo-shimmer-wrap"
         aria-label="TEMO DESIGN"
         role="img"
       >
-        <div className={`logo-metal-stack ${mounted ? "is-mounted" : ""}`}>
+        <div className="logo-metal-stack is-mounted">
           <div className="logo-metal-layer logo-metal-edge-shadow" />
           <div className="logo-metal-layer logo-metal-body" />
           <div className="logo-metal-layer logo-metal-edge-highlight" />
           <div className="logo-metal-layer logo-metal-sweep" />
           <div className="logo-metal-layer logo-metal-glint" />
         </div>
-        <div className="logo-corner-spark" />
       </div>
 
       <style>{`
@@ -106,8 +110,8 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
           width: 100%;
           aspect-ratio: 2872 / 2471;
           position: relative;
-          opacity: 0;
-          transform: scale(0.985);
+          opacity: 1;
+          transform: scale(1);
           transform-origin: center;
         }
         .logo-metal-layer {
@@ -193,28 +197,8 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
           mix-blend-mode: screen;
           filter: blur(0.12px);
         }
-        .logo-corner-spark {
-          content: "";
-          position: absolute;
-          left: 23.5%;
-          top: 49.5%;
-          width: 34px;
-          height: 34px;
-          pointer-events: none;
-          transform: translate(-50%, -50%) rotate(-18deg) scale(0.72);
-          opacity: 0;
-          background:
-            radial-gradient(circle, rgba(255, 255, 255, 0.72) 0 4%, rgba(235, 244, 248, 0.42) 7%, rgba(255, 255, 255, 0) 18%),
-            linear-gradient(90deg, transparent 0 42%, rgba(255, 255, 255, 0.46) 49%, rgba(255, 255, 255, 0.46) 51%, transparent 58% 100%),
-            linear-gradient(0deg, transparent 0 43%, rgba(255, 255, 255, 0.34) 49%, rgba(255, 255, 255, 0.34) 51%, transparent 57% 100%);
-          filter:
-            blur(0.1px)
-            drop-shadow(0 0 6px rgba(255, 255, 255, 0.26))
-            drop-shadow(0 0 12px rgba(194, 218, 226, 0.1));
-          mix-blend-mode: screen;
-        }
         .logo-metal-stack.is-mounted {
-          animation: logoMetalReveal 1.25s cubic-bezier(0.7, 0, 0.18, 1) 0.12s forwards;
+          animation: logoMetalReveal 1.25s cubic-bezier(0.7, 0, 0.18, 1) 0.12s both;
         }
         .logo-metal-stack.is-mounted .logo-metal-body {
           animation: logoMetalDrift 7.6s cubic-bezier(0.45, 0, 0.25, 1) 0.2s infinite alternate;
@@ -224,9 +208,6 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
         }
         .logo-metal-stack.is-mounted .logo-metal-glint {
           animation: logoMetalGlint 8.2s cubic-bezier(0.65, 0, 0.3, 1) 0.7s infinite;
-        }
-        .logo-metal-stack.is-mounted + .logo-corner-spark {
-          animation: logoCornerSpark 8.2s cubic-bezier(0.58, 0, 0.26, 1) 1s infinite;
         }
         @keyframes logoMetalReveal {
           0% {
@@ -302,33 +283,12 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
             background-position: 116% 0, 130% 0;
           }
         }
-        @keyframes logoCornerSpark {
-          0%,
-          16% {
-            opacity: 0;
-            transform: translate(-50%, -50%) rotate(-18deg) scale(0.62);
-          }
-          22% {
-            opacity: 0.42;
-            transform: translate(-50%, -50%) rotate(-18deg) scale(0.86);
-          }
-          28% {
-            opacity: 0.08;
-            transform: translate(-50%, -50%) rotate(-18deg) scale(0.96);
-          }
-          36%,
-          100% {
-            opacity: 0;
-            transform: translate(-50%, -50%) rotate(-18deg) scale(0.9);
-          }
-        }
         @media (prefers-reduced-motion: reduce) {
           .logo-metal-stack,
           .logo-metal-stack.is-mounted,
           .logo-metal-stack.is-mounted .logo-metal-body,
           .logo-metal-stack.is-mounted .logo-metal-sweep,
-          .logo-metal-stack.is-mounted .logo-metal-glint,
-          .logo-metal-stack.is-mounted + .logo-corner-spark {
+          .logo-metal-stack.is-mounted .logo-metal-glint {
             animation: none;
           }
           .logo-metal-stack {
@@ -337,8 +297,7 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
             filter: none;
           }
           .logo-metal-sweep,
-          .logo-metal-glint,
-          .logo-corner-spark {
+          .logo-metal-glint {
             display: none;
           }
         }
