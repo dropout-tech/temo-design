@@ -315,20 +315,20 @@ function TodayStage({
         {/* 標題區 */}
         <div className="text-[#2a2a28]">
           <p
-            className="text-[17vw] leading-none tracking-[-0.01em] text-[rgba(222,222,222,0.92)]"
+            className="text-[clamp(3.625rem,17vw,4.625rem)] leading-none tracking-[-0.01em] text-[rgba(222,222,222,0.92)]"
             style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 900 }}
           >
             TODAY
           </p>
           <p
-            className="mt-3 text-sm tracking-[0.09em] text-[rgba(222,222,222,0.92)]"
+            className="mt-3 whitespace-nowrap text-[clamp(1.25rem,6.15vw,1.5rem)] leading-[1.05] tracking-[0.09em] text-[rgba(222,222,222,0.92)]"
             style={{ fontFamily: "var(--font-barlow), sans-serif", fontWeight: 900 }}
           >
             SOMETHING MORE...
           </p>
           <p
-            className="mt-2 text-base font-bold tracking-[0.25em] text-[rgba(222,222,222,0.92)]"
-            style={{ fontFamily: "'Noto Sans TC', sans-serif" }}
+            className="mt-2 whitespace-nowrap text-[clamp(1.125rem,5.13vw,1.25rem)] leading-[1.2] font-bold tracking-[0.25em] text-[rgba(222,222,222,0.92)]"
+            style={{ fontFamily: "var(--font-noto-sans-tc), sans-serif" }}
           >
             今天我想來點...
           </p>
@@ -347,7 +347,7 @@ function TodayStage({
         </div>
 
         {/* 4 個服務選項 — 斜切平行四邊形帶，呼應桌機版斜線構圖 */}
-        <div className="mt-8 flex flex-1 flex-col justify-end gap-3">
+        <div className="mt-12 flex flex-1 flex-col justify-end gap-3">
           {SECTIONS.map((s, i) => (
             <button
               key={s.num}
@@ -365,8 +365,8 @@ function TodayStage({
               />
               <span className="relative flex items-baseline gap-4">
                 <span
-                  className="text-3xl font-black tracking-[0.13em]"
-                  style={{ fontFamily: "'Noto Sans TC', sans-serif", color: s.color }}
+                  className="text-[30px] leading-[1.2] font-black tracking-[0.13em]"
+                  style={{ fontFamily: "var(--font-noto-sans-tc), sans-serif", color: s.color }}
                 >
                   {s.top}
                   {s.bottom}
