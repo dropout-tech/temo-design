@@ -436,18 +436,6 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                       </MetaItem>
                     )}
 
-                    {project.deliverables && project.deliverables.length > 0 && (
-                      <MetaItem label="交付項目 Deliverables">
-                        <ul className="space-y-1.5">
-                          {project.deliverables.map((d) => (
-                            <li key={d} className="text-temo-warm-gray text-sm">
-                              ─ {d}
-                            </li>
-                          ))}
-                        </ul>
-                      </MetaItem>
-                    )}
-
                     {project.designers.length > 0 && (
                       <MetaItem label="設計團隊 Team">
                         <ul className="space-y-1">
