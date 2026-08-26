@@ -45,6 +45,17 @@ export type DetailIndustry = {
   label: string
 }
 
+function getEnglishRole(role: string): string {
+  return role
+    .split("/")
+    .map((part) => {
+      const firstHanCharacter = part.search(/\p{Script=Han}/u)
+      return (firstHanCharacter >= 0 ? part.slice(0, firstHanCharacter) : part).trim()
+    })
+    .filter(Boolean)
+    .join(" / ")
+}
+
 // 新聞報導單行解析：「媒體名稱 https://連結」→ { label, url }。
 // 沒有網址就整行當純文字；只貼網址沒名稱就以網址本身當顯示文字。
 function parsePressMention(raw: string): { label: string; url?: string } {
@@ -462,7 +473,11 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                                     <p className="text-temo-white group-hover:text-temo-gold text-sm tracking-wider transition-colors">
                                       {d.name}
                                     </p>
-                                    {d.role && <p className="text-temo-warm-gray/60 text-xs truncate">{d.role}</p>}
+                                    {d.role && (
+                                      <p className="text-temo-warm-gray/60 text-xs truncate">
+                                        {getEnglishRole(d.role)}
+                                      </p>
+                                    )}
                                   </div>
                                   <ArrowUpRight className="w-3.5 h-3.5 ml-auto text-temo-warm-gray/0 group-hover:text-temo-gold transition-colors" />
                                 </Link>
@@ -1212,7 +1227,7 @@ function MobileEditorialPeople({ designers }: { designers: DetailDesigner[] }) {
                   {designer.nameZh || designer.name}
                 </span>
                 <span className="mt-1 block text-[11px] leading-snug text-temo-warm-gray/55">
-                  {designer.role || "參與設計"}
+                  {designer.role ? getEnglishRole(designer.role) : "參與設計"}
                 </span>
               </span>
               <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-temo-gold" aria-hidden="true" />
