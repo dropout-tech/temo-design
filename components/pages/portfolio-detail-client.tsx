@@ -407,7 +407,9 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                           <p className="text-temo-white font-medium">{project.clientName}</p>
                         )}
                         {project.clientBrief && (
-                          <p className="text-temo-warm-gray/70 text-sm mt-1">{project.clientBrief}</p>
+                          <p className="mt-1 whitespace-pre-line break-words text-sm text-temo-warm-gray/70">
+                            {project.clientBrief}
+                          </p>
                         )}
                       </MetaItem>
                     )}
@@ -1030,7 +1032,7 @@ function MobileProjectDetails({
                 <p className="text-base font-medium text-temo-white">{project.clientName}</p>
               )}
               {project.clientBrief && (
-                <p className="mx-auto mt-2 max-w-md text-sm leading-[1.65] text-temo-warm-gray/65">
+                <p className="mx-auto mt-2 max-w-md whitespace-pre-line break-words text-sm leading-[1.65] text-temo-warm-gray/65">
                   {project.clientBrief}
                 </p>
               )}
