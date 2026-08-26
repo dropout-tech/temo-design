@@ -46,13 +46,13 @@ async function getDashboardData() {
   const supabase = await createClient()
   const worksRes = await supabase
     .from("works")
-    .select("id, slug, title, year, cover_url, published, sort, category_groups(label), work_category_groups(sort, category_groups(label)), clients(name)")
+    .select("id, slug, title, year, cover_url, published, sort, category_groups:category_groups!works_category_group_fkey(label), work_category_groups(sort, category_groups(label)), clients(name)")
     .order("sort")
   let works = (worksRes.data ?? []) as unknown as WorkSummary[]
   if (worksRes.error) {
     const fallbackWorks = await supabase
       .from("works")
-      .select("id, slug, title, year, cover_url, published, sort, category_groups(label), clients(name)")
+      .select("id, slug, title, year, cover_url, published, sort, category_groups:category_groups!works_category_group_fkey(label), clients(name)")
       .order("sort")
     works = (fallbackWorks.data ?? []) as unknown as WorkSummary[]
   }

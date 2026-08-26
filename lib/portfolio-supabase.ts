@@ -185,7 +185,7 @@ const DETAIL_SELECT = `
   id, slug, title, subtitle, year, cover_url, video_url, size, description,
   services, deliverables, challenge, approach, result, quote_text, quote_author, awards,
   category_group,
-  category_groups ( value, label ),
+  category_groups:category_groups!works_category_group_fkey ( value, label ),
   clients ( slug, name, brief ),
   work_industries ( industries ( value, label ) ),
   work_designers ( sort, designers ( slug, name, name_zh, role, photo_url ) ),
@@ -358,7 +358,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
   // 相關作品：與目前作品命中任一執行項目者優先，其次補其他。
   const { data: relData } = await supa
     .from("works")
-    .select("id, slug, title, subtitle, cover_url, year, category_group, category_groups ( label )")
+    .select("id, slug, title, subtitle, cover_url, year, category_group, category_groups:category_groups!works_category_group_fkey ( label )")
     .eq("published", true)
     .neq("slug", slug)
     .order("sort")

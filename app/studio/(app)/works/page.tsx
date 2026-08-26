@@ -27,7 +27,7 @@ async function getWorks(): Promise<WorkRow[]> {
   const result = await supabase
     .from("works")
     .select(
-      "id, slug, title, subtitle, cover_url, year, published, size, sort, category_groups(label), work_category_groups(sort, category_groups(label)), clients(name)"
+      "id, slug, title, subtitle, cover_url, year, published, size, sort, category_groups:category_groups!works_category_group_fkey(label), work_category_groups(sort, category_groups(label)), clients(name)"
     )
     .order("sort")
   if (!result.error) return (result.data as unknown as WorkRow[]) ?? []
@@ -35,7 +35,7 @@ async function getWorks(): Promise<WorkRow[]> {
   const { data } = await supabase
     .from("works")
     .select(
-      "id, slug, title, subtitle, cover_url, year, published, size, sort, category_groups(label), clients(name)"
+      "id, slug, title, subtitle, cover_url, year, published, size, sort, category_groups:category_groups!works_category_group_fkey(label), clients(name)"
     )
     .order("sort")
   return (data as unknown as WorkRow[]) ?? []
