@@ -11,7 +11,7 @@ function revalidate() {
 
 export type FacetInput = { value: string; label: string; sort: number; landing_slug?: string | null }
 
-// ── 執行項目（category_groups，單選）─────────────────────
+// ── 執行項目（category_groups，作品可複選）───────────────
 export async function saveCategoryGroup(input: FacetInput): Promise<{ ok?: true; error?: string }> {
   const supabase = await createClient()
   if (!input.label.trim()) return { error: "顯示名稱為必填" }

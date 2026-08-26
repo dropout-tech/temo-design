@@ -71,7 +71,7 @@ export function CategoryManager({
 
       <FacetSection
         title="執行項目"
-        description="作品的單選主分類，每件作品只能選一個。右側「服務頁」決定這個分類的作品會出現在哪個作品探索分類頁。"
+        description="作品可複選的執行項目。右側「服務頁」決定選到這個項目的作品會出現在哪個作品探索分類頁。"
         addButtonLabel="新增執行項目"
         landingOptions={landingOptions}
         addPlaceholder="例：品牌企劃"

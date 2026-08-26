@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import type { WorkFormInitial } from "@/components/studio/work-form"
 import { normalizeCoverCrop } from "@/lib/cover-crop"
 import { normalizeCollaboratorNames } from "@/lib/collaborator-names"
+import { normalizeCategoryGroupValues } from "@/lib/work-category-groups"
 
 // work_blocks 的原始 DB 欄位形狀（後台表單之後直接讀寫這個形狀即可，不做欄位改名）。
 export type WorkBlockRow = {
@@ -41,6 +42,7 @@ export type WorkForEditWithBlocks = WorkFormInitial & {
 }
 
 type WorkIndustryRelationRow = { industry_value: string }
+type WorkCategoryGroupRelationRow = { category_group_value: string; sort: number | null }
 type WorkDesignerRelationRow = { designer_id: string }
 type WorkGalleryRow = {
   src: string
@@ -130,6 +132,26 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
     positionY: w.cover_position_y ?? undefined,
   })
 
+  // 新關聯未套用時仍可用舊 category_group 開啟表單；套用後依使用者選取順序回填。
+  let categoryGroupValues: string[] = []
+  try {
+    const { data: categoryRows, error: categoryError } = await supabase
+      .from("work_category_groups")
+      .select("category_group_value, sort")
+      .eq("work_id", id)
+      .order("sort")
+    if (!categoryError && Array.isArray(categoryRows)) {
+      categoryGroupValues = normalizeCategoryGroupValues(
+        (categoryRows as WorkCategoryGroupRelationRow[]).map((row) => row.category_group_value)
+      )
+    }
+  } catch {
+    categoryGroupValues = []
+  }
+  if (categoryGroupValues.length === 0) {
+    categoryGroupValues = normalizeCategoryGroupValues([w.category_group])
+  }
+
   // ── blocks：獨立查詢 work_blocks（migration 未套用/表不存在/查詢失敗 → 回空陣列，表單走既有 gallery 欄位）──
   let blocks: WorkBlockRow[] = []
   try {
@@ -156,7 +178,7 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
     slug: w.slug ?? "",
     title: w.title ?? "",
     subtitle: w.subtitle ?? "",
-    category_group: w.category_group ?? "",
+    categoryGroupValues,
     year: w.year ?? "",
     client_id: w.client_id ?? "",
     cover_url: w.cover_url ?? "",

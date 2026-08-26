@@ -65,6 +65,8 @@ export type DetailProject = {
   subtitle: string
   categoryLabel: string
   categoryGroup?: string         // 用來在導覽列連回 /portfolio?group=xxx
+  /** 完整執行項目清單；舊資料沒有時退回上方主要分類。 */
+  categoryGroups?: { value: string; label: string }[]
   industryLabels: string[]
   industries?: DetailIndustry[]  // 帶 value 的版本，可用於連結
   year: string
@@ -924,6 +926,12 @@ function MobileProjectIntro({ project }: { project: DetailProject }) {
 }
 
 function MobileFilterNav({ project }: { project: DetailProject }) {
+  const categoryGroups =
+    project.categoryGroups?.length
+      ? project.categoryGroups
+      : project.categoryGroup
+        ? [{ value: project.categoryGroup, label: project.categoryLabel || "未分類" }]
+        : []
   const industries: DetailIndustry[] =
     project.industries?.length
       ? project.industries
@@ -941,16 +949,19 @@ function MobileFilterNav({ project }: { project: DetailProject }) {
       className="mt-3 px-4 pb-5 md:hidden"
     >
       <div className="flex flex-wrap items-center gap-2 border-t border-temo-warm-gray/10 pt-3">
-        <Link
-          href={
-            project.categoryGroup
-              ? `/portfolio?group=${encodeURIComponent(project.categoryGroup)}`
-              : "/portfolio"
-          }
-          className={pillClass}
-        >
-          {project.categoryLabel || "未分類"}
-        </Link>
+        {categoryGroups.length > 0 ? (
+          categoryGroups.map((group) => (
+            <Link
+              key={group.value}
+              href={`/portfolio?group=${encodeURIComponent(group.value)}`}
+              className={pillClass}
+            >
+              {group.label}
+            </Link>
+          ))
+        ) : (
+          <span className={pillClass}>未分類</span>
+        )}
         {industries.map((industry, index) => (
           industry.value ? (
             <Link
@@ -1329,8 +1340,14 @@ function toWebsiteHref(website?: string): string | undefined {
 }
 
 function RelatedNav({ project }: { project: DetailProject }) {
+  const categoryGroups =
+    project.categoryGroups?.length
+      ? project.categoryGroups
+      : project.categoryGroup
+        ? [{ value: project.categoryGroup, label: project.categoryLabel }]
+        : []
   const hasAny =
-    project.categoryGroup ||
+    categoryGroups.length > 0 ||
     (project.industries && project.industries.length > 0) ||
     project.clientSlug ||
     project.designers.length > 0 ||
@@ -1345,14 +1362,17 @@ function RelatedNav({ project }: { project: DetailProject }) {
     <div className="hidden md:block border-b border-temo-warm-gray/10 bg-temo-black/40">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center gap-x-6 gap-y-3">
         {/* 執行項目 */}
-        {project.categoryGroup && (
+        {categoryGroups.length > 0 && (
           <NavGroup label="執行項目">
-            <Link
-              href={`/portfolio?group=${project.categoryGroup}`}
-              className={pillClass}
-            >
-              {project.categoryLabel}
-            </Link>
+            {categoryGroups.map((group) => (
+              <Link
+                key={group.value}
+                href={`/portfolio?group=${encodeURIComponent(group.value)}`}
+                className={pillClass}
+              >
+                {group.label}
+              </Link>
+            ))}
           </NavGroup>
         )}
 

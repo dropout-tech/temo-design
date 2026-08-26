@@ -25,22 +25,44 @@ type WorkSummary = {
   published: boolean
   sort: number
   category_groups: { label: string } | null
+  work_category_groups?: {
+    sort: number
+    category_groups: { label: string } | null
+  }[]
   clients: { name: string } | null
+}
+
+function categoryLabels(work: WorkSummary): string[] {
+  const labels = (work.work_category_groups ?? [])
+    .slice()
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+    .map((relation) => relation.category_groups?.label)
+    .filter((label): label is string => Boolean(label))
+  if (labels.length > 0) return labels
+  return work.category_groups?.label ? [work.category_groups.label] : []
 }
 
 async function getDashboardData() {
   const supabase = await createClient()
-  const [worksRes, designers, clients, faqs, quoteCategories] = await Promise.all([
-    supabase
+  const worksRes = await supabase
+    .from("works")
+    .select("id, slug, title, year, cover_url, published, sort, category_groups(label), work_category_groups(sort, category_groups(label)), clients(name)")
+    .order("sort")
+  let works = (worksRes.data ?? []) as unknown as WorkSummary[]
+  if (worksRes.error) {
+    const fallbackWorks = await supabase
       .from("works")
       .select("id, slug, title, year, cover_url, published, sort, category_groups(label), clients(name)")
-      .order("sort"),
+      .order("sort")
+    works = (fallbackWorks.data ?? []) as unknown as WorkSummary[]
+  }
+
+  const [designers, clients, faqs, quoteCategories] = await Promise.all([
     supabase.from("designers").select("*", { count: "exact", head: true }),
     supabase.from("clients").select("*", { count: "exact", head: true }),
     supabase.from("faqs").select("*", { count: "exact", head: true }),
     supabase.from("quote_categories").select("*", { count: "exact", head: true }),
   ])
-  const works = ((worksRes.data ?? []) as unknown as WorkSummary[])
   return {
     works,
     designers: designers.count ?? 0,
@@ -131,7 +153,7 @@ export default async function StudioDashboard() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-temo-white truncate">{w.title}</p>
                   <p className="text-[11px] text-temo-warm-gray/45 truncate">
-                    {[w.category_groups?.label, w.clients?.name, w.year].filter(Boolean).join(" · ") || "尚未補分類資訊"}
+                    {[categoryLabels(w).join("、"), w.clients?.name, w.year].filter(Boolean).join(" · ") || "尚未補分類資訊"}
                   </p>
                 </div>
                 {!w.published && (

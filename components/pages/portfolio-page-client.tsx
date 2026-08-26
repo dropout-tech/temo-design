@@ -21,6 +21,11 @@ import {
   type CategoryGroupValue,
 } from "@/lib/portfolio-data"
 import { getCoverCropStyle } from "@/lib/cover-crop"
+import {
+  getWorkCategoryGroupValues,
+  workHasAnyCategoryGroup,
+  workHasCategoryGroup,
+} from "@/lib/work-category-groups"
 
 export type { Work }
 
@@ -108,7 +113,7 @@ function buildSearchHaystack(
     w.subtitle,
     w.description,
     w.year,
-    catLabel(w.categoryGroup),
+    ...getWorkCategoryGroupValues(w).map((group) => catLabel(group)),
     ...w.industries.map((i) => indLabel(i)),
   ]
   const client = CLIENT_MAP[w.clientSlug]
@@ -183,7 +188,7 @@ function FilterBar({
               { value: "all", label: `全部（${works.length}）` },
               ...groups.map((cat) => ({
                 value: cat.value,
-                label: `${cat.label}（${works.filter((w) => w.categoryGroup === cat.value).length}）`,
+                label: `${cat.label}（${works.filter((w) => workHasCategoryGroup(w, cat.value)).length}）`,
               })),
             ]}
           />
@@ -552,8 +557,8 @@ export function PortfolioGrid({
       .filter(Boolean)
 
     return works.filter((w) => {
-      if (allowedGroups && !allowedGroups.includes(w.categoryGroup)) return false
-      if (filters.group !== "all" && w.categoryGroup !== filters.group) return false
+      if (allowedGroups && !workHasAnyCategoryGroup(w, allowedGroups)) return false
+      if (filters.group !== "all" && !workHasCategoryGroup(w, filters.group)) return false
       // 行業分類複選採「OR」：作品命中任一選取的產業即通過
       if (filters.industries.length > 0 && !filters.industries.some((i) => (w.industries as string[]).includes(i))) return false
       if (filters.designer !== "all" && !w.designerSlugs.includes(filters.designer)) return false
@@ -731,7 +736,7 @@ export function PortfolioGrid({
                       }}
                     >
                       <p className="text-[10px] tracking-[0.3em] text-temo-gold uppercase mb-1">
-                        {catLabel(work.categoryGroup)}
+                        {getWorkCategoryGroupValues(work).map(catLabel).join(" · ")}
                       </p>
                       <h3 className="text-base font-bold text-white leading-tight mb-0.5">{work.title}</h3>
                       <p className="text-[11px] text-white/40">{work.subtitle}</p>

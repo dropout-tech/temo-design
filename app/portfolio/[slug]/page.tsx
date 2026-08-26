@@ -43,13 +43,17 @@ function buildFromLocal(slug: string): DetailProject | null {
     categoryLabel: getCategoryLabel(w.categoryGroup),
     year: w.year,
   }))
+  const categoryGroups = (work.categoryGroups?.length ? work.categoryGroups : [work.categoryGroup]).map(
+    (value) => ({ value, label: getCategoryLabel(value as never) })
+  )
 
   return {
     slug: work.slug,
     title: work.title,
     subtitle: work.subtitle,
-    categoryLabel: getCategoryLabel(work.categoryGroup),
-    categoryGroup: work.categoryGroup,
+    categoryLabel: categoryGroups.map((group) => group.label).join("、"),
+    categoryGroup: categoryGroups[0]?.value,
+    categoryGroups,
     industryLabels: work.industries.map((i) => getIndustryLabel(i)),
     industries: work.industries.map((i) => ({
       value: i,

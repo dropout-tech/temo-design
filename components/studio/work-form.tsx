@@ -3,7 +3,7 @@
 import { useId, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Loader2, Upload, Trash2, ArrowLeft, ExternalLink, X, GripVertical, Minus, Move, Plus, RotateCcw } from "lucide-react"
+import { Loader2, Upload, Trash2, ArrowLeft, ExternalLink, X, GripVertical, Minus, Move, Plus, RotateCcw, ChevronDown } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { downscaleImage } from "@/lib/downscale-image"
 import { isVideoUrl } from "@/lib/video"
@@ -14,6 +14,12 @@ import { saveWork, deleteWork, type WorkInput } from "@/app/studio/(app)/works/a
 import type { WorkBlockRow } from "@/lib/studio/works"
 import { RichTextEditor, looksLikeHtml, plainTextToHtml } from "@/components/studio/rich-text-editor"
 import { normalizeWorkSlug } from "@/lib/work-slug"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   BUTTON_DEFAULTS,
   BUTTON_FONT_WEIGHTS,
@@ -49,7 +55,7 @@ export type WorkFormInitial = {
   slug: string
   title: string
   subtitle: string
-  category_group: string
+  categoryGroupValues: string[]
   year: string
   client_id: string
   cover_url: string
@@ -86,7 +92,7 @@ export type WorkFormInitial = {
 }
 
 const EMPTY: WorkFormInitial = {
-  slug: "", title: "", subtitle: "", category_group: "", year: "", client_id: "",
+  slug: "", title: "", subtitle: "", categoryGroupValues: [], year: "", client_id: "",
   cover_url: "", cover_zoom: DEFAULT_COVER_CROP.zoom, cover_position_x: DEFAULT_COVER_CROP.positionX,
   cover_position_y: DEFAULT_COVER_CROP.positionY, hero_url: "", client_logo_urls: [], video_url: "", size: "medium", description: "", services: "",
   deliverables: "", challenge: "", approach: "", result: "", quote_text: "",
@@ -716,7 +722,7 @@ export function WorkForm({
 
     const input: WorkInput = {
       slug: f.slug, title: f.title, subtitle: f.subtitle,
-      category_group: f.category_group, year: f.year, client_id: f.client_id,
+      categoryGroupValues: f.categoryGroupValues, year: f.year, client_id: f.client_id,
       cover_url: f.cover_url, cover_zoom: f.cover_zoom, cover_position_x: f.cover_position_x,
       cover_position_y: f.cover_position_y, hero_url: heroUrl, client_logo_urls: clientLogos, video_url: f.video_url, size: f.size,
       description: f.description, services: toLines(f.services),
@@ -878,13 +884,17 @@ export function WorkForm({
                 <section className="space-y-5">
                   <SectionTitle>分類與關聯</SectionTitle>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <Field label="執行項目（單選）">
-                      <select className={inputCls} value={f.category_group} onChange={(e) => set("category_group", e.target.value)}>
-                        <option value="">（未選）</option>
-                        {options.categories.map((c) => (
-                          <option key={c.value} value={c.value} className="bg-[#201d1a]">{c.label}</option>
-                        ))}
-                      </select>
+                    <Field
+                      label="執行項目（可複選）"
+                      hint="可選擇多個；前台會讓作品出現在每一個所選分類與對應服務頁。"
+                    >
+                      <CategoryMultiSelect
+                        items={options.categories}
+                        selected={f.categoryGroupValues}
+                        onToggle={(value) =>
+                          set("categoryGroupValues", toggle(f.categoryGroupValues, value))
+                        }
+                      />
                     </Field>
                     <Field label="版面尺寸">
                       <select className={inputCls} value={f.size} onChange={(e) => set("size", e.target.value as WorkFormInitial["size"])}>
@@ -1722,6 +1732,99 @@ function ColorField({
       </span>
       {!valid && <span className="mt-1.5 block text-[11px] text-red-400/85">請輸入 3 或 6 碼 HEX 色碼。</span>}
     </label>
+  )
+}
+
+function CategoryMultiSelect({
+  items,
+  selected,
+  onToggle,
+}: {
+  items: { value: string; label: string }[]
+  selected: string[]
+  onToggle: (value: string) => void
+}) {
+  const itemsByValue = new Map(items.map((item) => [item.value, item]))
+  const selectedItems = selected
+    .map((value) => itemsByValue.get(value))
+    .filter((item): item is { value: string; label: string } => Boolean(item))
+  const summary =
+    selectedItems.length === 0
+      ? "選擇執行項目"
+      : selectedItems.length <= 2
+        ? selectedItems.map((item) => item.label).join("、")
+        : `${selectedItems.slice(0, 2).map((item) => item.label).join("、")}等 ${selectedItems.length} 項`
+
+  return (
+    <div className="space-y-2.5">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              inputCls,
+              "flex min-h-12 items-center justify-between gap-3 text-left",
+              selectedItems.length > 0 && "border-temo-gold/35"
+            )}
+            aria-label={`執行項目，可複選。目前${selectedItems.length > 0 ? `已選 ${selectedItems.length} 項` : "未選"}`}
+          >
+            <span
+              className={cn(
+                "min-w-0 flex-1 truncate",
+                selectedItems.length === 0 ? "text-temo-warm-gray/45" : "text-temo-white"
+              )}
+            >
+              {summary}
+            </span>
+            <span className="flex shrink-0 items-center gap-2 text-xs text-temo-warm-gray/45">
+              {selectedItems.length > 0 && <span>已選 {selectedItems.length} 項</span>}
+              <ChevronDown className="h-4 w-4" aria-hidden="true" />
+            </span>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="start"
+          className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-64 border-white/12 bg-[#201d1a] p-1.5 text-temo-white shadow-xl"
+        >
+          {items.length > 0 ? (
+            items.map((item) => (
+              <DropdownMenuCheckboxItem
+                key={item.value}
+                checked={selected.includes(item.value)}
+                onCheckedChange={() => onToggle(item.value)}
+                onSelect={(event) => event.preventDefault()}
+                className="min-h-11 cursor-pointer whitespace-normal py-2.5 pr-3 text-sm leading-snug text-temo-warm-gray/85 focus:bg-temo-gold/10 focus:text-temo-white data-[state=checked]:text-temo-gold"
+              >
+                {item.label}
+              </DropdownMenuCheckboxItem>
+            ))
+          ) : (
+            <p className="px-3 py-3 text-sm text-temo-warm-gray/55">目前沒有可選的執行項目。</p>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {selectedItems.length > 0 && (
+        <div className="flex flex-wrap gap-2" aria-label="已選執行項目">
+          {selectedItems.map((item) => (
+            <span
+              key={item.value}
+              className="inline-flex min-h-9 max-w-full items-center gap-1 rounded-full border border-temo-gold/40 bg-temo-gold/10 py-1.5 pl-3 pr-1.5 text-xs text-temo-gold"
+            >
+              <span className="truncate">{item.label}</span>
+              <button
+                type="button"
+                onClick={() => onToggle(item.value)}
+                aria-label={`移除執行項目 ${item.label}`}
+                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-temo-gold/15 hover:text-temo-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

@@ -16,12 +16,13 @@ import {
   isHexColor,
   normalizeHexColor,
 } from "@/lib/work-block-config"
+import { normalizeCategoryGroupValues } from "@/lib/work-category-groups"
 
 export type WorkInput = {
   slug: string
   title: string
   subtitle: string
-  category_group: string
+  categoryGroupValues: string[]
   year: string
   client_id: string
   cover_url: string
@@ -102,7 +103,7 @@ function normalizeCustomNames(names: unknown) {
   return normalized
 }
 
-function toRow(input: WorkInput) {
+function toRow(input: WorkInput, categoryGroupValues: string[]) {
   const coverCrop = normalizeCoverCrop({
     zoom: input.cover_zoom,
     positionX: input.cover_position_x,
@@ -113,7 +114,8 @@ function toRow(input: WorkInput) {
     slug: normalizeWorkSlug(input.slug),
     title: input.title.trim(),
     subtitle: input.subtitle.trim() || null,
-    category_group: input.category_group || null,
+    // 舊欄位保留第一個選項，讓尚未改用多對多關聯的讀取端仍能正常顯示。
+    category_group: categoryGroupValues[0] ?? null,
     year: input.year.trim() || null,
     client_id: input.client_id || null,
     cover_url: input.cover_url.trim() || null,
@@ -168,6 +170,18 @@ export async function saveWork(
     return { error: `合作夥伴名稱請控制在 ${CUSTOM_NAME_MAX} 個字內` }
   }
 
+  const categoryGroupValues = normalizeCategoryGroupValues(input.categoryGroupValues)
+  if (categoryGroupValues.length > 0) {
+    const { data: validGroups, error: categoryError } = await supabase
+      .from("category_groups")
+      .select("value")
+      .in("value", categoryGroupValues)
+    if (categoryError) return { error: categoryError.message }
+    if ((validGroups ?? []).length !== categoryGroupValues.length) {
+      return { error: "執行項目清單已更新，請重新整理後再選一次" }
+    }
+  }
+
   for (const [index, block] of input.blocks.entries()) {
     if (block.type === "button") {
       if (!block.button_text.trim()) {
@@ -192,7 +206,7 @@ export async function saveWork(
     }
   }
 
-  const row = toRow(input)
+  const row = toRow(input, categoryGroupValues)
   let workId = id
 
   if (id) {
@@ -217,7 +231,26 @@ export async function saveWork(
     workId = data.id
   }
 
-  // 重建 行業 關聯
+  // 重建執行項目關聯；第一個選項同時已寫入 works.category_group 作為舊版相容值。
+  const { error: deleteCategoryError } = await supabase
+    .from("work_category_groups")
+    .delete()
+    .eq("work_id", workId!)
+  if (deleteCategoryError) {
+    return { error: `執行項目複選尚未就緒：${deleteCategoryError.message}` }
+  }
+  if (categoryGroupValues.length > 0) {
+    const { error } = await supabase.from("work_category_groups").insert(
+      categoryGroupValues.map((value, index) => ({
+        work_id: workId!,
+        category_group_value: value,
+        sort: index,
+      }))
+    )
+    if (error) return { error: error.message }
+  }
+
+  // 重建行業關聯
   await supabase.from("work_industries").delete().eq("work_id", workId!)
   if (input.industryValues.length > 0) {
     const { error } = await supabase

@@ -5,7 +5,8 @@
  * 用法：tsx scripts/export-seed-sql.ts > out.sql
  *      psql "$DATABASE_URI" -v ON_ERROR_STOP=1 -f out.sql
  *
- * 匯入範圍（階段 1 作品切片）：category_groups / industries / clients / works / work_industries。
+ * 匯入範圍（階段 1 作品切片）：category_groups / industries / clients / works /
+ * work_category_groups / work_industries。
  * 設計師（designers）與 作品↔設計師（work_designers）另外處理（見 CMS_BLUEPRINT.md 決策 1）。
  */
 import { CATEGORY_GROUPS, INDUSTRIES, CLIENTS, WORKS } from "../lib/portfolio-data"
@@ -82,6 +83,19 @@ WORKS.forEach((w) => {
       `approach=excluded.approach, result=excluded.result, quote_text=excluded.quote_text, ` +
       `quote_author=excluded.quote_author, awards=excluded.awards;`
   )
+})
+
+// ── 作品 ↔ 執行項目（多對多） ──
+lines.push("\n-- work_category_groups")
+WORKS.forEach((w) => {
+  const groups = w.categoryGroups?.length ? w.categoryGroups : [w.categoryGroup]
+  groups.forEach((group, sort) => {
+    lines.push(
+      `insert into work_category_groups (work_id, category_group_value, sort) ` +
+        `select id, ${q(group)}, ${sort} from works where slug=${q(w.slug)} ` +
+        `on conflict (work_id, category_group_value) do update set sort=excluded.sort;`
+    )
+  })
 })
 
 // ── 作品 ↔ 行業（多對多） ──

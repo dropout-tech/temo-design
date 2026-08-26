@@ -7,7 +7,7 @@
 //              clientSlug / designerSlugs 將改為 Payload relationship）
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ─── 執行項目（單選） ──────────────────────────────────────────────────────────
+// ─── 執行項目（作品可複選） ────────────────────────────────────────────────────
 // 註：欄位／型別沿用舊名 categoryGroup / CategoryGroupValue，避免全站大改名；
 //     其值與標籤已換成「執行項目」這個維度（原本的「粗分類」）。
 export const CATEGORY_GROUPS = [
@@ -152,7 +152,10 @@ export type Work = {
   slug: string
   title: string
   subtitle: string
-  categoryGroup: CategoryGroupValue      // 執行項目（單選）
+  /** 相容舊資料與既有版面所用的主要執行項目（複選時為第一個）。 */
+  categoryGroup: CategoryGroupValue
+  /** 完整執行項目清單；舊資料未提供時由 categoryGroup 退回。 */
+  categoryGroups?: string[]
   industries: IndustryValue[]            // 行業分類（複選）
   year: string
   clientSlug: string

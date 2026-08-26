@@ -4,6 +4,7 @@ import { createPublicClient } from "@/lib/supabase/public"
 import type { DetailProject } from "@/components/pages/portfolio-detail-client"
 import type { Work, Designer } from "@/lib/portfolio-data"
 import { normalizeCoverCrop } from "@/lib/cover-crop"
+import { normalizeCategoryGroupValues } from "@/lib/work-category-groups"
 
 // ─── 作品內容區塊（Adobe Portfolio 式：圖片/文字/YouTube 影片，可同列雙圖） ─────
 // 這是後台表單與前台渲染共用的合約型別，欄位形狀不得隨意更動。
@@ -66,6 +67,12 @@ type WorkIndustryDbRow = {
   industries?: IndustryDbRow | null
 }
 type WorkDesignerDbRow = { sort: number | null; designers: DesignerDbRow | null }
+type WorkCategoryGroupDbRow = {
+  work_id?: string
+  category_group_value: string
+  sort: number | null
+  category_groups?: { value: string; label: string } | null
+}
 type WorkGalleryDbRow = {
   src: string
   alt: string | null
@@ -74,6 +81,7 @@ type WorkGalleryDbRow = {
 }
 
 type WorkListDbRow = {
+  id: string
   slug: string
   title: string
   subtitle: string | null
@@ -117,6 +125,7 @@ type WorkDetailDbRow = {
 }
 
 type RelatedWorkDbRow = {
+  id: string
   slug: string
   title: string
   subtitle: string | null
@@ -124,6 +133,14 @@ type RelatedWorkDbRow = {
   year: string | null
   category_group: string | null
   category_groups: { label: string } | null
+}
+
+function getRelatedGroupValues(
+  row: RelatedWorkDbRow,
+  groupsByWork: Map<string, { value: string; label: string }[]>
+): string[] {
+  const linked = groupsByWork.get(row.id)?.map((group) => group.value) ?? []
+  return normalizeCategoryGroupValues(linked.length > 0 ? linked : [row.category_group])
 }
 
 type ClientContactDbRow = {
@@ -232,7 +249,7 @@ export async function getAllWorks(): Promise<Work[]> {
   const { data } = await supa
     .from("works")
     .select(
-      `slug, title, subtitle, year, cover_url, cover_zoom, cover_position_x, cover_position_y, video_url, size, description, category_group,
+      `id, slug, title, subtitle, year, cover_url, cover_zoom, cover_position_x, cover_position_y, video_url, size, description, category_group,
        clients ( slug, name ),
        work_industries ( industry_value ),
        work_designers ( sort, designers ( slug, name, name_zh ) )`
@@ -240,19 +257,48 @@ export async function getAllWorks(): Promise<Work[]> {
     .eq("published", true)
     .order("sort")
 
-  return ((data ?? []) as unknown as WorkListDbRow[]).map((w, idx) => {
+  const rows = (data ?? []) as unknown as WorkListDbRow[]
+  const linkedGroups = new Map<string, string[]>()
+  if (rows.length > 0) {
+    try {
+      const { data: groupRows, error: groupError } = await supa
+        .from("work_category_groups")
+        .select("work_id, category_group_value, sort")
+        .in("work_id", rows.map((row) => row.id))
+        .order("sort")
+      if (!groupError && Array.isArray(groupRows)) {
+        for (const relation of groupRows as unknown as WorkCategoryGroupDbRow[]) {
+          if (!relation.work_id) continue
+          linkedGroups.set(relation.work_id, [
+            ...(linkedGroups.get(relation.work_id) ?? []),
+            relation.category_group_value,
+          ])
+        }
+      }
+    } catch {
+      // migration 尚未套用時，由下方既有 category_group 欄位接手。
+    }
+  }
+
+  return rows.map((w, idx) => {
     const coverCrop = normalizeCoverCrop({
       zoom: w.cover_zoom ?? undefined,
       positionX: w.cover_position_x ?? undefined,
       positionY: w.cover_position_y ?? undefined,
     })
 
+    const linkedCategoryGroups = linkedGroups.get(w.id) ?? []
+    const categoryGroups = normalizeCategoryGroupValues(
+      linkedCategoryGroups.length > 0 ? linkedCategoryGroups : [w.category_group]
+    )
+
     return {
       id: idx + 1,
       slug: w.slug,
       title: w.title,
       subtitle: w.subtitle ?? "",
-      categoryGroup: w.category_group,
+      categoryGroup: (categoryGroups[0] ?? "") as Work["categoryGroup"],
+      categoryGroups,
       industries: (w.work_industries ?? [])
         .map((relation) => relation.industry_value)
         .filter((value): value is Work["industries"][number] => Boolean(value)),
@@ -290,18 +336,62 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
   if (error || !data) return null
   const w = data as unknown as WorkDetailDbRow
 
-  // 相關作品：同執行項目優先，其次補其他
+  let categoryGroups: { value: string; label: string }[] = []
+  try {
+    const { data: groupRows, error: groupError } = await supa
+      .from("work_category_groups")
+      .select("category_group_value, sort, category_groups ( value, label )")
+      .eq("work_id", w.id)
+      .order("sort")
+    if (!groupError && Array.isArray(groupRows)) {
+      categoryGroups = (groupRows as unknown as WorkCategoryGroupDbRow[])
+        .map((relation) => relation.category_groups)
+        .filter((group): group is { value: string; label: string } => Boolean(group))
+    }
+  } catch {
+    categoryGroups = []
+  }
+  if (categoryGroups.length === 0 && w.category_group && w.category_groups) {
+    categoryGroups = [w.category_groups]
+  }
+
+  // 相關作品：與目前作品命中任一執行項目者優先，其次補其他。
   const { data: relData } = await supa
     .from("works")
-    .select("slug, title, subtitle, cover_url, year, category_group, category_groups ( label )")
+    .select("id, slug, title, subtitle, cover_url, year, category_group, category_groups ( label )")
     .eq("published", true)
     .neq("slug", slug)
     .order("sort")
-  const related = ((relData ?? []) as unknown as RelatedWorkDbRow[])
+
+  const relatedRows = (relData ?? []) as unknown as RelatedWorkDbRow[]
+  const relatedGroups = new Map<string, { value: string; label: string }[]>()
+  if (relatedRows.length > 0) {
+    try {
+      const { data: groupRows, error: groupError } = await supa
+        .from("work_category_groups")
+        .select("work_id, category_group_value, sort, category_groups ( value, label )")
+        .in("work_id", relatedRows.map((row) => row.id))
+        .order("sort")
+      if (!groupError && Array.isArray(groupRows)) {
+        for (const relation of groupRows as unknown as WorkCategoryGroupDbRow[]) {
+          if (!relation.work_id || !relation.category_groups) continue
+          relatedGroups.set(relation.work_id, [
+            ...(relatedGroups.get(relation.work_id) ?? []),
+            relation.category_groups,
+          ])
+        }
+      }
+    } catch {
+      // 舊資料庫由 category_group / category_groups 關聯退回。
+    }
+  }
+
+  const currentGroupValues = new Set(categoryGroups.map((group) => group.value))
+  const related = relatedRows
     .sort(
       (a, b) =>
-        (a.category_group === w.category_group ? 0 : 1) -
-        (b.category_group === w.category_group ? 0 : 1)
+        (getRelatedGroupValues(a, relatedGroups).some((value) => currentGroupValues.has(value)) ? 0 : 1) -
+        (getRelatedGroupValues(b, relatedGroups).some((value) => currentGroupValues.has(value)) ? 0 : 1)
     )
     .slice(0, 3)
     .map((r) => ({
@@ -309,7 +399,10 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       title: r.title,
       subtitle: r.subtitle ?? "",
       cover: r.cover_url ?? "/placeholder.jpg",
-      categoryLabel: r.category_groups?.label ?? "",
+      categoryLabel:
+        relatedGroups.get(r.id)?.map((group) => group.label).join("、") ||
+        r.category_groups?.label ||
+        "",
       year: r.year ?? "",
     }))
 
@@ -515,8 +608,9 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     slug: w.slug,
     title: w.title,
     subtitle: w.subtitle ?? "",
-    categoryLabel: w.category_groups?.label ?? "",
-    categoryGroup: w.category_group ?? undefined,
+    categoryLabel: categoryGroups.map((group) => group.label).join("、"),
+    categoryGroup: categoryGroups[0]?.value ?? w.category_group ?? undefined,
+    categoryGroups,
     industryLabels: industries.map((industry) => industry.label),
     industries,
     year: w.year ?? "",

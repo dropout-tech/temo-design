@@ -9,6 +9,7 @@ import { Footer } from "@/components/footer"
 import { cn } from "@/lib/utils"
 import { getCategoryLabel, type Designer, type Work } from "@/lib/portfolio-data"
 import { getCoverCropStyle } from "@/lib/cover-crop"
+import { getWorkCategoryGroupValues } from "@/lib/work-category-groups"
 
 export function TeamMemberClient({
   designer,
@@ -202,7 +203,7 @@ export function TeamMemberClient({
                       />
                       <div className="absolute bottom-0 left-0 right-0 p-5">
                         <p className="text-[10px] tracking-[0.3em] text-temo-gold uppercase mb-1">
-                          {catLabel(work.categoryGroup)}
+                          {getWorkCategoryGroupValues(work).map(catLabel).join(" · ")}
                         </p>
                         <h3 className="text-base font-bold leading-tight">{work.title}</h3>
                         <p className="text-[11px] text-white/40 mt-0.5">{work.subtitle}</p>

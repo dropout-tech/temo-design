@@ -33,7 +33,21 @@ export type StudioWorkRow = {
   size: "large" | "medium" | "small"
   sort: number
   category_groups: { label: string } | null
+  work_category_groups?: {
+    sort: number
+    category_groups: { label: string } | null
+  }[]
   clients: { name: string } | null
+}
+
+function categoryLabels(work: StudioWorkRow): string[] {
+  const labels = (work.work_category_groups ?? [])
+    .slice()
+    .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+    .map((relation) => relation.category_groups?.label)
+    .filter((label): label is string => Boolean(label))
+  if (labels.length > 0) return labels
+  return work.category_groups?.label ? [work.category_groups.label] : []
 }
 
 type StatusFilter = "all" | "published" | "draft" | "missing-cover"
@@ -62,8 +76,7 @@ export function WorksManager({ initialWorks }: { initialWorks: StudioWorkRow[] }
   const categories = useMemo(() => {
     const labels = new Set<string>()
     works.forEach((work) => {
-      const label = work.category_groups?.label
-      if (label) labels.add(label)
+      categoryLabels(work).forEach((label) => labels.add(label))
     })
     return Array.from(labels).sort((a, b) => a.localeCompare(b, "zh-Hant"))
   }, [works])
@@ -87,14 +100,15 @@ export function WorksManager({ initialWorks }: { initialWorks: StudioWorkRow[] }
       if (status === "published" && !work.published) return false
       if (status === "draft" && work.published) return false
       if (status === "missing-cover" && work.cover_url) return false
-      if (category !== "all" && work.category_groups?.label !== category) return false
+      const workCategories = categoryLabels(work)
+      if (category !== "all" && !workCategories.includes(category)) return false
       if (!needle) return true
       const haystack = [
         work.title,
         work.subtitle,
         work.slug,
         work.year,
-        work.category_groups?.label,
+        ...workCategories,
         work.clients?.name,
       ]
         .filter(Boolean)
@@ -242,7 +256,7 @@ export function WorksManager({ initialWorks }: { initialWorks: StudioWorkRow[] }
 
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
               <p className="max-w-full truncate text-xs text-temo-warm-gray/50">
-                {[work.category_groups?.label, work.clients?.name, work.year]
+                {[categoryLabels(work).join("、"), work.clients?.name, work.year]
                   .filter(Boolean)
                   .join(" · ") || "尚未補分類資訊"}
               </p>

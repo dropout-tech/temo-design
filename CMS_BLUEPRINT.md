@@ -51,7 +51,7 @@
 
 ### 分類（可編輯的清單）
 
-**`category_groups`（執行項目，單選來源）** — 11 筆
+**`category_groups`（執行項目，複選來源）** — 11 筆
 | 欄位 | 型別 | 說明 |
 |---|---|---|
 | `value` | text PK | 例 `brand-planning` |
@@ -98,7 +98,7 @@
 | `slug` | text unique | `/portfolio/[slug]` |
 | `title` | text | 中文標題 |
 | `subtitle` | text? | 英文副標 |
-| `category_group` | text FK→category_groups | 執行項目（單選） |
+| `category_group` | text FK→category_groups | 主要執行項目（相容舊資料，等同複選的第一項） |
 | `year` | text | 年份 |
 | `client_id` | uuid FK→clients | 客戶（多對一） |
 | `cover_url` | text | 封面圖（存 Supabase Storage 的網址） |
@@ -149,8 +149,8 @@
 ## 3. 關聯圖
 
 ```
-category_groups ──(單選)──►  works  ◄──(多對一)── clients
-                              │  ▲
+category_groups ──(多對多)──► works  ◄──(多對一)── clients
+             (work_category_groups) │  ▲
       industries ──(多對多)───┘  └──(多對多)── designers
                                               (work_designers)
       works ──(一對多)──► work_blocks（原 work_gallery，2026-07-21 起）
