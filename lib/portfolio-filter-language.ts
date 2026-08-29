@@ -2,7 +2,7 @@ export type PortfolioFilterLanguage = "bilingual" | "zh" | "en"
 
 export const PORTFOLIO_FILTER_LANGUAGE_STORAGE_KEY = "temo-portfolio-filter-language"
 const PORTFOLIO_FILTER_LANGUAGE_EVENT = "temo:portfolio-filter-language"
-let portfolioFilterLanguageMemory: PortfolioFilterLanguage = "bilingual"
+let portfolioFilterLanguageMemory: PortfolioFilterLanguage = "en"
 
 export const PORTFOLIO_FILTER_LANGUAGE_OPTIONS: ReadonlyArray<{
   value: PortfolioFilterLanguage
@@ -101,7 +101,7 @@ export function getPortfolioFilterLanguageSnapshot(): PortfolioFilterLanguage {
 }
 
 export function getPortfolioFilterLanguageServerSnapshot(): PortfolioFilterLanguage {
-  return "bilingual"
+  return "en"
 }
 
 export function setPortfolioFilterLanguage(nextLanguage: PortfolioFilterLanguage) {

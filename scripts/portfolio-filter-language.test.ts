@@ -38,7 +38,7 @@ assert.equal(formatPortfolioOptionCount("全部", 18, "zh"), "全部（18）")
 assert.equal(formatPortfolioResultCount(1, "en"), "1 Project")
 assert.equal(formatPortfolioResultCount(18, "bilingual"), "18 件作品 / Projects")
 assert.equal(formatPortfolioSelectedCount(2, "zh"), "已選 2 項")
-assert.equal(getPortfolioFilterLanguageServerSnapshot(), "bilingual")
+assert.equal(getPortfolioFilterLanguageServerSnapshot(), "en")
 
 const storedValues = new Map<string, string>()
 const mockWindow = new EventTarget() as EventTarget & {
