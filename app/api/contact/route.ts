@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto"
 import { NextResponse, type NextRequest } from "next/server"
-import { buildContactEmail, CONTACT_TO_EMAIL, contactSubmissionSchema } from "@/lib/contact-submission"
+import {
+  ContactMailerConfigurationError,
+  sendContactNotification,
+} from "@/lib/contact-mailer"
+import { buildContactEmail, contactSubmissionSchema } from "@/lib/contact-submission"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export const runtime = "nodejs"
@@ -37,17 +41,10 @@ function getClientIp(request: NextRequest) {
 
 function hashClientIp(request: NextRequest) {
   const ip = getClientIp(request)
-  const salt = process.env.CONTACT_FORM_RATE_LIMIT_SALT || process.env.RESEND_API_KEY
+  const salt =
+    process.env.CONTACT_FORM_RATE_LIMIT_SALT || process.env.CONTACT_MAIL_WEBHOOK_SECRET
   if (!ip || !salt) return null
   return createHash("sha256").update(`${salt}:${ip}`).digest("hex")
-}
-
-function trimProviderError(value: unknown) {
-  if (typeof value === "string") return value.slice(0, 1000)
-  if (value && typeof value === "object" && "message" in value) {
-    return String(value.message).slice(0, 1000)
-  }
-  return "Email provider rejected the request"
 }
 
 function storedInput(row: StoredSubmission, website = "") {
@@ -174,22 +171,6 @@ export async function POST(request: NextRequest) {
     return json({ error: "表單暫時無法送出，請稍後再試。" }, 503)
   }
 
-  const resendApiKey = process.env.RESEND_API_KEY
-  const from = process.env.CONTACT_FROM_EMAIL || "TEMO DESIGN <onboarding@resend.dev>"
-  const to = process.env.CONTACT_TO_EMAIL || CONTACT_TO_EMAIL
-
-  if (!resendApiKey) {
-    await supabase
-      .from("contact_submissions")
-      .update({ email_status: "failed", email_error: "Missing RESEND_API_KEY" })
-      .eq("id", row.id)
-    console.error("Contact form email configuration error: missing RESEND_API_KEY")
-    return json(
-      { error: "內容已保存，但通知信暫時寄送失敗。請稍後再按一次送出。" },
-      503
-    )
-  }
-
   let emailInput
   try {
     emailInput = storedInput(row)
@@ -203,64 +184,35 @@ export async function POST(request: NextRequest) {
   }
 
   const email = buildContactEmail(emailInput)
-  let providerResponse: Response
+  let delivery: Awaited<ReturnType<typeof sendContactNotification>>
   try {
-    providerResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-        "Idempotency-Key": `contact-${row.request_id}`,
-      },
-      body: JSON.stringify({
-        from,
-        to: [to],
-        reply_to: emailInput.email,
-        subject: email.subject,
-        text: email.text,
-        html: email.html,
-      }),
+    delivery = await sendContactNotification({
+      requestId: row.request_id,
+      replyTo: emailInput.email,
+      subject: email.subject,
+      text: email.text,
+      html: email.html,
     })
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Email request failed"
-    console.error("Contact form email request failed", error)
+    const message =
+      error instanceof Error ? error.message.slice(0, 1000) : "Apps Script request failed"
+    const status = error instanceof ContactMailerConfigurationError ? 503 : 502
+    console.error("Contact form Apps Script delivery failed", error)
     await supabase
       .from("contact_submissions")
       .update({ email_status: "failed", email_error: message.slice(0, 1000) })
       .eq("id", row.id)
     return json(
       { error: "內容已保存，但通知信暫時寄送失敗。請稍後再按一次送出。" },
-      502
+      status
     )
   }
-
-  const providerBody = await providerResponse.json().catch(() => null)
-  if (!providerResponse.ok) {
-    const providerError = trimProviderError(providerBody)
-    console.error("Contact form email provider rejected request", {
-      status: providerResponse.status,
-      error: providerError,
-    })
-    await supabase
-      .from("contact_submissions")
-      .update({ email_status: "failed", email_error: providerError })
-      .eq("id", row.id)
-    return json(
-      { error: "內容已保存，但通知信暫時寄送失敗。請稍後再按一次送出。" },
-      502
-    )
-  }
-
-  const providerId =
-    providerBody && typeof providerBody === "object" && "id" in providerBody
-      ? String(providerBody.id).slice(0, 255)
-      : null
   const updateResult = await supabase
     .from("contact_submissions")
     .update({
       email_status: "sent",
       email_sent_at: new Date().toISOString(),
-      email_provider_id: providerId,
+      email_provider_id: delivery.providerId,
       email_error: null,
     })
     .eq("id", row.id)

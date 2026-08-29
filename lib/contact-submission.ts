@@ -1,7 +1,5 @@
 import { z } from "zod"
 
-export const CONTACT_TO_EMAIL = "temo.design0531@gmail.com"
-
 export const CONTACT_SUBJECT_LABELS = {
   brand: "品牌識別設計",
   graphic: "平面 / 包裝設計",
