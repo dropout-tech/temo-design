@@ -100,6 +100,7 @@ export function CategoryLandingClient({
   works,
   categoryGroups,
   allowedGroups,
+  industries,
   initialFilterParams = {},
 }: {
   landing: CategoryLanding
@@ -108,6 +109,8 @@ export function CategoryLandingClient({
   categoryGroups?: { value: string; label: string }[]
   // 本落地頁只顯示這些執行項目的作品；未傳＝不限制（migration 未套用時的照舊行為）
   allowedGroups?: string[]
+  // 行業選項直接來自後台 industries 主檔，保留後台名稱與排序。
+  industries?: { value: string; label: string }[]
   initialFilterParams?: {
     group?: string
     industry?: string
@@ -187,6 +190,7 @@ export function CategoryLandingClient({
           transparentBg
           categoryGroups={categoryGroups}
           allowedGroups={allowedGroups}
+          industries={industries}
         />
       </main>
       <Footer />
