@@ -116,7 +116,10 @@ export function FAQPageClient({ faqs: faqsProp }: { faqs?: FaqGroup[] }) {
                   }}
                 >
                   <button
+                    type="button"
                     onClick={() => setActiveQ(activeQ === i ? null : i)}
+                    aria-expanded={activeQ === i}
+                    aria-controls={`faq-answer-${activeCatIdx}-${i}`}
                     className="w-full flex items-center justify-between p-6 hover:bg-temo-gold/5 transition-colors text-left"
                   >
                     <span className="font-medium text-temo-white pr-6">{faq.q}</span>
@@ -130,15 +133,18 @@ export function FAQPageClient({ faqs: faqsProp }: { faqs?: FaqGroup[] }) {
                   </button>
 
                   <div
-                    className="overflow-hidden"
+                    id={`faq-answer-${activeCatIdx}-${i}`}
+                    className="grid overflow-hidden"
                     style={{
-                      maxHeight: activeQ === i ? "900px" : 0,
+                      gridTemplateRows: activeQ === i ? "1fr" : "0fr",
                       opacity: activeQ === i ? 1 : 0,
-                      transition: "max-height 0.35s ease, opacity 0.25s ease",
+                      transition: "grid-template-rows 0.35s ease, opacity 0.25s ease",
                     }}
                   >
-                    <div className="px-6 pb-6 border-t border-temo-warm-gray/20">
-                      <p className="text-temo-warm-gray leading-relaxed pt-4 text-sm">{faq.a}</p>
+                    <div className="min-h-0">
+                      <div className="px-6 pb-6 border-t border-temo-warm-gray/20">
+                        <p className="whitespace-pre-line break-words text-temo-warm-gray leading-relaxed pt-4 text-sm">{faq.a}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
