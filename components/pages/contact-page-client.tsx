@@ -416,6 +416,7 @@ export function ContactPageClient({
           <QuoteCalculator
             {...(quoteCategories && quoteCategories.length > 0 ? { categories: quoteCategories } : {})}
             components={quoteComponents ?? []}
+            lineUrl={info.lineUrl}
           />
         </div>
 

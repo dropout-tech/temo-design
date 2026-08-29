@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react"
 import { useInView } from "@/hooks/use-in-view"
 import { Check, ChevronDown, ChevronUp, Info, ArrowRight, X } from "lucide-react"
-import Link from "next/link"
 import { cn } from "@/lib/utils"
 
 // ─────────────────────────────────────────────
@@ -451,9 +450,11 @@ function PackageCard({
 export function QuoteCalculator({
   categories = DEFAULT_CATEGORIES,
   components = [],
+  lineUrl = "",
 }: {
   categories?: ServiceCategory[]
   components?: QuoteComponent[]
+  lineUrl?: string
 }) {
   const { ref: sectionRef, isInView } = useInView<HTMLElement>({ once: true, amount: 0.08 })
   const safeCategories = categories.length > 0 ? categories : DEFAULT_CATEGORIES
@@ -524,6 +525,8 @@ export function QuoteCalculator({
     opacity: isInView ? 1 : 0,
     transform: isInView ? "translateY(0)" : "translateY(28px)",
   }
+  const lineHref = lineUrl.trim()
+  const consultationHref = lineHref || `/contact?service=${encodeURIComponent(summary.lines.map((l) => l.pkg.name).join(", "))}&budget=${summary.total}`
 
   return (
     <section ref={sectionRef} className="relative py-24 md:py-32 bg-[#161412]">
@@ -668,8 +671,10 @@ export function QuoteCalculator({
                 </div>
 
                 {/* CTA */}
-                <Link
-                  href={`/contact?service=${encodeURIComponent(summary.lines.map((l) => l.pkg.name).join(", "))}&budget=${summary.total}`}
+                <a
+                  href={consultationHref}
+                  target={lineHref ? "_blank" : undefined}
+                  rel={lineHref ? "noopener noreferrer" : undefined}
                   className={cn(
                     "mt-5 flex items-center justify-center gap-2 w-full py-3 text-xs font-bold tracking-[0.2em] uppercase transition-all rounded-sm",
                     summary.total > 0
@@ -679,7 +684,7 @@ export function QuoteCalculator({
                 >
                   立即詢價
                   <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+                </a>
               </div>
             </div>
 
@@ -700,13 +705,15 @@ export function QuoteCalculator({
               <p className="text-[10px] tracking-[0.25em] text-temo-warm-gray/60 uppercase">參考總價</p>
               <p className="text-xl font-bold text-temo-gold leading-tight">{formatPrice(summary.total)}</p>
             </div>
-            <Link
-              href={`/contact?service=${encodeURIComponent(summary.lines.map((l) => l.pkg.name).join(", "))}&budget=${summary.total}`}
+            <a
+              href={consultationHref}
+              target={lineHref ? "_blank" : undefined}
+              rel={lineHref ? "noopener noreferrer" : undefined}
               className="flex items-center justify-center gap-2 px-7 py-3.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.2em] uppercase rounded-sm active:scale-[0.98] transition-all"
             >
               立即詢價
               <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            </a>
           </div>
         </div>
       )}
