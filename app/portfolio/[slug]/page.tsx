@@ -34,6 +34,7 @@ function buildFromLocal(slug: string): DetailProject | null {
       nameZh: d.nameZh,
       role: d.role,
       photo: d.photo,
+      category: "DESIGNER 設計團隊",
     }))
   const related = getRelatedWorks(slug, 3).map((w) => ({
     slug: w.slug,

@@ -22,6 +22,7 @@ import {
   normalizeHexColor,
   normalizeOptionalImageHeightPercent,
 } from "@/lib/work-block-config"
+import { getEnglishTeamCategoryLabel, groupTeamMembersByCategory } from "@/lib/team-members"
 
 export type DetailDesigner = {
   slug: string
@@ -29,6 +30,8 @@ export type DetailDesigner = {
   nameZh?: string
   role: string
   photo: string
+  /** 沿用「團隊成員」管理頁的分類名稱，例如 DESIGNER 設計團隊、LEGAL CONSULTANT 法律顧問。 */
+  category?: string
 }
 
 export type DetailRelated = {
@@ -164,6 +167,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
     project.collaborators?.length ||
     project.clientName ||
     project.clientLogos?.length
+  const teamGroups = groupTeamMembersByCategory(project.designers)
 
   // 內頁首圖：優先用後台設定的 hero，沒有就退回封面
   const heroSrc = project.hero || project.cover
@@ -193,7 +197,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
           </div>
         </div>
 
-        {/* ─── 相關導覽列：分類 / 細項 / 客戶 / 設計師（皆可點） ─────── */}
+        {/* ─── 相關導覽列：分類 / 細項 / 客戶 / 團隊成員（皆可點） ─────── */}
         <RelatedNav project={project} />
         <MobileProjectIntro project={project} />
         <MobileFilterNav project={project} />
@@ -448,50 +452,14 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                       </MetaItem>
                     )}
 
-                    {project.designers.length > 0 && (
-                      <MetaItem label="設計團隊 Team">
-                        <ul className="space-y-1">
-                          {project.designers.map((d, index) => (
-                            <li key={d.slug ?? `guest-${d.name}-${index}`}>
-                              {d.slug ? (
-                                <Link
-                                  href={`/team/${d.slug}`}
-                                  className="group flex items-center gap-3 -mx-2 px-2 py-1.5 rounded-lg hover:bg-temo-warm-gray/5 transition-colors"
-                                >
-                                  {d.photo && (
-                                    <div className="relative w-10 h-10 rounded-full overflow-hidden border border-temo-warm-gray/20 group-hover:border-temo-gold/50 flex-shrink-0 transition-colors">
-                                      <Image
-                                        src={proxyImage(d.photo)}
-                                        alt={d.name}
-                                        fill
-                                        className="object-cover"
-                                        sizes="40px"
-                                        referrerPolicy="no-referrer"
-                                      />
-                                    </div>
-                                  )}
-                                  <div className="min-w-0">
-                                    <p className="text-temo-white group-hover:text-temo-gold text-sm tracking-wider transition-colors">
-                                      {d.name}
-                                    </p>
-                                    {d.role && (
-                                      <p className="text-temo-warm-gray/60 text-xs truncate">
-                                        {getEnglishRole(d.role)}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <ArrowUpRight className="w-3.5 h-3.5 ml-auto text-temo-warm-gray/0 group-hover:text-temo-gold transition-colors" />
-                                </Link>
-                              ) : (
-                                <div className="-mx-2 px-2 py-1.5 text-sm tracking-wider text-temo-white">
-                                  {d.name}
-                                </div>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
+                    {teamGroups.map((group) => (
+                      <MetaItem
+                        key={group.category}
+                        label={getEnglishTeamCategoryLabel(group.category)}
+                      >
+                        <DesktopTeamMemberList members={group.members} />
                       </MetaItem>
-                    )}
+                    ))}
 
                     {project.collaborators && project.collaborators.length > 0 && (
                       <MetaItem label="合作夥伴 Collaborators">
@@ -930,6 +898,56 @@ function MetaItem({ label, children }: { label: string; children: React.ReactNod
   )
 }
 
+function DesktopTeamMemberList({ members }: { members: DetailDesigner[] }) {
+  return (
+    <ul className="space-y-1">
+      {members.map((member, index) => (
+        <li key={member.slug || `${member.category}-${member.name}-${index}`}>
+          {member.slug ? (
+            <Link
+              href={`/team/${member.slug}`}
+              className="group -mx-2 flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-temo-warm-gray/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+            >
+              {member.photo && (
+                <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full border border-temo-warm-gray/20 transition-colors group-hover:border-temo-gold/50">
+                  <Image
+                    src={proxyImage(member.photo)}
+                    alt={member.name}
+                    fill
+                    className="object-cover"
+                    sizes="40px"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="break-words text-sm tracking-wider text-temo-white transition-colors group-hover:text-temo-gold">
+                  {member.name}
+                </p>
+                {member.role && (
+                  <p className="truncate text-xs text-temo-warm-gray/60">
+                    {getEnglishRole(member.role)}
+                  </p>
+                )}
+              </div>
+              <ArrowUpRight className="ml-auto h-3.5 w-3.5 shrink-0 text-temo-warm-gray/0 transition-colors group-hover:text-temo-gold" />
+            </Link>
+          ) : (
+            <div className="-mx-2 px-2 py-1.5">
+              <p className="break-words text-sm tracking-wider text-temo-white">{member.name}</p>
+              {member.role && (
+                <p className="mt-1 text-xs text-temo-warm-gray/60">
+                  {getEnglishRole(member.role)}
+                </p>
+              )}
+            </div>
+          )}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 // ─── 相關導覽列 ──────────────────────────────────────────────────────────────
 
 function MobileProjectIntro({ project }: { project: DetailProject }) {
@@ -1021,12 +1039,15 @@ function MobileProjectDetails({
     project.clientLogos?.length || project.clientName || project.clientBrief || hasClientContact
   )
   const websiteHref = toWebsiteHref(project.clientWebsite)
-  const mobileScopeItems = project.deliverables?.length
+  const hasDeliverables = Boolean(project.deliverables?.length)
+  const mobileScopeItems = hasDeliverables
     ? project.deliverables
     : project.services
+  const mobileScopeTitle = hasDeliverables ? "DELIVERABLES" : "服務範疇"
   const hasSupplementalContent = Boolean(
     project.pressMentions?.length || project.awards?.length || project.description || project.quote
   )
+  const teamGroups = groupTeamMembersByCategory(project.designers)
 
   return (
     <article className="md:hidden px-4 pb-20">
@@ -1126,11 +1147,15 @@ function MobileProjectDetails({
       {(mobileScopeItems?.length || project.designers.length > 0 || project.collaborators?.length) && (
         <section className="space-y-6 border-b border-temo-warm-gray/15 py-6">
           {mobileScopeItems && mobileScopeItems.length > 0 && (
-            <MobileEditorialMeta title="服務範疇" items={mobileScopeItems} />
+            <MobileEditorialMeta title={mobileScopeTitle} items={mobileScopeItems} />
           )}
-          {project.designers.length > 0 && (
-            <MobileEditorialPeople designers={project.designers} />
-          )}
+          {teamGroups.map((group) => (
+            <MobileEditorialPeople
+              key={group.category}
+              category={getEnglishTeamCategoryLabel(group.category)}
+              members={group.members}
+            />
+          ))}
           {project.collaborators && project.collaborators.length > 0 && (
             <MobileEditorialCollaborators names={project.collaborators} />
           )}
@@ -1223,30 +1248,40 @@ function MobileEditorialMeta({ title, items }: { title: string; items: string[] 
   )
 }
 
-function MobileEditorialPeople({ designers }: { designers: DetailDesigner[] }) {
+function MobileEditorialPeople({
+  category,
+  members,
+}: {
+  category: string
+  members: DetailDesigner[]
+}) {
   return (
     <div>
-      <MobileSectionHeading>設計師</MobileSectionHeading>
+      <MobileSectionHeading>{category}</MobileSectionHeading>
       <ul className="mt-3 space-y-1">
-        {designers.map((designer, index) => {
+        {members.map((member, index) => {
           const person = (
             <>
-              <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-temo-warm-gray/20">
-                <Image
-                  src={proxyImage(designer.photo)}
-                  alt={designer.name}
-                  fill
-                  className="object-cover"
-                  sizes="40px"
-                  referrerPolicy="no-referrer"
-                />
+              <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-temo-warm-gray/20 bg-white/[0.03] text-[10px] tracking-wide text-temo-warm-gray/65">
+                {member.photo ? (
+                  <Image
+                    src={proxyImage(member.photo)}
+                    alt={member.name}
+                    fill
+                    className="object-cover"
+                    sizes="40px"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span aria-hidden="true">{(member.nameZh || member.name).slice(0, 2)}</span>
+                )}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium leading-snug text-temo-white group-hover:text-temo-gold">
-                  {designer.nameZh || designer.name}
+                <span className="block break-words text-sm font-medium leading-snug text-temo-white group-hover:text-temo-gold">
+                  {member.nameZh || member.name}
                 </span>
                 <span className="mt-1 block text-[11px] leading-snug text-temo-warm-gray/55">
-                  {designer.role ? getEnglishRole(designer.role) : "參與設計"}
+                  {member.role ? getEnglishRole(member.role) : category}
                 </span>
               </span>
               <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-temo-gold" aria-hidden="true" />
@@ -1254,10 +1289,10 @@ function MobileEditorialPeople({ designers }: { designers: DetailDesigner[] }) {
           )
 
           return (
-            <li key={designer.slug ?? `guest-${designer.name}-${index}`}>
-              {designer.slug ? (
+            <li key={member.slug || `${category}-${member.name}-${index}`}>
+              {member.slug ? (
                 <Link
-                  href={`/team/${designer.slug}`}
+                  href={`/team/${member.slug}`}
                   className="group flex min-h-13 items-center gap-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
                 >
                   {person}
@@ -1374,6 +1409,7 @@ function RelatedNav({ project }: { project: DetailProject }) {
     project.clientSlug ||
     project.designers.length > 0 ||
     Boolean(project.collaborators?.length)
+  const teamGroups = groupTeamMembersByCategory(project.designers)
 
   if (!hasAny) return null
 
@@ -1434,21 +1470,23 @@ function RelatedNav({ project }: { project: DetailProject }) {
           </NavGroup>
         )}
 
-        {/* 設計師 */}
-        {project.designers.length > 0 && (
-          <NavGroup label="設計師">
-            {project.designers.map((d, index) =>
-              d.slug ? (
+        {teamGroups.map((group) => (
+          <NavGroup
+            key={group.category}
+            label={getEnglishTeamCategoryLabel(group.category)}
+          >
+            {group.members.map((member, index) =>
+              member.slug ? (
                 <Link
-                  key={d.slug}
-                  href={`/team/${d.slug}`}
+                  key={member.slug}
+                  href={`/team/${member.slug}`}
                   className={pillClass}
                 >
-                  {d.photo && (
+                  {member.photo && (
                     <span className="relative w-5 h-5 rounded-full overflow-hidden bg-white/10">
                       <Image
-                        src={proxyImage(d.photo)}
-                        alt={d.name}
+                        src={proxyImage(member.photo)}
+                        alt={member.name}
                         fill
                         className="object-cover"
                         sizes="20px"
@@ -1456,19 +1494,19 @@ function RelatedNav({ project }: { project: DetailProject }) {
                       />
                     </span>
                   )}
-                  {d.name}
+                  {member.name}
                 </Link>
               ) : (
                 <span
-                  key={`guest-${d.name}-${index}`}
+                  key={`${group.category}-${member.name}-${index}`}
                   className="inline-flex items-center rounded-full border border-temo-warm-gray/20 px-3.5 py-2.5 text-xs text-temo-warm-gray/80 md:px-3 md:py-1.5"
                 >
-                  {d.name}
+                  {member.name}
                 </span>
               )
             )}
           </NavGroup>
-        )}
+        ))}
 
         {project.collaborators && project.collaborators.length > 0 && (
           <NavGroup label="合作夥伴">

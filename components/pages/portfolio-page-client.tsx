@@ -57,7 +57,7 @@ function makeIndLabel(inds?: Facet[]) {
   return (v: string) => map.get(v) ?? getIndustryLabel(v)
 }
 
-// 客戶／設計師／年份三顆下拉的選項改由「實際作品資料」動態推導，不再用寫死的
+// 客戶／團隊成員／年份三顆下拉的選項改由「實際作品資料」動態推導，不再用寫死的
 // DESIGNERS/CLIENTS/getAllYears 靜態清單 —— 這樣選單必與後台資料庫連動，且選項
 // 一定篩得到東西。名稱優先用既有的 CLIENT_MAP/DESIGNER_MAP 對照，對照不到（例如
 // 後台剛新增、map 尚未同步）就退回顯示 slug 本身，不讓選單開天窗。
@@ -130,7 +130,7 @@ export const INITIAL_FILTERS: FilterState = {
   year: "all",
 }
 
-// 把每件作品攤平成一段可搜尋的小寫字串，包含作品名、客戶、設計師、標籤等
+// 把每件作品攤平成一段可搜尋的小寫字串，包含作品名、客戶、團隊成員、標籤等
 function buildSearchHaystack(
   w: Work,
   catLabel: (v: string) => string,

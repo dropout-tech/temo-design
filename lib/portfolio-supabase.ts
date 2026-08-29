@@ -52,6 +52,7 @@ type DesignerDbRow = {
   name: string
   name_zh: string | null
   role: string | null
+  category?: string | null
   photo_url: string | null
   instagram?: string | null
   bio?: string[] | null
@@ -192,7 +193,7 @@ const DETAIL_SELECT = `
   category_groups:category_groups!works_category_group_fkey ( value, label ),
   clients ( slug, name, brief ),
   work_industries ( industries ( value, label ) ),
-  work_designers ( sort, designers ( slug, name, name_zh, role, photo_url ) ),
+  work_designers ( sort, designers ( slug, name, name_zh, role, category, photo_url ) ),
   work_gallery ( src, alt, caption, sort )
 `
 
@@ -475,6 +476,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       nameZh: d.name_zh ?? undefined,
       role: d.role ?? "",
       photo: d.photo_url ?? "",
+      category: d.category ?? undefined,
     }))
 
   // 臨時合作夥伴只存顯示名稱；獨立查詢可讓 migration 尚未套用時仍正常讀取舊作品。

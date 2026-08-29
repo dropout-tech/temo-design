@@ -41,6 +41,15 @@ import {
   normalizeCoverCrop,
   type CoverCrop,
 } from "@/lib/cover-crop"
+import { groupTeamMembersByCategory } from "@/lib/team-members"
+
+type TeamMemberOption = {
+  id: string
+  name: string
+  name_zh: string | null
+  role: string | null
+  category: string | null
+}
 
 type Options = {
   categories: { value: string; label: string }[]
@@ -48,7 +57,8 @@ type Options = {
     id: string
     name: string
   }[]
-  designers: { id: string; name: string; name_zh: string | null }[]
+  teamMembers: TeamMemberOption[]
+  teamCategories: string[]
   industries: { value: string; label: string }[]
   collaboratorNames: string[]
 }
@@ -966,16 +976,39 @@ export function WorkForm({
                       />
                     </ChipGroup>
                   </Field>
-                  <Field label="設計師（可複選）">
-                    <ChipGroup
-                      items={options.designers.map((d) => ({ value: d.id, label: d.name_zh ? `${d.name}（${d.name_zh}）` : d.name }))}
+                  <Field
+                    label="團隊成員與顧問（可複選）"
+                    hint="名單同步自「團隊成員」管理頁；設計師、攝影師與各類顧問都會依原分類顯示。"
+                  >
+                    <TeamMemberSelector
+                      members={options.teamMembers}
+                      categoryOrder={options.teamCategories}
                       selected={f.designerIds}
                       onToggle={(v) => set("designerIds", toggle(f.designerIds, v))}
                     />
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Link
+                        href="/studio/designers"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex min-h-10 items-center gap-2 rounded-sm border border-white/10 px-3.5 py-2 text-xs text-temo-warm-gray/70 transition-colors hover:border-temo-gold/40 hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/50"
+                      >
+                        管理團隊與顧問資料
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => router.refresh()}
+                        className="inline-flex min-h-10 items-center gap-2 rounded-sm px-3.5 py-2 text-xs text-temo-warm-gray/55 transition-colors hover:bg-white/[0.04] hover:text-temo-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/50"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        更新團隊清單
+                      </button>
+                    </div>
                   </Field>
                   <Field
                     label="其他合作夥伴（臨時名稱）"
-                    hint="攝影師、顧問或外部團隊都可直接輸入；既有名稱可點選重用，並會自動出現在「合作夥伴」彙整頁。"
+                    hint="只用於不在正式團隊名冊的單次合作姓名或團隊；正式顧問請先到「團隊成員」新增，再從上方選取。"
                   >
                     <div className="flex flex-wrap gap-2">
                       <CustomNameChips
@@ -1278,7 +1311,7 @@ export function WorkForm({
                 <p>媒體：{mediaSummary.length > 0 ? mediaSummary.join("、") : "尚未補媒體"}</p>
                 <p>文字：{storySummary.length > 0 ? storySummary.join("、") : "尚未補案例文字"}</p>
                 <p>
-                  關聯：{f.industryValues.length + f.customIndustryNames.length} 個行業 · {f.designerIds.length} 位設計師 · {f.guestDesignerNames.length} 個合作夥伴
+                  關聯：{f.industryValues.length + f.customIndustryNames.length} 個行業 · {f.designerIds.length} 位團隊成員 · {f.guestDesignerNames.length} 個臨時合作夥伴
                 </p>
               </div>
             </div>
@@ -2026,8 +2059,9 @@ function ChipGroup({
             key={it.value}
             type="button"
             onClick={() => onToggle(it.value)}
+            aria-pressed={active}
             className={cn(
-              "px-3 py-1.5 text-xs rounded-full border transition-colors",
+              "min-h-10 px-3 py-1.5 text-xs rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60",
               active
                 ? "bg-temo-gold/15 border-temo-gold/50 text-temo-gold"
                 : "border-white/10 text-temo-warm-gray/60 hover:text-temo-white hover:border-white/25"
@@ -2038,6 +2072,48 @@ function ChipGroup({
         )
       })}
       {children}
+    </div>
+  )
+}
+
+function TeamMemberSelector({
+  members,
+  categoryOrder,
+  selected,
+  onToggle,
+}: {
+  members: TeamMemberOption[]
+  categoryOrder: string[]
+  selected: string[]
+  onToggle: (id: string) => void
+}) {
+  const groups = groupTeamMembersByCategory(members, categoryOrder)
+
+  if (groups.length === 0) {
+    return (
+      <p className="rounded-md border border-dashed border-white/10 px-4 py-3 text-sm text-temo-warm-gray/55">
+        目前沒有團隊成員，請先到「團隊成員」管理頁新增。
+      </p>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {groups.map((group) => (
+        <div key={group.category} className="space-y-2">
+          <p className="break-words text-[11px] font-medium tracking-[0.12em] text-temo-warm-gray/55">
+            {group.category}
+          </p>
+          <ChipGroup
+            items={group.members.map((member) => ({
+              value: member.id,
+              label: member.name_zh ? `${member.name}（${member.name_zh}）` : member.name,
+            }))}
+            selected={selected}
+            onToggle={onToggle}
+          />
+        </div>
+      ))}
     </div>
   )
 }

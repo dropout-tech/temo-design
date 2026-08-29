@@ -89,17 +89,14 @@ type WorkEditRow = {
 /** 作品表單需要的下拉/多選選項 */
 export async function getWorkOptions() {
   const supabase = await createClient()
-  const [categories, clients, members, industries, collaboratorWorks] = await Promise.all([
+  const [categories, clients, members, teamCategories, industries, collaboratorWorks] = await Promise.all([
     supabase.from("category_groups").select("value,label").order("sort"),
     supabase.from("clients").select("id,name").order("name"),
-    supabase.from("designers").select("id,name,name_zh,category").order("sort"),
+    supabase.from("designers").select("id,name,name_zh,role,category").order("sort"),
+    supabase.from("team_categories").select("name").order("sort"),
     supabase.from("industries").select("value,label").order("sort"),
     supabase.from("works").select("guest_designer_names").order("updated_at", { ascending: false }),
   ])
-  // designers.category 自 0006/0016 起是後台自由字串（如「DESIGNER 設計團隊」），
-  // 不能再精準比對舊代號；取分類含 DESIGNER 者，全對不到時退回全員以免選單空白。
-  const allMembers = members.data ?? []
-  const designerMembers = allMembers.filter((m) => /designer/i.test(m.category ?? ""))
   const collaboratorNames = normalizeCollaboratorNames(
     (collaboratorWorks.data ?? []).flatMap((work) =>
       Array.isArray(work.guest_designer_names) ? work.guest_designer_names : []
@@ -108,7 +105,10 @@ export async function getWorkOptions() {
   return {
     categories: categories.data ?? [],
     clients: clients.data ?? [],
-    designers: designerMembers.length > 0 ? designerMembers : allMembers,
+    // 正式設計師、攝影師與顧問都沿用「團隊成員」名冊及既有 work_designers 關聯。
+    // 不複製顧問姓名到作品的臨時名稱欄位，名冊異動後作品會自然讀到最新資料。
+    teamMembers: members.data ?? [],
+    teamCategories: (teamCategories.data ?? []).map((category) => category.name),
     industries: industries.data ?? [],
     collaboratorNames,
   }

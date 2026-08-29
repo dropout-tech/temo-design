@@ -32,7 +32,10 @@ assert.equal(
 )
 
 assert.deepEqual(getPortfolioDesignerFallback("elise"), { zh: "伊莉絲", en: "ELISE WU" })
-assert.equal(portfolioFilterCopy("allDesigners", "bilingual"), "全部設計師 / All Designers")
+assert.equal(
+  portfolioFilterCopy("allDesigners", "bilingual"),
+  "全部團隊成員 / All Team Members"
+)
 assert.equal(formatPortfolioOptionCount("All", 18, "en"), "All (18)")
 assert.equal(formatPortfolioOptionCount("全部", 18, "zh"), "全部（18）")
 assert.equal(formatPortfolioResultCount(1, "en"), "1 Project")
