@@ -542,7 +542,6 @@ export function AboutPageClient({
   const translateXRef = useRef(0)
 
   const currentList = categories[activeCategory] ?? []
-  const shouldMarquee = currentList.length >= 4
 
   // 觸控裝置沒有 hover：跑馬燈改用原生橫向滑動，不跑滑鼠感應動畫
   const noHover = useMediaQuery("(hover: none)")
@@ -624,6 +623,13 @@ export function AboutPageClient({
           if (translateXRef.current > 0) translateXRef.current = 0
           else if (translateXRef.current < -maxScroll) translateXRef.current = -maxScroll
           track.style.transform = `translate3d(${translateXRef.current}px, 0, 0)`
+        }
+
+        // A resize can make an overflowing row fit. Bring the track back to
+        // center instead of leaving its previous translated position behind.
+        if (maxScroll === 0 && translateXRef.current !== 0) {
+          translateXRef.current = 0
+          track.style.transform = "translate3d(0, 0, 0)"
         }
 
         const atStart = translateXRef.current >= -0.5
@@ -848,63 +854,43 @@ export function AboutPageClient({
               <div className="h-px w-16 md:w-24 bg-white/20" />
             </div>
 
-            {/* Designer Cards — scroll for many (stops at both ends), centered for few */}
-            {shouldMarquee ? (
+            {/* Designer Cards — center when they fit; scroll from the start when they overflow */}
+            <div
+              ref={marqueeContainerRef}
+              onMouseMove={noHover ? undefined : handleMarqueeMouseMove}
+              onMouseLeave={noHover ? undefined : handleMarqueeMouseLeave}
+              className={
+                noHover
+                  ? "relative w-full overflow-x-auto overscroll-x-contain py-4 -mx-4 px-4 sm:-mx-6 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  : "relative w-full overflow-hidden py-4"
+              }
+              style={{
+                transition: "opacity 0.8s ease 0.2s",
+                opacity: visible ? 1 : 0,
+                // Initial "at start" fade; applyMask() keeps it in sync while scrolling.
+                ...(noHover
+                  ? {}
+                  : {
+                      maskImage:
+                        "linear-gradient(to right, black 0%, black 92%, transparent 100%)",
+                      WebkitMaskImage:
+                        "linear-gradient(to right, black 0%, black 92%, transparent 100%)",
+                    }),
+              }}
+            >
               <div
-                ref={marqueeContainerRef}
-                onMouseMove={noHover ? undefined : handleMarqueeMouseMove}
-                onMouseLeave={noHover ? undefined : handleMarqueeMouseLeave}
-                className={
-                  noHover
-                    ? "relative w-full overflow-x-auto overscroll-x-contain py-4 -mx-4 px-4 sm:-mx-6 sm:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                    : "relative w-full overflow-hidden py-4"
-                }
-                style={{
-                  transition: "opacity 0.8s ease 0.2s",
-                  opacity: visible ? 1 : 0,
-                  // Initial "at start" fade; applyMask() keeps it in sync while scrolling.
-                  ...(noHover
-                    ? {}
-                    : {
-                        maskImage:
-                          "linear-gradient(to right, black 0%, black 92%, transparent 100%)",
-                        WebkitMaskImage:
-                          "linear-gradient(to right, black 0%, black 92%, transparent 100%)",
-                      }),
-                }}
+                ref={marqueeTrackRef}
+                className="flex w-max min-w-full justify-center gap-6 md:gap-8 will-change-transform"
               >
-                <div
-                  ref={marqueeTrackRef}
-                  className="flex gap-6 md:gap-8 w-max will-change-transform"
-                >
-                  {currentList.map((person) => (
-                    <DesignerCard
-                      key={`${activeCategory}-${person.name}`}
-                      person={person}
-                      onClick={() => setSelectedPerson(person)}
-                    />
-                  ))}
-                </div>
+                {currentList.map((person) => (
+                  <DesignerCard
+                    key={`${activeCategory}-${person.name}`}
+                    person={person}
+                    onClick={() => setSelectedPerson(person)}
+                  />
+                ))}
               </div>
-            ) : (
-              <div
-                className="relative w-full py-4"
-                style={{
-                  transition: "opacity 0.8s ease 0.2s",
-                  opacity: visible ? 1 : 0,
-                }}
-              >
-                <div className="flex justify-center flex-wrap gap-6 md:gap-8">
-                  {currentList.map((person) => (
-                    <DesignerCard
-                      key={`${activeCategory}-${person.name}`}
-                      person={person}
-                      onClick={() => setSelectedPerson(person)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         </section>
 
