@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef, useSyncExternalStore } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
@@ -27,18 +27,13 @@ import {
   workHasCategoryGroup,
 } from "@/lib/work-category-groups"
 import {
-  PORTFOLIO_FILTER_LANGUAGE_OPTIONS,
   formatPortfolioOptionCount,
   formatPortfolioResultCount,
   formatPortfolioSelectedCount,
-  getPortfolioFilterLanguageServerSnapshot,
-  getPortfolioFilterLanguageSnapshot,
   getPortfolioDesignerFallback,
   localizePortfolioFacet,
   localizePortfolioPair,
   portfolioFilterCopy,
-  setPortfolioFilterLanguage,
-  subscribePortfolioFilterLanguage,
   type PortfolioFilterLanguage,
 } from "@/lib/portfolio-filter-language"
 
@@ -168,6 +163,7 @@ function FilterBar({
   filteredCount,
   categoryGroups,
   industries,
+  language,
 }: {
   filters: FilterState
   setFilters: (f: FilterState) => void
@@ -175,12 +171,8 @@ function FilterBar({
   filteredCount: number
   categoryGroups?: Facet[]
   industries?: Facet[]
+  language: PortfolioFilterLanguage
 }) {
-  const language = useSyncExternalStore(
-    subscribePortfolioFilterLanguage,
-    getPortfolioFilterLanguageSnapshot,
-    getPortfolioFilterLanguageServerSnapshot
-  )
   const years = useMemo(() => deriveYearOptions(works), [works])
   const clientOptions = useMemo(() => deriveClientOptions(works), [works])
   const designerOptions = useMemo(() => deriveDesignerOptions(works, language), [works, language])
@@ -192,10 +184,6 @@ function FilterBar({
     localizePortfolioFacet("category", value, catLabel(value), language)
   const localizedIndLabel = (value: string) =>
     localizePortfolioFacet("industry", value, indLabel(value), language)
-
-  function changeLanguage(nextLanguage: PortfolioFilterLanguage) {
-    setPortfolioFilterLanguage(nextLanguage)
-  }
 
   function toggleIndustry(value: string) {
     const next = filters.industries.includes(value)
@@ -219,40 +207,6 @@ function FilterBar({
 
   return (
     <div className="mb-12 space-y-6">
-      <div className="flex justify-end">
-        <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#161412]/90 p-1">
-          <span className="pl-2 text-[9px] uppercase tracking-[0.22em] text-white/35">
-            {portfolioFilterCopy("displayLanguage", language)}
-          </span>
-          <div
-            className="flex items-center gap-1"
-            role="group"
-            aria-label="篩選顯示語言 / Filter display language"
-          >
-            {PORTFOLIO_FILTER_LANGUAGE_OPTIONS.map((option) => {
-              const active = option.value === language
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  aria-label={option.ariaLabel}
-                  aria-pressed={active}
-                  onClick={() => changeLanguage(option.value)}
-                  className={cn(
-                    "min-h-11 rounded-full px-3 text-[10px] font-medium tracking-[0.12em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70 md:min-h-8",
-                    active
-                      ? "bg-temo-gold text-black"
-                      : "text-white/55 hover:bg-white/8 hover:text-white"
-                  )}
-                >
-                  {option.label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
       {/* 五顆下拉選單：手機兩欄、桌面單列（chip 牆已退役） */}
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-x-3 gap-y-4 md:flex md:flex-wrap md:items-end md:gap-4">
@@ -599,6 +553,7 @@ export function PortfolioGrid({
   categoryGroups,
   industries,
   allowedGroups,
+  portfolioFilterLanguage = "en",
 }: {
   works: Work[]
   filters: FilterState
@@ -612,6 +567,8 @@ export function PortfolioGrid({
   industries?: Facet[]
   // 分類落地頁用：只顯示這些執行項目的作品（使用者的篩選再疊加其上）；未傳＝不限制
   allowedGroups?: string[]
+  // 由 Studio 網站設定統一控制；前台訪客不提供切換入口。
+  portfolioFilterLanguage?: PortfolioFilterLanguage
 }) {
   const [hoveredId, setHoveredId] = useState<number | null>(null)
   const [visible, setVisible] = useState(false)
@@ -723,6 +680,7 @@ export function PortfolioGrid({
               filteredCount={filtered.length}
               categoryGroups={categoryGroups}
               industries={industries}
+              language={portfolioFilterLanguage}
             />
           </div>
         )}
@@ -943,10 +901,12 @@ export function PortfolioPageClient({
   works,
   categoryGroups,
   industries,
+  portfolioFilterLanguage = "en",
 }: {
   works?: Work[]
   categoryGroups?: Facet[]
   industries?: Facet[]
+  portfolioFilterLanguage?: PortfolioFilterLanguage
 } = {}) {
   // 有從 Supabase 傳入就用，否則 fallback 到本地 DEMO_WORKS
   const effectiveWorks = works && works.length > 0 ? works : DEMO_WORKS
@@ -1009,6 +969,7 @@ export function PortfolioPageClient({
           setFilters={setFilters}
           categoryGroups={categoryGroups}
           industries={industries}
+          portfolioFilterLanguage={portfolioFilterLanguage}
         />
       </main>
       <Footer />

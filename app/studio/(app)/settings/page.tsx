@@ -41,6 +41,7 @@ export default async function StudioSettingsPage() {
           business_hours: s?.business_hours ?? "",
           line_url: s?.line_url ?? "",
           line_qr_url: s?.line_qr_url ?? "",
+          portfolio_filter_language: s?.portfolio_filter_language ?? "en",
         }}
       />
       <SocialLinksManager rows={socialLinks} />

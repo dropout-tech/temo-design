@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 import { PortfolioPageClient } from "@/components/pages/portfolio-page-client"
 import { getAllWorks } from "@/lib/portfolio-supabase"
-import { getCategoryGroups, getIndustries } from "@/lib/content-supabase"
+import { getCategoryGroups, getIndustries, getSiteSettings } from "@/lib/content-supabase"
 
 export const metadata: Metadata = {
   title: "作品集 | TEMO DESIGN",
@@ -13,15 +13,21 @@ export const metadata: Metadata = {
 export const revalidate = 60
 
 export default async function PortfolioPage() {
-  const [works, categoryGroups, industries] = await Promise.all([
+  const [works, categoryGroups, industries, settings] = await Promise.all([
     getAllWorks(),
     getCategoryGroups(),
     getIndustries(),
+    getSiteSettings(),
   ])
   // Suspense 包住是因為 PortfolioPageClient 內部用了 useSearchParams（讀 ?group=）
   return (
     <Suspense fallback={null}>
-      <PortfolioPageClient works={works} categoryGroups={categoryGroups} industries={industries} />
+      <PortfolioPageClient
+        works={works}
+        categoryGroups={categoryGroups}
+        industries={industries}
+        portfolioFilterLanguage={settings?.portfolio_filter_language ?? "en"}
+      />
     </Suspense>
   )
 }

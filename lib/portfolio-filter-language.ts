@@ -1,9 +1,5 @@
 export type PortfolioFilterLanguage = "bilingual" | "zh" | "en"
 
-export const PORTFOLIO_FILTER_LANGUAGE_STORAGE_KEY = "temo-portfolio-filter-language"
-const PORTFOLIO_FILTER_LANGUAGE_EVENT = "temo:portfolio-filter-language"
-let portfolioFilterLanguageMemory: PortfolioFilterLanguage = "en"
-
 export const PORTFOLIO_FILTER_LANGUAGE_OPTIONS: ReadonlyArray<{
   value: PortfolioFilterLanguage
   label: string
@@ -11,11 +7,10 @@ export const PORTFOLIO_FILTER_LANGUAGE_OPTIONS: ReadonlyArray<{
 }> = [
   { value: "bilingual", label: "中英", ariaLabel: "中英雙語" },
   { value: "zh", label: "中文", ariaLabel: "中文" },
-  { value: "en", label: "EN", ariaLabel: "English" },
+  { value: "en", label: "英文", ariaLabel: "英文" },
 ]
 
 const FILTER_COPY = {
-  displayLanguage: { zh: "顯示", en: "Display" },
   services: { zh: "執行項目", en: "Services" },
   industries: { zh: "行業分類 · 複選", en: "Industries · Multi" },
   clients: { zh: "客戶", en: "Clients" },
@@ -73,45 +68,12 @@ const DESIGNER_LABEL_FALLBACKS: Record<string, { zh: string; en: string }> = {
   sofia: { zh: "黃丞儀", en: "SOFIA HUANG" },
 }
 
-export function isPortfolioFilterLanguage(value: string | null): value is PortfolioFilterLanguage {
+export function isPortfolioFilterLanguage(value: unknown): value is PortfolioFilterLanguage {
   return value === "bilingual" || value === "zh" || value === "en"
 }
 
-export function subscribePortfolioFilterLanguage(onChange: () => void) {
-  function handleStorage(event: StorageEvent) {
-    if (event.key === PORTFOLIO_FILTER_LANGUAGE_STORAGE_KEY) onChange()
-  }
-
-  window.addEventListener("storage", handleStorage)
-  window.addEventListener(PORTFOLIO_FILTER_LANGUAGE_EVENT, onChange)
-  return () => {
-    window.removeEventListener("storage", handleStorage)
-    window.removeEventListener(PORTFOLIO_FILTER_LANGUAGE_EVENT, onChange)
-  }
-}
-
-export function getPortfolioFilterLanguageSnapshot(): PortfolioFilterLanguage {
-  try {
-    const savedLanguage = window.localStorage.getItem(PORTFOLIO_FILTER_LANGUAGE_STORAGE_KEY)
-    if (isPortfolioFilterLanguage(savedLanguage)) return savedLanguage
-  } catch {
-    // 瀏覽器禁用 storage 時改用當前分頁的記憶值。
-  }
-  return portfolioFilterLanguageMemory
-}
-
-export function getPortfolioFilterLanguageServerSnapshot(): PortfolioFilterLanguage {
-  return "en"
-}
-
-export function setPortfolioFilterLanguage(nextLanguage: PortfolioFilterLanguage) {
-  portfolioFilterLanguageMemory = nextLanguage
-  try {
-    window.localStorage.setItem(PORTFOLIO_FILTER_LANGUAGE_STORAGE_KEY, nextLanguage)
-  } catch {
-    // 瀏覽器禁用 storage 時，仍可在當前分頁切換。
-  }
-  window.dispatchEvent(new Event(PORTFOLIO_FILTER_LANGUAGE_EVENT))
+export function normalizePortfolioFilterLanguage(value: unknown): PortfolioFilterLanguage {
+  return isPortfolioFilterLanguage(value) ? value : "en"
 }
 
 export function localizePortfolioPair(

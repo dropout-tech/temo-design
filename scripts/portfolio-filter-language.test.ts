@@ -3,14 +3,12 @@ import {
   formatPortfolioOptionCount,
   formatPortfolioResultCount,
   formatPortfolioSelectedCount,
-  getPortfolioFilterLanguageSnapshot,
-  getPortfolioFilterLanguageServerSnapshot,
   getPortfolioDesignerFallback,
+  isPortfolioFilterLanguage,
   localizePortfolioFacet,
   localizePortfolioPair,
+  normalizePortfolioFilterLanguage,
   portfolioFilterCopy,
-  setPortfolioFilterLanguage,
-  subscribePortfolioFilterLanguage,
 } from "../lib/portfolio-filter-language"
 
 assert.equal(localizePortfolioPair("設計師", "Designers", "bilingual"), "設計師 / Designers")
@@ -41,30 +39,12 @@ assert.equal(formatPortfolioOptionCount("全部", 18, "zh"), "全部（18）")
 assert.equal(formatPortfolioResultCount(1, "en"), "1 Project")
 assert.equal(formatPortfolioResultCount(18, "bilingual"), "18 件作品 / Projects")
 assert.equal(formatPortfolioSelectedCount(2, "zh"), "已選 2 項")
-assert.equal(getPortfolioFilterLanguageServerSnapshot(), "en")
-
-const storedValues = new Map<string, string>()
-const mockWindow = new EventTarget() as EventTarget & {
-  localStorage: Pick<Storage, "getItem" | "setItem">
-}
-mockWindow.localStorage = {
-  getItem: (key) => storedValues.get(key) ?? null,
-  setItem: (key, value) => {
-    storedValues.set(key, value)
-  },
-}
-Object.defineProperty(globalThis, "window", { value: mockWindow, configurable: true })
-
-let languageChanges = 0
-const unsubscribe = subscribePortfolioFilterLanguage(() => {
-  languageChanges += 1
-})
-setPortfolioFilterLanguage("en")
-assert.equal(getPortfolioFilterLanguageSnapshot(), "en")
-assert.equal(languageChanges, 1)
-setPortfolioFilterLanguage("zh")
-assert.equal(getPortfolioFilterLanguageSnapshot(), "zh")
-assert.equal(languageChanges, 2)
-unsubscribe()
+assert.equal(isPortfolioFilterLanguage("bilingual"), true)
+assert.equal(isPortfolioFilterLanguage("zh"), true)
+assert.equal(isPortfolioFilterLanguage("en"), true)
+assert.equal(isPortfolioFilterLanguage("ja"), false)
+assert.equal(normalizePortfolioFilterLanguage("zh"), "zh")
+assert.equal(normalizePortfolioFilterLanguage(null), "en")
+assert.equal(normalizePortfolioFilterLanguage("invalid"), "en")
 
 console.log("portfolio filter language tests: PASS")
