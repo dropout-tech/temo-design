@@ -22,6 +22,7 @@ import {
   normalizeHexColor,
   normalizeOptionalImageHeightPercent,
 } from "@/lib/work-block-config"
+import { buildWorksLandingHref } from "@/lib/portfolio-navigation"
 import { getEnglishTeamCategoryLabel, groupTeamMembersByCategory } from "@/lib/team-members"
 
 export type DetailDesigner = {
@@ -79,9 +80,11 @@ export type DetailProject = {
   title: string
   subtitle: string
   categoryLabel: string
-  categoryGroup?: string         // 用來在導覽列連回 /portfolio?group=xxx
+  categoryGroup?: string         // 用來在導覽列連回所屬服務頁的作品區
   /** 完整執行項目清單；舊資料沒有時退回上方主要分類。 */
   categoryGroups?: { value: string; label: string }[]
+  /** 作品主要執行項目所屬的服務頁；列表已整合於該頁。 */
+  worksLandingSlug?: string
   industryLabels: string[]
   industries?: DetailIndustry[]  // 帶 value 的版本，可用於連結
   year: string
@@ -189,7 +192,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
               首頁
             </Link>
             <span>/</span>
-            <Link href="/portfolio" className="hover:text-temo-gold transition-colors">
+            <Link href="/explore" className="hover:text-temo-gold transition-colors">
               作品集
             </Link>
             <span>/</span>
@@ -415,7 +418,9 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                       <MetaItem label="客戶 Client">
                         {project.clientSlug ? (
                           <Link
-                            href={`/portfolio?client=${project.clientSlug}`}
+                            href={buildWorksLandingHref(project.worksLandingSlug, {
+                              client: project.clientSlug,
+                            })}
                             className="group inline-flex items-center gap-1.5 text-temo-white font-medium hover:text-temo-gold transition-colors"
                           >
                             {project.clientName}
@@ -496,7 +501,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                   <h2 className="text-3xl md:text-4xl font-bold text-temo-white">其他案例</h2>
                 </div>
                 <Link
-                  href="/portfolio"
+                  href="/explore"
                   className="hidden sm:inline-flex items-center gap-2 text-sm text-temo-warm-gray hover:text-temo-gold transition-colors"
                 >
                   看全部作品 <ArrowUpRight className="w-4 h-4" />
@@ -542,7 +547,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
         <section className="py-16 md:py-20 border-t border-temo-warm-gray/10 bg-temo-black">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <Link
-              href="/portfolio"
+              href="/explore"
               className="inline-flex items-center gap-2 text-temo-warm-gray hover:text-temo-gold transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -993,7 +998,7 @@ function MobileFilterNav({ project }: { project: DetailProject }) {
           categoryGroups.map((group) => (
             <Link
               key={group.value}
-              href={`/portfolio?group=${encodeURIComponent(group.value)}`}
+              href={buildWorksLandingHref(project.worksLandingSlug, { group: group.value })}
               className={pillClass}
             >
               {group.label}
@@ -1006,7 +1011,7 @@ function MobileFilterNav({ project }: { project: DetailProject }) {
           industry.value ? (
             <Link
               key={industry.value}
-              href={`/portfolio?industry=${encodeURIComponent(industry.value)}`}
+              href={buildWorksLandingHref(project.worksLandingSlug, { industry: industry.value })}
               className={pillClass}
             >
               {industry.label}
@@ -1076,7 +1081,9 @@ function MobileProjectDetails({
             <div className="text-center">
               {project.clientSlug ? (
                 <Link
-                  href={`/portfolio?client=${encodeURIComponent(project.clientSlug)}`}
+                  href={buildWorksLandingHref(project.worksLandingSlug, {
+                    client: project.clientSlug,
+                  })}
                   className="inline-flex min-h-6 items-center justify-center gap-1.5 text-base font-medium text-temo-white transition-colors hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
                 >
                   {project.clientName}
@@ -1425,7 +1432,7 @@ function RelatedNav({ project }: { project: DetailProject }) {
             {categoryGroups.map((group) => (
               <Link
                 key={group.value}
-                href={`/portfolio?group=${encodeURIComponent(group.value)}`}
+                href={buildWorksLandingHref(project.worksLandingSlug, { group: group.value })}
                 className={pillClass}
               >
                 {group.label}
@@ -1441,7 +1448,7 @@ function RelatedNav({ project }: { project: DetailProject }) {
               t.value ? (
                 <Link
                   key={t.value}
-                  href={`/portfolio?industry=${encodeURIComponent(t.value)}`}
+                  href={buildWorksLandingHref(project.worksLandingSlug, { industry: t.value })}
                   className={pillClass}
                 >
                   {t.label}
@@ -1462,7 +1469,9 @@ function RelatedNav({ project }: { project: DetailProject }) {
         {project.clientSlug && project.clientName && (
           <NavGroup label="客戶">
             <Link
-              href={`/portfolio?client=${project.clientSlug}`}
+              href={buildWorksLandingHref(project.worksLandingSlug, {
+                client: project.clientSlug,
+              })}
               className={pillClass}
             >
               {project.clientName}

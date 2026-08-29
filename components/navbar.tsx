@@ -67,8 +67,12 @@ export function Navbar({
 
   const handleSearch = (e: FormEvent) => {
     e.preventDefault()
+    if (onMobileSearchChange) {
+      e.currentTarget.querySelector("input")?.blur()
+      return
+    }
     const query = q.trim()
-    router.push(query ? `/portfolio?q=${encodeURIComponent(query)}` : "/portfolio")
+    router.push(query ? `/explore?q=${encodeURIComponent(query)}` : "/explore")
   }
 
   const handleMobileSearch = (e: FormEvent<HTMLFormElement>) => {
@@ -79,7 +83,7 @@ export function Navbar({
     }
 
     const query = (mobileSearchValue ?? q).trim()
-    router.push(query ? `/portfolio?q=${encodeURIComponent(query)}` : "/portfolio")
+    router.push(query ? `/explore?q=${encodeURIComponent(query)}` : "/explore")
   }
 
   useEffect(() => {
@@ -193,8 +197,14 @@ export function Navbar({
                 <div className="relative">
                   <input
                     type="text"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
+                    value={mobileSearchValue ?? q}
+                    onChange={(e) => {
+                      if (onMobileSearchChange) {
+                        onMobileSearchChange(e.target.value)
+                      } else {
+                        setQ(e.target.value)
+                      }
+                    }}
                     placeholder="SEARCH"
                     aria-label="搜尋作品"
                     className="w-full bg-white/[0.03] border border-white/25 rounded-full pl-6 pr-12 py-2.5 text-[11px] tracking-[0.3em] uppercase text-white placeholder:text-white/40 focus:border-white/60 focus:bg-white/[0.06] focus:outline-none transition-all"

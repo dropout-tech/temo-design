@@ -11,6 +11,7 @@ import { ArrowUpRight, Building2, ChevronDown, Instagram, Facebook, Globe, Phone
 import Link from "next/link"
 import Image from "next/image"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import { buildWorksLandingHref } from "@/lib/portfolio-navigation"
 
 type Person = {
   name: string
@@ -38,6 +39,7 @@ type AboutClient = {
   website?: string
   logoUrl?: string
   workCount: number
+  worksLandingSlug?: string
 }
 
 const CLIENT_CATEGORY = "CLIENT 合作客戶"
@@ -665,7 +667,9 @@ function ClientDetailPanel({
                 <div className="flex flex-wrap gap-3 pt-2">
                   {client.workCount > 0 && (
                     <Link
-                      href={`/portfolio?client=${encodeURIComponent(client.slug)}`}
+                      href={buildWorksLandingHref(client.worksLandingSlug, {
+                        client: client.slug,
+                      })}
                       onClick={onClose}
                       className="inline-flex min-h-11 items-center gap-2 rounded-full bg-temo-gold px-5 py-3 text-sm font-semibold text-temo-black transition-[filter] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-temo-black"
                     >

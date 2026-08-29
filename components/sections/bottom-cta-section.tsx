@@ -60,7 +60,7 @@ export function BottomCTASection() {
             </Link>
 
             <Link
-              href="/portfolio"
+              href="/explore"
               className="inline-flex items-center gap-2 px-9 py-4 border border-temo-gold text-temo-gold font-semibold tracking-wider hover:bg-temo-gold/10 transition-all duration-300 hover:scale-105 active:scale-95"
             >
               查看作品集

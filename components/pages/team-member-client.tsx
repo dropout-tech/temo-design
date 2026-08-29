@@ -217,7 +217,7 @@ export function TeamMemberClient({
             {/* CTA */}
             <div className="mt-20 pt-12 border-t border-white/8 text-center">
               <Link
-                href="/portfolio"
+                href="/explore"
                 className="inline-flex items-center gap-2 text-xs tracking-[0.25em] uppercase text-white/50 hover:text-temo-gold transition-colors"
               >
                 查看所有作品

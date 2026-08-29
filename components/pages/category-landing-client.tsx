@@ -102,6 +102,7 @@ export function CategoryLandingClient({
   categoryGroups,
   allowedGroups,
   portfolioFilterLanguage = "en",
+  initialFilterParams = {},
 }: {
   landing: CategoryLanding
   works?: Work[]
@@ -110,10 +111,48 @@ export function CategoryLandingClient({
   // 本落地頁只顯示這些執行項目的作品；未傳＝不限制（migration 未套用時的照舊行為）
   allowedGroups?: string[]
   portfolioFilterLanguage?: PortfolioFilterLanguage
+  initialFilterParams?: {
+    group?: string
+    industry?: string
+    client?: string
+    designer?: string
+    year?: string
+    query?: string
+  }
 }) {
-  const [filters, setFilters] = useState<FilterState>({
-    ...INITIAL_FILTERS,
-    group: landing.portfolioGroup,
+  const effectiveWorks = works && works.length > 0 ? works : DEMO_WORKS
+  const [filters, setFilters] = useState<FilterState>(() => {
+    const group = initialFilterParams.group?.trim()
+    const industry = initialFilterParams.industry?.trim()
+    const client = initialFilterParams.client?.trim()
+    const designer = initialFilterParams.designer?.trim()
+    const year = initialFilterParams.year?.trim()
+    const query = initialFilterParams.query?.trim() ?? ""
+
+    return {
+      ...INITIAL_FILTERS,
+      group:
+        group && effectiveWorks.some((work) => work.categoryGroups?.includes(group) || work.categoryGroup === group)
+          ? group
+          : landing.portfolioGroup,
+      industries:
+        industry && effectiveWorks.some((work) => (work.industries as readonly string[]).includes(industry))
+          ? [industry]
+          : [],
+      client:
+        client && effectiveWorks.some((work) => work.clientSlug === client)
+          ? client
+          : "all",
+      designer:
+        designer && effectiveWorks.some((work) => work.designerSlugs.includes(designer))
+          ? designer
+          : "all",
+      year:
+        year && effectiveWorks.some((work) => work.year === year)
+          ? year
+          : "all",
+      query,
+    }
   })
 
   return (
@@ -144,7 +183,7 @@ export function CategoryLandingClient({
       <main className="pt-[68px]">
         <LandingHero landing={landing} />
         <PortfolioGrid
-          works={works && works.length > 0 ? works : DEMO_WORKS}
+          works={effectiveWorks}
           filters={filters}
           setFilters={setFilters}
           showFilters={!landing.hideFilters}

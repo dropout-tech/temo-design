@@ -658,8 +658,9 @@ export function PortfolioGrid({
 
   return (
     <section
+      id="works"
       className={cn(
-        "relative pt-10 md:pt-14 pb-24 md:pb-32",
+        "relative scroll-mt-[68px] pt-10 md:pt-14 pb-24 md:pb-32",
         transparentBg ? "bg-transparent" : "bg-[#0c0b09]"
       )}
     >

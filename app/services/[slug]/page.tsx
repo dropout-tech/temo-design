@@ -12,6 +12,11 @@ import { getAllWorks } from "@/lib/portfolio-supabase"
 
 interface ServiceLandingPageProps {
   params: Promise<{ slug: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
+
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value
 }
 
 export const revalidate = 60
@@ -33,7 +38,7 @@ export async function generateMetadata(props: ServiceLandingPageProps): Promise<
 }
 
 export default async function ServiceLandingPage(props: ServiceLandingPageProps) {
-  const { slug } = await props.params
+  const [{ slug }, searchParams] = await Promise.all([props.params, props.searchParams])
   const landing = (await getCategoryLanding(slug)) ?? CATEGORY_LANDING_MAP[slug]
   if (!landing) notFound()
   const [works, allGroups, settings] = await Promise.all([
@@ -50,6 +55,14 @@ export default async function ServiceLandingPage(props: ServiceLandingPageProps)
       categoryGroups={ownGroups.length > 0 ? ownGroups : undefined}
       allowedGroups={ownGroups.length > 0 ? ownGroups.map((g) => g.value) : undefined}
       portfolioFilterLanguage={settings?.portfolio_filter_language ?? "en"}
+      initialFilterParams={{
+        group: firstParam(searchParams.group),
+        industry: firstParam(searchParams.industry),
+        client: firstParam(searchParams.client),
+        designer: firstParam(searchParams.designer),
+        year: firstParam(searchParams.year),
+        query: firstParam(searchParams.q),
+      }}
     />
   )
 }

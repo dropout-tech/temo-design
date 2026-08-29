@@ -349,7 +349,7 @@ export function WorksManager({ initialWorks }: { initialWorks: StudioWorkRow[] }
         </div>
         <div className="flex items-center gap-3">
           <Link
-            href="/portfolio"
+            href="/explore"
             target="_blank"
             className="inline-flex items-center gap-2 px-4 py-3 border border-white/12 text-temo-warm-gray/75 hover:text-temo-gold hover:border-temo-gold/40 text-xs font-bold tracking-[0.12em] uppercase rounded-sm transition-colors"
           >

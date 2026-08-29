@@ -6,7 +6,11 @@ import {
   getClientLogos,
   getPressLinks,
   getTeamGrouped,
+  getCategoryGroups,
 } from "@/lib/content-supabase"
+import { getAllWorks } from "@/lib/portfolio-supabase"
+import { getWorkCategoryGroupValues } from "@/lib/work-category-groups"
+import { findWorksLandingSlug } from "@/lib/portfolio-navigation"
 
 export const metadata: Metadata = {
   title: "關於我們 | TEMO DESIGN",
@@ -14,12 +18,14 @@ export const metadata: Metadata = {
 }
 
 export default async function AboutPage() {
-  const [logos, awards, press, team, clients] = await Promise.all([
+  const [logos, awards, press, team, clients, works, categoryGroups] = await Promise.all([
     getClientLogos(),
     getAwardLogos(),
     getPressLinks(),
     getTeamGrouped(),
     getAboutClients(),
+    getAllWorks(),
+    getCategoryGroups(),
   ])
   return (
     <AboutPageClient
@@ -32,7 +38,15 @@ export default async function AboutPage() {
         image_url: p.image_url,
       }))}
       team={team}
-      clients={clients}
+      clients={clients.map((client) => {
+        const clientWork = works.find((work) => work.clientSlug === client.slug)
+        return {
+          ...client,
+          worksLandingSlug: clientWork
+            ? findWorksLandingSlug(getWorkCategoryGroupValues(clientWork), categoryGroups)
+            : undefined,
+        }
+      })}
     />
   )
 }

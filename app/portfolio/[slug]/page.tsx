@@ -3,6 +3,8 @@ import { notFound, permanentRedirect } from "next/navigation"
 import { PortfolioDetailClient, type DetailProject } from "@/components/pages/portfolio-detail-client"
 import { getWorkDetail, getPublishedWorkSlugs } from "@/lib/portfolio-supabase"
 import { decodeWorkSlugParam, normalizeWorkSlug } from "@/lib/work-slug"
+import { getCategoryGroups } from "@/lib/content-supabase"
+import { findWorksLandingSlug } from "@/lib/portfolio-navigation"
 import {
   CLIENT_MAP,
   DESIGNER_MAP,
@@ -146,5 +148,10 @@ export default async function PortfolioDetailPage(
     notFound()
   }
 
-  return <PortfolioDetailClient project={project} />
+  const categoryGroups = await getCategoryGroups()
+  const projectCategoryValues = project.categoryGroups?.map((group) => group.value)
+    ?? (project.categoryGroup ? [project.categoryGroup] : [])
+  const worksLandingSlug = findWorksLandingSlug(projectCategoryValues, categoryGroups)
+
+  return <PortfolioDetailClient project={{ ...project, worksLandingSlug }} />
 }
