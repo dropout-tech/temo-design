@@ -1,6 +1,8 @@
 export const COLLABORATOR_NAME_MAX = 100
 export const COLLABORATOR_NAME_LIMIT = 20
 
+export type TemporaryNameKind = "guest-designer" | "collaborator"
+
 export function normalizeCollaboratorName(value: unknown): string {
   if (typeof value !== "string") return ""
   return value.trim().replace(/\s+/g, " ")
@@ -48,6 +50,7 @@ export type CollaboratorSourceWork = {
   published: boolean
   updated_at?: string | null
   guest_designer_names: unknown
+  collaborator_names: unknown
 }
 
 export type CollaboratorUsage = {
@@ -59,12 +62,13 @@ export type CollaboratorUsage = {
 
 export type CollaboratorDirectoryEntry = {
   key: string
+  kind: TemporaryNameKind
   name: string
   variants: string[]
   usages: CollaboratorUsage[]
 }
 
-/** 從各作品的臨時合作名稱建立唯讀名錄；不建立額外人物資料。 */
+/** 從各作品的臨時設計師與合作夥伴名稱建立名錄；不建立額外人物資料。 */
 export function buildCollaboratorDirectory(
   works: CollaboratorSourceWork[]
 ): CollaboratorDirectoryEntry[] {
@@ -73,9 +77,14 @@ export function buildCollaboratorDirectory(
     CollaboratorDirectoryEntry & { variantSet: Set<string> }
   >()
 
-  for (const work of works) {
-    for (const name of normalizeCollaboratorNames(work.guest_designer_names)) {
-      const key = collaboratorNameKey(name)
+  function addNames(
+    work: CollaboratorSourceWork,
+    kind: TemporaryNameKind,
+    values: unknown
+  ) {
+    for (const name of normalizeCollaboratorNames(values)) {
+      const nameKey = collaboratorNameKey(name)
+      const key = `${kind}:${nameKey}`
       const existing = entries.get(key)
       if (existing) {
         existing.variantSet.add(name)
@@ -90,6 +99,7 @@ export function buildCollaboratorDirectory(
 
       entries.set(key, {
         key,
+        kind,
         name,
         variants: [],
         variantSet: new Set([name]),
@@ -105,10 +115,18 @@ export function buildCollaboratorDirectory(
     }
   }
 
+  for (const work of works) {
+    addNames(work, "guest-designer", work.guest_designer_names)
+    addNames(work, "collaborator", work.collaborator_names)
+  }
+
   return Array.from(entries.values())
     .map(({ variantSet, ...entry }) => ({
       ...entry,
       variants: Array.from(variantSet),
     }))
-    .sort((a, b) => a.name.localeCompare(b.name, "zh-Hant"))
+    .sort((a, b) => {
+      if (a.kind !== b.kind) return a.kind === "guest-designer" ? -1 : 1
+      return a.name.localeCompare(b.name, "zh-Hant")
+    })
 }

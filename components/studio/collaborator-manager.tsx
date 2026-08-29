@@ -19,6 +19,11 @@ import type { CollaboratorDirectoryEntry } from "@/lib/collaborator-names"
 const inputCls =
   "w-full rounded-sm border border-white/10 bg-white/[0.03] px-3 py-2.5 text-sm text-temo-white placeholder:text-white/20 transition-all focus:border-temo-gold/60 focus:outline-none"
 
+const KIND_LABELS = {
+  "guest-designer": "臨時設計師",
+  collaborator: "合作夥伴",
+} as const
+
 export function CollaboratorManager({
   initial,
   loadError,
@@ -40,6 +45,7 @@ export function CollaboratorManager({
     return initial.filter(
       (entry) =>
         entry.name.toLocaleLowerCase().includes(keyword) ||
+        KIND_LABELS[entry.kind].includes(keyword) ||
         entry.usages.some((usage) =>
           usage.title.toLocaleLowerCase().includes(keyword)
         )
@@ -47,6 +53,8 @@ export function CollaboratorManager({
   }, [initial, query])
 
   const totalUsages = initial.reduce((sum, entry) => sum + entry.usages.length, 0)
+  const guestDesignerCount = initial.filter((entry) => entry.kind === "guest-designer").length
+  const collaboratorCount = initial.filter((entry) => entry.kind === "collaborator").length
 
   function beginRename(entry: CollaboratorDirectoryEntry) {
     setEditingKey(entry.key)
@@ -65,7 +73,7 @@ export function CollaboratorManager({
     setError("")
     setNotice("")
     startTransition(async () => {
-      const result = await renameCollaborator(entry.name, draft)
+      const result = await renameCollaborator(entry.kind, entry.name, draft)
       if (result.error) {
         setError(result.error)
         return
@@ -85,14 +93,22 @@ export function CollaboratorManager({
         </p>
         <h1 className="text-3xl font-bold text-temo-white md:text-4xl">合作夥伴</h1>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-temo-warm-gray/60">
-          這裡從所有作品的臨時合作名稱自動彙整，不會另外建立人物檔案。可查看曾參與的作品，或一次改名並同步到全部作品。
+          這裡從所有作品自動彙整臨時設計師與其他合作夥伴，不會另外建立人物檔案。兩種類型分開保存，可查看曾參與的作品，或一次改名並同步到同類型的全部作品。
         </p>
       </div>
 
-      <div className="mb-7 grid gap-3 sm:grid-cols-2">
+      <div className="mb-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border border-white/10 bg-white/[0.025] p-4">
-          <p className="text-[10px] uppercase tracking-[0.25em] text-temo-warm-gray/45">名稱</p>
+          <p className="text-[10px] uppercase tracking-[0.25em] text-temo-warm-gray/45">全部名稱</p>
           <p className="mt-2 text-2xl font-semibold text-temo-white">{initial.length}</p>
+        </div>
+        <div className="rounded-lg border border-white/10 bg-white/[0.025] p-4">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-temo-warm-gray/45">臨時設計師</p>
+          <p className="mt-2 text-2xl font-semibold text-temo-white">{guestDesignerCount}</p>
+        </div>
+        <div className="rounded-lg border border-white/10 bg-white/[0.025] p-4">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-temo-warm-gray/45">合作夥伴</p>
+          <p className="mt-2 text-2xl font-semibold text-temo-white">{collaboratorCount}</p>
         </div>
         <div className="rounded-lg border border-white/10 bg-white/[0.025] p-4">
           <p className="text-[10px] uppercase tracking-[0.25em] text-temo-warm-gray/45">作品使用次數</p>
@@ -101,7 +117,7 @@ export function CollaboratorManager({
       </div>
 
       <div className="mb-6 rounded-lg border border-temo-gold/20 bg-temo-gold/[0.04] p-4 text-xs leading-relaxed text-temo-warm-gray/70">
-        改成已存在的名稱時，系統會自動合併同一件作品裡的重複名稱。新增合作名稱仍請在作品編輯頁操作。
+        改成同類型已存在的名稱時，系統會自動合併同一件作品裡的重複名稱。新增臨時設計師或合作夥伴仍請在作品編輯頁操作。
       </div>
 
       <div className="relative mb-6">
@@ -110,7 +126,7 @@ export function CollaboratorManager({
           className={`${inputCls} pl-10`}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="搜尋合作名稱或作品名稱"
+          placeholder="搜尋名稱、類型或作品名稱"
           aria-label="搜尋合作夥伴"
         />
       </div>
@@ -133,7 +149,7 @@ export function CollaboratorManager({
           <UsersRound className="mx-auto h-8 w-8 text-temo-warm-gray/25" />
           <p className="mt-4 text-sm text-temo-warm-gray/55">
             {initial.length === 0
-              ? "目前還沒有作品使用臨時合作名稱。"
+              ? "目前還沒有作品使用臨時設計師或合作夥伴名稱。"
               : "找不到符合搜尋條件的名稱。"}
           </p>
           {initial.length === 0 && (
@@ -150,6 +166,7 @@ export function CollaboratorManager({
         <div className="space-y-4">
           {filtered.map((entry) => {
             const editing = editingKey === entry.key
+            const kindLabel = KIND_LABELS[entry.kind]
             return (
               <section
                 key={entry.key}
@@ -194,13 +211,22 @@ export function CollaboratorManager({
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex flex-wrap items-center gap-2.5">
                         <h2 className="truncate text-lg font-medium text-temo-white">{entry.name}</h2>
+                        <span
+                          className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                            entry.kind === "guest-designer"
+                              ? "border-sky-300/25 text-sky-200/80"
+                              : "border-temo-gold/25 text-temo-gold/80"
+                          }`}
+                        >
+                          {kindLabel}
+                        </span>
                         <button
                           type="button"
                           onClick={() => beginRename(entry)}
                           className="rounded-sm p-1.5 text-temo-warm-gray/45 transition-colors hover:bg-white/[0.04] hover:text-temo-gold"
-                          aria-label={`重新命名 ${entry.name}`}
+                          aria-label={`重新命名${kindLabel} ${entry.name}`}
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </button>

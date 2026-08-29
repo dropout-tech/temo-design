@@ -41,7 +41,7 @@ import {
   normalizeCoverCrop,
   type CoverCrop,
 } from "@/lib/cover-crop"
-import { groupTeamMembersByCategory } from "@/lib/team-members"
+import { DEFAULT_TEAM_CATEGORY, groupTeamMembersByCategory } from "@/lib/team-members"
 
 type TeamMemberOption = {
   id: string
@@ -60,6 +60,7 @@ type Options = {
   teamMembers: TeamMemberOption[]
   teamCategories: string[]
   industries: { value: string; label: string }[]
+  guestDesignerNames: string[]
   collaboratorNames: string[]
 }
 
@@ -95,8 +96,10 @@ export type WorkFormInitial = {
   /** 不在既有行業分類中的作品專屬顯示名稱 */
   customIndustryNames: string[]
   designerIds: string[]
-  /** 不在正式團隊名冊中的臨時合作夥伴，只在作品與後台彙整頁保留名稱 */
+  /** 不在正式團隊名冊中的單次合作設計師，只在作品與後台彙整頁保留名稱 */
   guestDesignerNames: string[]
+  /** 攝影師、顧問或外部團隊等其他合作夥伴，只存作品專屬顯示名稱 */
+  collaboratorNames: string[]
   /** 舊資料：僅用於表單初始化時的一次性 fallback，不再被編輯或送出 */
   gallery: { src: string; alt?: string; caption?: string }[]
   /** 內容區塊（新系統），有值時以此為準 */
@@ -109,7 +112,7 @@ const EMPTY: WorkFormInitial = {
   cover_position_y: DEFAULT_COVER_CROP.positionY, hero_url: "", client_logo_urls: [], video_url: "", size: "medium", description: "", services: "",
   deliverables: "", challenge: "", approach: "", result: "", quote_text: "",
   quote_author: "", awards: "", press: "", published: true, industryValues: [], customIndustryNames: [], designerIds: [],
-  guestDesignerNames: [],
+  guestDesignerNames: [], collaboratorNames: [],
   gallery: [], blocks: [],
 }
 
@@ -751,6 +754,7 @@ export function WorkForm({
       quote_author: f.quote_author, awards: toLines(f.awards), press_mentions: toLines(f.press),
       published: f.published, industryValues: f.industryValues, customIndustryNames: f.customIndustryNames, designerIds: f.designerIds,
       guestDesignerNames: f.guestDesignerNames,
+      collaboratorNames: f.collaboratorNames,
       blocks: blocks.map((b) => ({
         type: b.type,
         src: b.src,
@@ -978,13 +982,23 @@ export function WorkForm({
                   </Field>
                   <Field
                     label="團隊成員與顧問（可複選）"
-                    hint="名單同步自「團隊成員」管理頁；設計師、攝影師與各類顧問都會依原分類顯示。"
+                    hint="正式名單同步自「團隊成員」管理頁；不在名冊中的單次合作設計師，可在 DESIGNER 分類使用「＋ 其他」新增。"
                   >
                     <TeamMemberSelector
                       members={options.teamMembers}
                       categoryOrder={options.teamCategories}
                       selected={f.designerIds}
                       onToggle={(v) => set("designerIds", toggle(f.designerIds, v))}
+                      designerExtras={
+                        <CustomNameChips
+                          values={f.guestDesignerNames}
+                          onChange={(values) => set("guestDesignerNames", values)}
+                          nameLabel="其他合作設計師"
+                          placeholder="設計師名稱"
+                          suggestions={options.guestDesignerNames}
+                          onError={setError}
+                        />
+                      }
                     />
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <Link
@@ -1012,8 +1026,8 @@ export function WorkForm({
                   >
                     <div className="flex flex-wrap gap-2">
                       <CustomNameChips
-                        values={f.guestDesignerNames}
-                        onChange={(values) => set("guestDesignerNames", values)}
+                        values={f.collaboratorNames}
+                        onChange={(values) => set("collaboratorNames", values)}
                         nameLabel="合作夥伴"
                         placeholder="姓名或團隊名稱"
                         suggestions={options.collaboratorNames}
@@ -1311,7 +1325,7 @@ export function WorkForm({
                 <p>媒體：{mediaSummary.length > 0 ? mediaSummary.join("、") : "尚未補媒體"}</p>
                 <p>文字：{storySummary.length > 0 ? storySummary.join("、") : "尚未補案例文字"}</p>
                 <p>
-                  關聯：{f.industryValues.length + f.customIndustryNames.length} 個行業 · {f.designerIds.length} 位團隊成員 · {f.guestDesignerNames.length} 個臨時合作夥伴
+                  關聯：{f.industryValues.length + f.customIndustryNames.length} 個行業 · {f.designerIds.length + f.guestDesignerNames.length} 位團隊成員／臨時設計師 · {f.collaboratorNames.length} 個合作夥伴
                 </p>
               </div>
             </div>
@@ -2081,15 +2095,18 @@ function TeamMemberSelector({
   categoryOrder,
   selected,
   onToggle,
+  designerExtras,
 }: {
   members: TeamMemberOption[]
   categoryOrder: string[]
   selected: string[]
   onToggle: (id: string) => void
+  designerExtras?: React.ReactNode
 }) {
   const groups = groupTeamMembersByCategory(members, categoryOrder)
+  const hasDesignerGroup = groups.some((group) => /designer/i.test(group.category))
 
-  if (groups.length === 0) {
+  if (groups.length === 0 && !designerExtras) {
     return (
       <p className="rounded-md border border-dashed border-white/10 px-4 py-3 text-sm text-temo-warm-gray/55">
         目前沒有團隊成員，請先到「團隊成員」管理頁新增。
@@ -2111,9 +2128,19 @@ function TeamMemberSelector({
             }))}
             selected={selected}
             onToggle={onToggle}
-          />
+          >
+            {/designer/i.test(group.category) ? designerExtras : null}
+          </ChipGroup>
         </div>
       ))}
+      {!hasDesignerGroup && designerExtras && (
+        <div className="space-y-2">
+          <p className="break-words text-[11px] font-medium tracking-[0.12em] text-temo-warm-gray/55">
+            {DEFAULT_TEAM_CATEGORY}
+          </p>
+          <div className="flex flex-wrap gap-2">{designerExtras}</div>
+        </div>
+      )}
     </div>
   )
 }

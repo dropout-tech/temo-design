@@ -5,6 +5,7 @@ import type { DetailProject } from "@/components/pages/portfolio-detail-client"
 import type { Work, Designer } from "@/lib/portfolio-data"
 import { normalizeCoverCrop } from "@/lib/cover-crop"
 import { normalizeCategoryGroupValues } from "@/lib/work-category-groups"
+import { DEFAULT_TEAM_CATEGORY } from "@/lib/team-members"
 
 // ─── 作品內容區塊（Adobe Portfolio 式：圖片/文字/YouTube 影片，可同列雙圖） ─────
 // 這是後台表單與前台渲染共用的合約型別，欄位形狀不得隨意更動。
@@ -479,8 +480,8 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       category: d.category ?? undefined,
     }))
 
-  // 臨時合作夥伴只存顯示名稱；獨立查詢可讓 migration 尚未套用時仍正常讀取舊作品。
-  let collaboratorNames: string[] = []
+  // 單次合作設計師仍屬於設計團隊，只是不建立人物檔案或個人頁。
+  let guestDesignerNames: string[] = []
   try {
     const { data: guestRow, error: guestErr } = await supa
       .from("works")
@@ -489,7 +490,36 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       .maybeSingle()
     const guestNames = (guestRow as unknown as { guest_designer_names?: unknown })?.guest_designer_names
     if (!guestErr && Array.isArray(guestNames)) {
-      collaboratorNames = guestNames
+      guestDesignerNames = guestNames
+        .map((name: unknown) => String(name).trim())
+        .filter(Boolean)
+    }
+  } catch {
+    guestDesignerNames = []
+  }
+
+  const designers = [
+    ...linkedDesigners,
+    ...guestDesignerNames.map((name) => ({
+      slug: "",
+      name,
+      role: "",
+      photo: "",
+      category: DEFAULT_TEAM_CATEGORY,
+    })),
+  ]
+
+  // 其他合作夥伴使用獨立欄位；欄位尚未套用時只隱藏此區，不影響作品頁。
+  let collaboratorNames: string[] = []
+  try {
+    const { data: collaboratorRow, error: collaboratorErr } = await supa
+      .from("works")
+      .select("collaborator_names")
+      .eq("slug", slug)
+      .maybeSingle()
+    const names = (collaboratorRow as unknown as { collaborator_names?: unknown })?.collaborator_names
+    if (!collaboratorErr && Array.isArray(names)) {
+      collaboratorNames = names
         .map((name: unknown) => String(name).trim())
         .filter(Boolean)
     }
@@ -648,7 +678,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     quote: w.quote_text ? { text: w.quote_text, author: w.quote_author ?? undefined } : undefined,
     awards: w.awards ?? [],
     pressMentions,
-    designers: linkedDesigners,
+    designers,
     collaborators: collaboratorNames,
     related,
     blocks,

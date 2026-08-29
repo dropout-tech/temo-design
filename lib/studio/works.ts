@@ -81,6 +81,7 @@ type WorkEditRow = {
   published: boolean | null
   custom_industry_names: string[] | null
   guest_designer_names: string[] | null
+  collaborator_names: string[] | null
   work_industries: WorkIndustryRelationRow[] | null
   work_designers: WorkDesignerRelationRow[] | null
   work_gallery: WorkGalleryRow[] | null
@@ -89,17 +90,23 @@ type WorkEditRow = {
 /** 作品表單需要的下拉/多選選項 */
 export async function getWorkOptions() {
   const supabase = await createClient()
-  const [categories, clients, members, teamCategories, industries, collaboratorWorks] = await Promise.all([
+  const [categories, clients, members, teamCategories, industries, guestDesignerWorks, collaboratorWorks] = await Promise.all([
     supabase.from("category_groups").select("value,label").order("sort"),
     supabase.from("clients").select("id,name").order("name"),
     supabase.from("designers").select("id,name,name_zh,role,category").order("sort"),
     supabase.from("team_categories").select("name").order("sort"),
     supabase.from("industries").select("value,label").order("sort"),
     supabase.from("works").select("guest_designer_names").order("updated_at", { ascending: false }),
+    supabase.from("works").select("collaborator_names").order("updated_at", { ascending: false }),
   ])
+  const guestDesignerNames = normalizeCollaboratorNames(
+    (guestDesignerWorks.data ?? []).flatMap((work) =>
+      Array.isArray(work.guest_designer_names) ? work.guest_designer_names : []
+    )
+  )
   const collaboratorNames = normalizeCollaboratorNames(
     (collaboratorWorks.data ?? []).flatMap((work) =>
-      Array.isArray(work.guest_designer_names) ? work.guest_designer_names : []
+      Array.isArray(work.collaborator_names) ? work.collaborator_names : []
     )
   )
   return {
@@ -110,6 +117,7 @@ export async function getWorkOptions() {
     teamMembers: members.data ?? [],
     teamCategories: (teamCategories.data ?? []).map((category) => category.name),
     industries: industries.data ?? [],
+    guestDesignerNames,
     collaboratorNames,
   }
 }
@@ -209,6 +217,11 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
     designerIds: (w.work_designers ?? []).map((r) => r.designer_id),
     guestDesignerNames: Array.isArray(w.guest_designer_names)
       ? w.guest_designer_names
+          .map((name: unknown) => String(name).trim())
+          .filter(Boolean)
+      : [],
+    collaboratorNames: Array.isArray(w.collaborator_names)
+      ? w.collaborator_names
           .map((name: unknown) => String(name).trim())
           .filter(Boolean)
       : [],

@@ -17,9 +17,20 @@ export async function getCollaboratorDirectory(): Promise<{
 
   if (error) return { entries: [], error: error.message }
 
+  const { data: collaboratorRows } = await supabase
+    .from("works")
+    .select("id, collaborator_names")
+  const collaboratorsByWork = new Map(
+    (collaboratorRows ?? []).map((work) => [work.id, work.collaborator_names])
+  )
+  const works = (data ?? []).map((work) => ({
+    ...work,
+    collaborator_names: collaboratorsByWork.get(work.id) ?? [],
+  }))
+
   return {
     entries: buildCollaboratorDirectory(
-      (data ?? []) as unknown as CollaboratorSourceWork[]
+      works as unknown as CollaboratorSourceWork[]
     ),
   }
 }

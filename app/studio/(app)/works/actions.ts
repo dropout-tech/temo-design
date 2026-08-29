@@ -52,8 +52,10 @@ export type WorkInput = {
   /** 作品專屬、未列入固定選項的行業顯示名稱 */
   customIndustryNames: string[]
   designerIds: string[]
-  /** 作品專屬的外部／單次合作夥伴顯示名稱（沿用既有 DB 欄位名） */
+  /** 作品專屬的外部／單次合作設計師顯示名稱 */
   guestDesignerNames: string[]
+  /** 作品專屬的攝影師、顧問或外部合作團隊顯示名稱 */
+  collaboratorNames: string[]
   blocks: {
     type: "image" | "video" | "text" | "divider" | "button"
     src: string
@@ -143,6 +145,7 @@ function toRow(input: WorkInput, categoryGroupValues: string[]) {
     press_mentions: input.press_mentions,
     custom_industry_names: normalizeCustomNames(input.customIndustryNames),
     guest_designer_names: normalizeCustomNames(input.guestDesignerNames),
+    collaborator_names: normalizeCustomNames(input.collaboratorNames),
     published: input.published,
   }
 }
@@ -167,9 +170,16 @@ export async function saveWork(
   }
   const guestDesignerNames = normalizeCustomNames(input.guestDesignerNames)
   if (guestDesignerNames.length > CUSTOM_NAME_LIMIT) {
-    return { error: `每件作品最多可新增 ${CUSTOM_NAME_LIMIT} 個合作夥伴` }
+    return { error: `每件作品最多可新增 ${CUSTOM_NAME_LIMIT} 位其他合作設計師` }
   }
   if (guestDesignerNames.some((name) => name.length > CUSTOM_NAME_MAX)) {
+    return { error: `其他合作設計師名稱請控制在 ${CUSTOM_NAME_MAX} 個字內` }
+  }
+  const collaboratorNames = normalizeCustomNames(input.collaboratorNames)
+  if (collaboratorNames.length > CUSTOM_NAME_LIMIT) {
+    return { error: `每件作品最多可新增 ${CUSTOM_NAME_LIMIT} 個合作夥伴` }
+  }
+  if (collaboratorNames.some((name) => name.length > CUSTOM_NAME_MAX)) {
     return { error: `合作夥伴名稱請控制在 ${CUSTOM_NAME_MAX} 個字內` }
   }
 
