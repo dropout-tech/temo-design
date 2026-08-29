@@ -1,6 +1,12 @@
 import type { Metadata } from "next"
 import { AboutPageClient } from "@/components/pages/about-page-client"
-import { getClientLogos, getAwardLogos, getPressLinks, getTeamGrouped } from "@/lib/content-supabase"
+import {
+  getAboutClients,
+  getAwardLogos,
+  getClientLogos,
+  getPressLinks,
+  getTeamGrouped,
+} from "@/lib/content-supabase"
 
 export const metadata: Metadata = {
   title: "關於我們 | TEMO DESIGN",
@@ -8,11 +14,12 @@ export const metadata: Metadata = {
 }
 
 export default async function AboutPage() {
-  const [logos, awards, press, team] = await Promise.all([
+  const [logos, awards, press, team, clients] = await Promise.all([
     getClientLogos(),
     getAwardLogos(),
     getPressLinks(),
     getTeamGrouped(),
+    getAboutClients(),
   ])
   return (
     <AboutPageClient
@@ -25,6 +32,7 @@ export default async function AboutPage() {
         image_url: p.image_url,
       }))}
       team={team}
+      clients={clients}
     />
   )
 }

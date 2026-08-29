@@ -20,7 +20,13 @@ type Row = {
   sort: number
 }
 
-export function ClientLogoManager({ initial }: { initial: Row[] }) {
+export function ClientLogoManager({
+  initial,
+  clientNames = [],
+}: {
+  initial: Row[]
+  clientNames?: string[]
+}) {
   const [rows, setRows] = useState<Row[]>(initial)
   const [orderPending, startOrder] = useTransition()
   const [orderError, setOrderError] = useState("")
@@ -66,8 +72,8 @@ export function ClientLogoManager({ initial }: { initial: Row[] }) {
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between mb-8">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-temo-white">客戶 Logo 牆</h1>
-          <p className="text-temo-warm-gray/60 text-sm mt-1">
-            這裡只控制「關於我們」頁面的 Logo 牆，與作品使用的客戶資料分開。共 {rows.length} 個，可拖曳把手排序。
+          <p className="mt-1 max-w-3xl text-sm leading-relaxed text-temo-warm-gray/60">
+            這裡管理「關於我們」的 Logo 素材。Logo 名稱與「客戶資料」完全相同時，會自動套用到合作客戶介紹卡；其餘素材仍保留在 Logo 牆。共 {rows.length} 個，可拖曳把手排序。
             {orderPending && (
               <span className="inline-flex items-center gap-1.5 text-[11px] text-temo-warm-gray/50 ml-2">
                 <Loader2 className="w-3 h-3 animate-spin" /> 儲存順序…
@@ -88,6 +94,12 @@ export function ClientLogoManager({ initial }: { initial: Row[] }) {
           <Plus className="w-4 h-4" /> 新增 Logo
         </button>
       </div>
+
+      <datalist id="formal-client-names">
+        {clientNames.map((name) => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
 
       <SortableList
         items={rows}
@@ -221,13 +233,17 @@ function Card({
 
       <input
         className={inputCls}
+        list="formal-client-names"
         value={row.name}
         onChange={(e) => {
           onChange({ name: e.target.value })
           setSaved(false)
         }}
-        placeholder="客戶名稱"
+        placeholder="客戶名稱（可選既有主檔）"
       />
+      <p className="text-[11px] leading-relaxed text-temo-warm-gray/45">
+        若要用於合作客戶介紹，請從建議清單選擇完全相同的名稱。
+      </p>
 
       <label
         className={

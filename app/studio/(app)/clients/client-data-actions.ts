@@ -79,6 +79,7 @@ export async function saveClientData(
   revalidatePath("/studio/clients")
   revalidatePath("/studio/works")
   revalidatePath("/studio/works/[id]", "page")
+  revalidatePath("/about")
   revalidatePath("/portfolio")
   revalidatePath("/portfolio/[slug]", "page")
 

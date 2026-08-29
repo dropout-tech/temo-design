@@ -20,6 +20,16 @@ export type ClientLogo = {
   sort: number
 }
 
+export type AboutClient = {
+  id: string
+  slug: string
+  name: string
+  brief: string
+  website?: string
+  logoUrl?: string
+  workCount: number
+}
+
 export type AwardLogo = {
   id: string
   name: string
@@ -100,6 +110,53 @@ export async function getClientLogos(): Promise<ClientLogo[]> {
     .select("id, name, image_url, sort")
     .order("sort")
   return (data as ClientLogo[]) ?? []
+}
+
+/**
+ * 關於頁「合作客戶」介紹：正式資料以 clients 主檔為準，不從 Logo 牆反向建檔。
+ * client_logos 只在名稱完全一致時套用為展示圖，避免相似品牌被誤配。
+ */
+export async function getAboutClients(): Promise<AboutClient[]> {
+  const supa = createPublicClient()
+  const [{ data: clientRows, error: clientError }, { data: workRows }, logos] =
+    await Promise.all([
+      supa.from("clients").select("id, slug, name, brief, website").order("name"),
+      supa.from("works").select("client_id").eq("published", true),
+      getClientLogos(),
+    ])
+
+  if (clientError || !clientRows) return []
+
+  const normalizeName = (value: string) =>
+    value.normalize("NFKC").trim().toLocaleLowerCase("zh-Hant-TW")
+
+  const logoByName = new Map<string, string>()
+  for (const logo of logos) {
+    const key = normalizeName(logo.name)
+    if (key && !logoByName.has(key)) logoByName.set(key, logo.image_url)
+  }
+
+  const workCountByClient = new Map<string, number>()
+  for (const work of (workRows ?? []) as unknown as { client_id: string | null }[]) {
+    if (!work.client_id) continue
+    workCountByClient.set(work.client_id, (workCountByClient.get(work.client_id) ?? 0) + 1)
+  }
+
+  return (clientRows as unknown as {
+    id: string
+    slug: string
+    name: string
+    brief: string | null
+    website: string | null
+  }[]).map((client) => ({
+    id: client.id,
+    slug: client.slug,
+    name: client.name,
+    brief: client.brief ?? "",
+    website: client.website ?? undefined,
+    logoUrl: logoByName.get(normalizeName(client.name)),
+    workCount: workCountByClient.get(client.id) ?? 0,
+  }))
 }
 
 export async function getAwardLogos(): Promise<AwardLogo[]> {
