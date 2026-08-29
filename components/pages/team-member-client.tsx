@@ -162,7 +162,7 @@ export function TeamMemberClient({
                 {works.map((work, i) => (
                   <Link
                     key={work.id}
-                    href={`/portfolio?designer=${designer.slug}#work-${work.id}`}
+                    href={`/portfolio/${work.slug}`}
                     className="break-inside-avoid block group"
                     style={{
                       transition: `opacity 0.6s ease ${i * 0.05}s, transform 0.6s ease ${i * 0.05}s`,
