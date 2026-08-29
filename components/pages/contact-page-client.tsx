@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useInView } from "@/hooks/use-in-view"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { QuoteCalculator } from "@/components/quote/quote-calculator"
 import { QuoteBriefForm } from "@/components/quote/quote-brief-form"
-import { Mail, Phone, MapPin, MessageSquare, Calculator, FileText } from "lucide-react"
+import { Mail, Phone, MapPin, MessageSquare, Calculator, FileText, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { QuoteCategory, QuoteComponent } from "@/lib/content-supabase"
 
@@ -55,6 +55,10 @@ export function ContactPageClient({
   })
   const [submitted, setSubmitted] = useState(false)
   const [prefilled, setPrefilled] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState("")
+  const [website, setWebsite] = useState("")
+  const requestIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80)
@@ -91,15 +95,46 @@ export function ContactPageClient({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+    setSubmitError("")
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
-    setTimeout(() => {
+    if (submitting) return
+
+    setSubmitting(true)
+    setSubmitError("")
+    requestIdRef.current ??= globalThis.crypto.randomUUID()
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestId: requestIdRef.current,
+          ...formData,
+          website,
+        }),
+      })
+      const result: unknown = await response.json().catch(() => null)
+      if (!response.ok) {
+        const message =
+          result && typeof result === "object" && "error" in result
+            ? String(result.error)
+            : "表單暫時無法送出，請稍後再試。"
+        throw new Error(message)
+      }
+
+      setSubmitted(true)
       setFormData({ name: "", email: "", company: "", phone: "", subject: "", message: "" })
-      setSubmitted(false)
-    }, 3000)
+      setWebsite("")
+      setPrefilled(false)
+      requestIdRef.current = null
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "表單暫時無法送出，請稍後再試。")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -309,14 +344,26 @@ export function ContactPageClient({
                     </div>
                   )}
                   {!submitted ? (
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-6" aria-busy={submitting}>
+                      <div className="absolute -left-[10000px] h-px w-px overflow-hidden" aria-hidden="true">
+                        <label htmlFor="contact-website">Website</label>
+                        <input
+                          id="contact-website"
+                          name="website"
+                          type="text"
+                          value={website}
+                          onChange={(event) => setWebsite(event.target.value)}
+                          tabIndex={-1}
+                          autoComplete="off"
+                        />
+                      </div>
                       <div className="grid md:grid-cols-2 gap-5">
                         {[
-                          { label: "姓名", name: "name", type: "text", placeholder: "您的姓名", required: true },
-                          { label: "電子郵件", name: "email", type: "email", placeholder: "your@email.com", required: true },
-                          { label: "公司名稱", name: "company", type: "text", placeholder: "您的公司名稱", required: false },
-                          { label: "聯絡電話", name: "phone", type: "tel", placeholder: "+886-9XX-XXX-XXX", required: false },
-                        ].map(({ label, name, type, placeholder, required }) => (
+                          { label: "姓名", name: "name", type: "text", placeholder: "您的姓名", required: true, maxLength: 100 },
+                          { label: "電子郵件", name: "email", type: "email", placeholder: "your@email.com", required: true, maxLength: 254 },
+                          { label: "公司名稱", name: "company", type: "text", placeholder: "您的公司名稱", required: false, maxLength: 150 },
+                          { label: "聯絡電話", name: "phone", type: "tel", placeholder: "+886-9XX-XXX-XXX", required: false, maxLength: 50 },
+                        ].map(({ label, name, type, placeholder, required, maxLength }) => (
                           <div key={name}>
                             <label className="block text-xs tracking-wide text-temo-warm-gray mb-2">
                               {label} {required && <span className="text-temo-gold">*</span>}
@@ -327,6 +374,8 @@ export function ContactPageClient({
                               value={formData[name as keyof typeof formData]}
                               onChange={handleChange}
                               required={required}
+                              maxLength={maxLength}
+                              disabled={submitting}
                               placeholder={placeholder}
                               className="w-full px-4 py-3 bg-white/3 border border-white/10 text-temo-white text-base md:text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:bg-white/5 focus:outline-none transition-all rounded-sm"
                             />
@@ -344,6 +393,7 @@ export function ContactPageClient({
                           value={formData.subject}
                           onChange={handleChange}
                           required
+                          disabled={submitting}
                           className="w-full px-4 py-3 pr-10 bg-white/3 border border-white/10 text-temo-white text-base md:text-sm focus:border-temo-gold/60 focus:outline-none transition-all rounded-sm appearance-none"
                         >
                           <option value="" className="bg-temo-dark">選擇您感興趣的服務類型</option>
@@ -372,18 +422,31 @@ export function ContactPageClient({
                           value={formData.message}
                           onChange={handleChange}
                           required
+                          maxLength={10000}
+                          disabled={submitting}
                           rows={6}
                           placeholder="請詳細描述您的品牌背景、設計需求、時程規劃等..."
                           className="w-full px-4 py-3 bg-white/3 border border-white/10 text-temo-white text-base md:text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:bg-white/5 focus:outline-none transition-all rounded-sm resize-none"
                         />
                       </div>
 
+                      {submitError && (
+                        <p
+                          role="alert"
+                          className="rounded-sm border border-red-400/25 bg-red-400/[0.06] px-4 py-3 text-sm text-red-200"
+                        >
+                          {submitError}
+                        </p>
+                      )}
+
                       <div className="flex flex-col sm:flex-row gap-4 items-center">
                         <button
                           type="submit"
-                          className="w-full sm:w-auto px-10 py-3.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.25em] hover:brightness-110 active:scale-[0.98] transition-all rounded-full"
+                          disabled={submitting}
+                          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-10 py-3.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.25em] hover:brightness-110 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60 transition-all rounded-full"
                         >
-                          送出訊息
+                          {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                          {submitting ? "送出中…" : "送出訊息"}
                         </button>
                         <p className="text-xs text-temo-warm-gray/50">我們會在 1 個工作天內回覆</p>
                       </div>
@@ -399,6 +462,13 @@ export function ContactPageClient({
                       <p className="text-temo-warm-gray text-sm max-w-sm mx-auto">
                         我們已收到您的需求，團隊會盡快與您聯繫，共同規劃最適合的設計方案。
                       </p>
+                      <button
+                        type="button"
+                        onClick={() => setSubmitted(false)}
+                        className="mt-7 text-xs tracking-[0.16em] text-temo-gold hover:brightness-125"
+                      >
+                        再傳一則訊息
+                      </button>
                     </div>
                   )}
                 </div>

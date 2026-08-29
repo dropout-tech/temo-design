@@ -20,6 +20,7 @@ import {
   Presentation,
   ExternalLink,
   Handshake,
+  Inbox,
   X,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
@@ -42,7 +43,10 @@ function navItemIsActive(pathname: string, item: NavItem) {
 const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: "工作台",
-    items: [{ href: "/studio", label: "總覽", icon: LayoutDashboard, exact: true }],
+    items: [
+      { href: "/studio", label: "總覽", icon: LayoutDashboard, exact: true },
+      { href: "/studio/submissions", label: "表單收件匣", icon: Inbox },
+    ],
   },
   {
     label: "內容管理",
