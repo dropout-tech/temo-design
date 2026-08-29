@@ -15,6 +15,7 @@ import {
   isButtonFontWeight,
   isHexColor,
   normalizeHexColor,
+  normalizeOptionalImageHeightPercent,
 } from "@/lib/work-block-config"
 import { normalizeCategoryGroupValues } from "@/lib/work-category-groups"
 
@@ -59,10 +60,12 @@ export type WorkInput = {
     alt: string
     width: number | null
     height: number | null
+    desktop_height_percent: number | null
     src2: string
     alt2: string
     width2: number | null
     height2: number | null
+    desktop_height_percent2: number | null
     text_content: string
     video_url: string
     caption: string
@@ -284,10 +287,18 @@ export async function saveWork(
           alt: b.alt.trim() || null,
           width: b.width,
           height: b.height,
+          desktop_height_percent:
+            b.type === "image"
+              ? normalizeOptionalImageHeightPercent(b.desktop_height_percent)
+              : null,
           src2: b.src2.trim() || null,
           alt2: b.alt2.trim() || null,
           width2: b.width2,
           height2: b.height2,
+          desktop_height_percent2:
+            b.type === "image" && b.src2.trim()
+              ? normalizeOptionalImageHeightPercent(b.desktop_height_percent2)
+              : null,
           text_content:
             b.type === "text" ? (richTextIsEmpty(cleanText) ? null : cleanText) : cleanText || null,
           video_url: b.video_url.trim() || null,

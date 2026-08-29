@@ -14,7 +14,12 @@ export const BUTTON_DEFAULTS = {
   fontWeight: 600,
 } as const
 
+export const IMAGE_HEIGHT_DEFAULTS = {
+  desktopPercent: 100,
+} as const
+
 export const WORK_BLOCK_LIMITS = {
+  imageHeightPercent: { min: 50, max: 200 },
   dividerWidth: { min: 10, max: 100 },
   dividerThickness: { min: 1, max: 8 },
   buttonWidth: { min: 120, max: 720 },
@@ -34,6 +39,17 @@ export function clampInteger(
   const numeric = typeof value === "number" ? value : Number(value)
   if (!Number.isFinite(numeric)) return fallback
   return Math.min(max, Math.max(min, Math.round(numeric)))
+}
+
+export function normalizeOptionalImageHeightPercent(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null
+
+  return clampInteger(
+    value,
+    WORK_BLOCK_LIMITS.imageHeightPercent.min,
+    WORK_BLOCK_LIMITS.imageHeightPercent.max,
+    IMAGE_HEIGHT_DEFAULTS.desktopPercent
+  )
 }
 
 export function normalizeHexColor(value: unknown, fallback: string): string {

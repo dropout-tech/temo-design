@@ -12,10 +12,12 @@ export type WorkBlockRow = {
   alt?: string | null
   width?: number | null
   height?: number | null
+  desktop_height_percent?: number | null
   src2?: string | null
   alt2?: string | null
   width2?: number | null
   height2?: number | null
+  desktop_height_percent2?: number | null
   text_content?: string | null
   video_url?: string | null
   caption?: string | null

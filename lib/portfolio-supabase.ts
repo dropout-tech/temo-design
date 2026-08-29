@@ -15,10 +15,12 @@ export type WorkBlock = {
   alt?: string | null
   width?: number | null
   height?: number | null
+  desktopHeightPercent?: number | null
   src2?: string | null
   alt2?: string | null
   width2?: number | null
   height2?: number | null
+  desktopHeightPercent2?: number | null
   text?: string | null // 對應 DB 欄 text_content
   videoUrl?: string | null // 對應 DB 欄 video_url
   caption?: string | null
@@ -156,10 +158,12 @@ type WorkBlockDbRow = {
   alt: string | null
   width: number | null
   height: number | null
+  desktop_height_percent: number | null
   src2: string | null
   alt2: string | null
   width2: number | null
   height2: number | null
+  desktop_height_percent2: number | null
   text_content: string | null
   video_url: string | null
   caption: string | null
@@ -564,10 +568,12 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
         alt: b.alt ?? null,
         width: b.width ?? null,
         height: b.height ?? null,
+        desktopHeightPercent: b.desktop_height_percent ?? null,
         src2: b.src2 ?? null,
         alt2: b.alt2 ?? null,
         width2: b.width2 ?? null,
         height2: b.height2 ?? null,
+        desktopHeightPercent2: b.desktop_height_percent2 ?? null,
         text: b.text_content ?? null,
         videoUrl: b.video_url ?? null,
         caption: b.caption ?? null,
@@ -597,10 +603,12 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
       alt: g.alt ?? null,
       width: null,
       height: null,
+      desktopHeightPercent: null,
       src2: null,
       alt2: null,
       width2: null,
       height2: null,
+      desktopHeightPercent2: null,
       text: null,
       videoUrl: null,
       caption: g.caption ?? null,

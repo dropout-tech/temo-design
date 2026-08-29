@@ -20,6 +20,7 @@ import {
   getSafeWorkBlockHref,
   isButtonFontWeight,
   normalizeHexColor,
+  normalizeOptionalImageHeightPercent,
 } from "@/lib/work-block-config"
 
 export type DetailDesigner = {
@@ -801,7 +802,7 @@ function BlockItem({
     )
   }
 
-  // image：預設情境；src2 有值＝同列雙圖（桌面並排、手機堆疊，頂部對齊、不強制等高）
+  // image：src2 有值＝同列雙圖。桌機可由 Studio 個別設定高度；手機維持自然比例堆疊。
   if (!block.src) return null
   const hasSecond = Boolean(block.src2)
 
@@ -814,12 +815,14 @@ function BlockItem({
             alt={block.alt || `${projectTitle} ${index + 1}`}
             width={block.width}
             height={block.height}
+            desktopHeightPercent={block.desktopHeightPercent}
           />
           <BlockImage
             src={block.src2!}
             alt={block.alt2 || `${projectTitle} ${index + 1}-2`}
             width={block.width2}
             height={block.height2}
+            desktopHeightPercent={block.desktopHeightPercent2}
           />
         </div>
       ) : (
@@ -828,6 +831,7 @@ function BlockItem({
           alt={block.alt || `${projectTitle} ${index + 1}`}
           width={block.width}
           height={block.height}
+          desktopHeightPercent={block.desktopHeightPercent}
         />
       )}
       <ResponsiveBlockCaption desktop={block.caption} mobile={block.captionMobile} />
@@ -870,14 +874,17 @@ function BlockImage({
   alt,
   width,
   height,
+  desktopHeightPercent,
 }: {
   src: string
   alt: string
   width?: number | null
   height?: number | null
+  desktopHeightPercent?: number | null
 }) {
-  if (width && height) {
-    return (
+  const normalizedDesktopHeight = normalizeOptionalImageHeightPercent(desktopHeightPercent)
+  const image =
+    width && height ? (
       <Image
         src={proxyImage(src)}
         alt={alt}
@@ -887,18 +894,30 @@ function BlockImage({
         sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 640px"
         referrerPolicy="no-referrer"
       />
+    ) : (
+      // 沒有原始尺寸資料（舊資料）：用原生 img 讓瀏覽器依圖片本身比例呈現，不裁切
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={proxyImage(src)}
+        alt={alt}
+        className="w-full h-auto"
+        loading="lazy"
+        referrerPolicy="no-referrer"
+      />
     )
-  }
+
   return (
-    // 沒有原始尺寸資料（舊資料）：用原生 img 讓瀏覽器依圖片本身比例呈現，不裁切
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={proxyImage(src)}
-      alt={alt}
-      className="w-full h-auto"
-      loading="lazy"
-      referrerPolicy="no-referrer"
-    />
+    <div
+      className="work-block-image-frame"
+      data-custom-height={normalizedDesktopHeight === null ? undefined : "true"}
+      style={
+        normalizedDesktopHeight === null
+          ? undefined
+          : ({ "--work-block-desktop-height": normalizedDesktopHeight } as React.CSSProperties)
+      }
+    >
+      {image}
+    </div>
   )
 }
 

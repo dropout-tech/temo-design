@@ -24,10 +24,12 @@ import {
   BUTTON_DEFAULTS,
   BUTTON_FONT_WEIGHTS,
   DIVIDER_DEFAULTS,
+  IMAGE_HEIGHT_DEFAULTS,
   WORK_BLOCK_LIMITS,
   getSafeWorkBlockHref,
   isHexColor,
   normalizeHexColor,
+  normalizeOptionalImageHeightPercent,
 } from "@/lib/work-block-config"
 import {
   COVER_POSITION_MAX,
@@ -113,10 +115,12 @@ type FormBlock = {
   alt: string
   width?: number
   height?: number
+  desktop_height_percent?: number
   src2: string
   alt2: string
   width2?: number
   height2?: number
+  desktop_height_percent2?: number
   text_content: string
   video_url: string
   caption: string
@@ -142,7 +146,9 @@ function newKey() {
 function emptyBlock(type: BlockType, dual = false): FormBlock {
   return {
     key: newKey(), type, dual, src: "", alt: "", width: undefined, height: undefined,
+    desktop_height_percent: undefined,
     src2: "", alt2: "", width2: undefined, height2: undefined,
+    desktop_height_percent2: undefined,
     text_content: "", video_url: "", caption: "", caption_mobile: "",
     divider_color: DIVIDER_DEFAULTS.color,
     divider_width: DIVIDER_DEFAULTS.width,
@@ -168,10 +174,12 @@ function blockRowToForm(b: WorkBlockRow): FormBlock {
     alt: b.alt ?? "",
     width: b.width ?? undefined,
     height: b.height ?? undefined,
+    desktop_height_percent: b.desktop_height_percent ?? undefined,
     src2: b.src2 ?? "",
     alt2: b.alt2 ?? "",
     width2: b.width2 ?? undefined,
     height2: b.height2 ?? undefined,
+    desktop_height_percent2: b.desktop_height_percent2 ?? undefined,
     // 舊資料若還是純文字（非 HTML），開進編輯器前先轉成段落結構，無痛接軌既有內容。
     text_content:
       b.text_content && !looksLikeHtml(b.text_content)
@@ -209,10 +217,12 @@ function initialBlocksFrom(initial?: WorkFormInitial): FormBlock[] {
       alt: g.alt ?? "",
       width: undefined,
       height: undefined,
+      desktop_height_percent: undefined,
       src2: "",
       alt2: "",
       width2: undefined,
       height2: undefined,
+      desktop_height_percent2: undefined,
       text_content: "",
       video_url: "",
       caption: g.caption ?? "",
@@ -737,10 +747,14 @@ export function WorkForm({
         alt: b.alt,
         width: b.width ?? null,
         height: b.height ?? null,
+        desktop_height_percent: normalizeOptionalImageHeightPercent(b.desktop_height_percent),
         src2: b.src2,
         alt2: b.alt2,
         width2: b.width2 ?? null,
         height2: b.height2 ?? null,
+        desktop_height_percent2: normalizeOptionalImageHeightPercent(
+          b.desktop_height_percent2
+        ),
         text_content: b.text_content,
         video_url: b.video_url,
         caption: b.caption,
@@ -1369,6 +1383,153 @@ function BlockAddBar({
   )
 }
 
+const IMAGE_HEIGHT_PRESETS = [75, 100, 125, 150] as const
+
+function ImageHeightField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value?: number
+  onChange: (value?: number) => void
+}) {
+  const normalized = normalizeOptionalImageHeightPercent(value)
+  const sliderValue = normalized ?? IMAGE_HEIGHT_DEFAULTS.desktopPercent
+
+  return (
+    <div className="rounded-md bg-black/25 p-3 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs text-temo-warm-gray/70">{label}</span>
+        <output className="text-xs tabular-nums text-temo-white">
+          {normalized === null ? "自然比例" : `${normalized}%`}
+        </output>
+      </div>
+      <div className="flex flex-wrap gap-2" role="group" aria-label={`${label}快速設定`}>
+        <button
+          type="button"
+          onClick={() => onChange(undefined)}
+          aria-pressed={normalized === null}
+          className={cn(
+            "h-8 rounded-sm border px-2.5 text-[11px] transition-colors",
+            normalized === null
+              ? "border-temo-gold/60 bg-temo-gold/10 text-temo-gold"
+              : "border-white/10 text-temo-warm-gray/60 hover:border-temo-gold/40 hover:text-temo-gold"
+          )}
+        >
+          自然
+        </button>
+        {IMAGE_HEIGHT_PRESETS.map((preset) => (
+          <button
+            key={preset}
+            type="button"
+            onClick={() => onChange(preset)}
+            aria-pressed={normalized === preset}
+            className={cn(
+              "h-8 rounded-sm border px-2.5 text-[11px] tabular-nums transition-colors",
+              normalized === preset
+                ? "border-temo-gold/60 bg-temo-gold/10 text-temo-gold"
+                : "border-white/10 text-temo-warm-gray/60 hover:border-temo-gold/40 hover:text-temo-gold"
+            )}
+          >
+            {preset}%
+          </button>
+        ))}
+      </div>
+      {normalized !== null && (
+        <input
+          type="range"
+          min={WORK_BLOCK_LIMITS.imageHeightPercent.min}
+          max={WORK_BLOCK_LIMITS.imageHeightPercent.max}
+          step={5}
+          value={sliderValue}
+          onChange={(event) => onChange(Number(event.target.value))}
+          className="h-2 w-full cursor-pointer accent-temo-gold"
+          aria-label={`${label}，目前為圖片寬度的 ${normalized}%`}
+        />
+      )}
+    </div>
+  )
+}
+
+function ImageHeightControls({
+  block,
+  onChange,
+}: {
+  block: FormBlock
+  onChange: (patch: Partial<FormBlock>) => void
+}) {
+  const firstHeight = normalizeOptionalImageHeightPercent(block.desktop_height_percent)
+  const secondHeight = normalizeOptionalImageHeightPercent(block.desktop_height_percent2)
+  const imagesAreEqualHeight =
+    block.dual && firstHeight !== null && firstHeight === secondHeight
+
+  function makeImagesEqualHeight() {
+    const sharedHeight = firstHeight ?? secondHeight ?? IMAGE_HEIGHT_DEFAULTS.desktopPercent
+    onChange({
+      desktop_height_percent: sharedHeight,
+      desktop_height_percent2: sharedHeight,
+    })
+  }
+
+  return (
+    <div className="rounded-md border border-white/[0.08] bg-white/[0.018] p-3 space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-medium text-temo-white">桌機圖片高度</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-temo-warm-gray/50">
+            100% 代表高度等於圖片欄寬；自訂高度會置中裁切，手機仍顯示自然比例。
+          </p>
+        </div>
+        {block.dual && (
+          <button
+            type="button"
+            onClick={makeImagesEqualHeight}
+            className={cn(
+              "shrink-0 rounded-sm border px-3 py-2 text-[11px] transition-colors",
+              imagesAreEqualHeight
+                ? "border-temo-gold/50 bg-temo-gold/10 text-temo-gold"
+                : "border-white/12 text-temo-warm-gray/70 hover:border-temo-gold/40 hover:text-temo-gold"
+            )}
+          >
+            {imagesAreEqualHeight ? `目前等高 ${firstHeight}%` : "一鍵設為等高"}
+          </button>
+        )}
+      </div>
+      <div className={cn("grid gap-3", block.dual && "md:grid-cols-2")}>
+        <ImageHeightField
+          label={block.dual ? "第 1 張" : "圖片高度"}
+          value={block.desktop_height_percent}
+          onChange={(desktop_height_percent) => onChange({ desktop_height_percent })}
+        />
+        {block.dual && (
+          <ImageHeightField
+            label="第 2 張"
+            value={block.desktop_height_percent2}
+            onChange={(desktop_height_percent2) => onChange({ desktop_height_percent2 })}
+          />
+        )}
+      </div>
+      {block.dual && (
+        <p className="text-[11px] leading-relaxed text-temo-warm-gray/45">
+          兩張設定相同數值就是等高；調整其中一張為不同數值，就會保留高低差。
+        </p>
+      )}
+    </div>
+  )
+}
+
+function getImagePreviewAspectRatio(
+  width: number | undefined,
+  height: number | undefined,
+  desktopHeightPercent: number | undefined
+) {
+  const customHeight = normalizeOptionalImageHeightPercent(desktopHeightPercent)
+  if (customHeight !== null) return `100 / ${customHeight}`
+  if (width && height) return `${width} / ${height}`
+  return "1 / 1"
+}
+
 function BlockCard({
   block,
   index,
@@ -1412,22 +1573,25 @@ function BlockCard({
       </div>
 
       {block.type === "image" && !block.dual && (
-        <div className="flex items-start gap-3">
-          <div className="w-24 h-24 rounded-md overflow-hidden bg-white/[0.04] shrink-0 border border-white/10">
-            {block.src && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={block.src} alt="" className="w-full h-full object-cover" />
-            )}
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="w-24 h-24 rounded-md overflow-hidden bg-white/[0.04] shrink-0 border border-white/10">
+              {block.src && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={block.src} alt="" className="w-full h-full object-cover" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0 space-y-2">
+              <label className={cn("inline-flex items-center gap-2 px-3 py-2 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {block.src ? "更換圖片" : "上傳圖片"}
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => onUploadImage(1, e)} disabled={uploading} />
+              </label>
+              <input className={inputCls} value={block.alt} onChange={(e) => onChange({ alt: e.target.value })} placeholder="圖片替代文字 alt（選填）" />
+              <ResponsiveCaptionFields block={block} contextLabel="圖片說明" onChange={onChange} />
+            </div>
           </div>
-          <div className="flex-1 min-w-0 space-y-2">
-            <label className={cn("inline-flex items-center gap-2 px-3 py-2 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
-              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              {block.src ? "更換圖片" : "上傳圖片"}
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => onUploadImage(1, e)} disabled={uploading} />
-            </label>
-            <input className={inputCls} value={block.alt} onChange={(e) => onChange({ alt: e.target.value })} placeholder="圖片替代文字 alt（選填）" />
-            <ResponsiveCaptionFields block={block} contextLabel="圖片說明" onChange={onChange} />
-          </div>
+          <ImageHeightControls block={block} onChange={onChange} />
         </div>
       )}
 
@@ -1437,9 +1601,22 @@ function BlockCard({
             {[1, 2].map((slot) => {
               const src = slot === 1 ? block.src : block.src2
               const alt = slot === 1 ? block.alt : block.alt2
+              const width = slot === 1 ? block.width : block.width2
+              const height = slot === 1 ? block.height : block.height2
+              const desktopHeightPercent =
+                slot === 1 ? block.desktop_height_percent : block.desktop_height_percent2
               return (
                 <div key={slot} className="space-y-2">
-                  <div className="w-full aspect-square rounded-md overflow-hidden bg-white/[0.04] border border-white/10">
+                  <div
+                    className="w-full rounded-md overflow-hidden bg-white/[0.04] border border-white/10"
+                    style={{
+                      aspectRatio: getImagePreviewAspectRatio(
+                        width,
+                        height,
+                        desktopHeightPercent
+                      ),
+                    }}
+                  >
                     {src && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={src} alt="" className="w-full h-full object-cover" />
@@ -1460,6 +1637,7 @@ function BlockCard({
               )
             })}
           </div>
+          <ImageHeightControls block={block} onChange={onChange} />
           <ResponsiveCaptionFields block={block} contextLabel="兩張圖片的共用說明" onChange={onChange} />
         </div>
       )}
