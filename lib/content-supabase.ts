@@ -4,10 +4,6 @@ import { createPublicClient } from "@/lib/supabase/public"
 import type { CategoryLanding } from "@/lib/category-landing-data"
 import type { BriefSection } from "@/lib/quote-brief-questions"
 import type { BriefSectionDbRow } from "@/lib/brief-supabase-types"
-import {
-  normalizePortfolioFilterLanguage,
-  type PortfolioFilterLanguage,
-} from "@/lib/portfolio-filter-language"
 
 export type Faq = {
   id: string
@@ -62,7 +58,6 @@ export type SiteSettings = {
   business_hours: string | null
   line_url: string | null
   line_qr_url: string | null
-  portfolio_filter_language: PortfolioFilterLanguage
 }
 
 type CategoryLandingDbRow = {
@@ -298,17 +293,10 @@ export async function getSiteSettings(): Promise<SiteSettings | null> {
   const supa = createPublicClient()
   const { data } = await supa
     .from("site_settings")
-    // select(*) 讓 migration 尚未部署的環境也能讀既有設定；缺少新欄位時下方預設英文。
     .select("*")
     .eq("id", 1)
     .maybeSingle()
-  if (!data) return null
-  return {
-    ...(data as Omit<SiteSettings, "portfolio_filter_language">),
-    portfolio_filter_language: normalizePortfolioFilterLanguage(
-      (data as { portfolio_filter_language?: unknown }).portfolio_filter_language
-    ),
-  }
+  return (data as SiteSettings | null) ?? null
 }
 
 // ── 即時報價試算（/quote 前台 + /studio/quote 後台共用）──────────────────────

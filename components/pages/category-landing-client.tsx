@@ -13,7 +13,6 @@ import {
 } from "@/components/pages/portfolio-page-client"
 import { WORKS as DEMO_WORKS, type Work } from "@/lib/portfolio-data"
 import type { CategoryLanding } from "@/lib/category-landing-data"
-import type { PortfolioFilterLanguage } from "@/lib/portfolio-filter-language"
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
@@ -101,7 +100,6 @@ export function CategoryLandingClient({
   works,
   categoryGroups,
   allowedGroups,
-  portfolioFilterLanguage = "en",
   initialFilterParams = {},
 }: {
   landing: CategoryLanding
@@ -110,7 +108,6 @@ export function CategoryLandingClient({
   categoryGroups?: { value: string; label: string }[]
   // 本落地頁只顯示這些執行項目的作品；未傳＝不限制（migration 未套用時的照舊行為）
   allowedGroups?: string[]
-  portfolioFilterLanguage?: PortfolioFilterLanguage
   initialFilterParams?: {
     group?: string
     industry?: string
@@ -190,7 +187,6 @@ export function CategoryLandingClient({
           transparentBg
           categoryGroups={categoryGroups}
           allowedGroups={allowedGroups}
-          portfolioFilterLanguage={portfolioFilterLanguage}
         />
       </main>
       <Footer />

@@ -26,16 +26,7 @@ import {
   workHasAnyCategoryGroup,
   workHasCategoryGroup,
 } from "@/lib/work-category-groups"
-import {
-  formatPortfolioOptionCount,
-  formatPortfolioResultCount,
-  formatPortfolioSelectedCount,
-  getPortfolioDesignerFallback,
-  localizePortfolioFacet,
-  localizePortfolioPair,
-  portfolioFilterCopy,
-  type PortfolioFilterLanguage,
-} from "@/lib/portfolio-filter-language"
+import { getPortfolioDesignerEnglishLabel } from "@/lib/portfolio-designer-label"
 
 export type { Work }
 
@@ -54,8 +45,8 @@ function makeIndLabel(inds?: Facet[]) {
 
 // 客戶／團隊成員／年份三顆下拉的選項改由「實際作品資料」動態推導，不再用寫死的
 // DESIGNERS/CLIENTS/getAllYears 靜態清單 —— 這樣選單必與後台資料庫連動，且選項
-// 一定篩得到東西。名稱優先用既有的 CLIENT_MAP/DESIGNER_MAP 對照，對照不到（例如
-// 後台剛新增、map 尚未同步）就退回顯示 slug 本身，不讓選單開天窗。
+// 一定篩得到東西。團隊成員固定優先顯示後台英文姓名；英文資料缺漏時退回既有
+// 英文對照或 slug，不讓選單開天窗，也不自動猜譯人名。
 function deriveClientOptions(works: Work[]): Facet[] {
   const seen = new Map<string, string>()
   works.forEach((w) => {
@@ -68,26 +59,21 @@ function deriveClientOptions(works: Work[]): Facet[] {
   )
 }
 
-function deriveDesignerOptions(
-  works: Work[],
-  language: PortfolioFilterLanguage = "zh"
-): Facet[] {
+function deriveDesignerOptions(works: Work[]): Facet[] {
   const seen = new Map<string, string>()
   works.forEach((w) => {
     ;(w.designerSlugs ?? []).forEach((slug, i) => {
       const s = slug?.trim()
       if (!s || seen.has(s)) return
-      const fallback = getPortfolioDesignerFallback(s)
-      const zhLabel =
-        w.designerNames?.[i] ||
-        fallback?.zh ||
-        DESIGNER_MAP[s]?.nameZh ||
-        w.designerEnglishNames?.[i] ||
-        DESIGNER_MAP[s]?.name ||
-        s
-      const enLabel =
-        w.designerEnglishNames?.[i] || fallback?.en || DESIGNER_MAP[s]?.name || zhLabel
-      seen.set(s, localizePortfolioPair(zhLabel, enLabel, language))
+      seen.set(
+        s,
+        getPortfolioDesignerEnglishLabel({
+          slug: s,
+          workEnglishName: w.designerEnglishNames?.[i],
+          directoryEnglishName: DESIGNER_MAP[s]?.name,
+          fallbackName: w.designerNames?.[i] || DESIGNER_MAP[s]?.nameZh,
+        })
+      )
     })
   })
   return Array.from(seen, ([value, label]) => ({ value, label })).sort((a, b) =>
@@ -163,7 +149,6 @@ function FilterBar({
   filteredCount,
   categoryGroups,
   industries,
-  language,
 }: {
   filters: FilterState
   setFilters: (f: FilterState) => void
@@ -171,19 +156,14 @@ function FilterBar({
   filteredCount: number
   categoryGroups?: Facet[]
   industries?: Facet[]
-  language: PortfolioFilterLanguage
 }) {
   const years = useMemo(() => deriveYearOptions(works), [works])
   const clientOptions = useMemo(() => deriveClientOptions(works), [works])
-  const designerOptions = useMemo(() => deriveDesignerOptions(works, language), [works, language])
+  const designerOptions = useMemo(() => deriveDesignerOptions(works), [works])
   const groups = categoryGroups ?? CATEGORY_GROUPS
   const inds = industries ?? INDUSTRIES
   const catLabel = useMemo(() => makeCatLabel(categoryGroups), [categoryGroups])
   const indLabel = useMemo(() => makeIndLabel(industries), [industries])
-  const localizedCatLabel = (value: string) =>
-    localizePortfolioFacet("category", value, catLabel(value), language)
-  const localizedIndLabel = (value: string) =>
-    localizePortfolioFacet("industry", value, indLabel(value), language)
 
   function toggleIndustry(value: string) {
     const next = filters.industries.includes(value)
@@ -211,22 +191,18 @@ function FilterBar({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-x-3 gap-y-4 md:flex md:flex-wrap md:items-end md:gap-4">
           <FilterSelect
-            label={portfolioFilterCopy("services", language)}
+            label="執行項目"
             value={filters.group}
             onChange={setGroup}
             fullWidth
             options={[
               {
                 value: "all",
-                label: formatPortfolioOptionCount(portfolioFilterCopy("all", language), works.length, language),
+                label: `全部（${works.length}）`,
               },
               ...groups.map((cat) => ({
                 value: cat.value,
-                label: formatPortfolioOptionCount(
-                  localizePortfolioFacet("category", cat.value, cat.label, language),
-                  works.filter((w) => workHasCategoryGroup(w, cat.value)).length,
-                  language
-                ),
+                label: `${cat.label}（${works.filter((w) => workHasCategoryGroup(w, cat.value)).length}）`,
               })),
             ]}
           />
@@ -234,35 +210,34 @@ function FilterBar({
             industries={inds}
             selected={filters.industries}
             onToggle={toggleIndustry}
-            language={language}
           />
           <FilterSelect
-            label={portfolioFilterCopy("clients", language)}
+            label="客戶"
             value={filters.client}
             onChange={(v) => setFilters({ ...filters, client: v })}
             fullWidth
             options={[
-              { value: "all", label: portfolioFilterCopy("allClients", language) },
+              { value: "all", label: "全部客戶" },
               ...clientOptions,
             ]}
           />
           <FilterSelect
-            label={portfolioFilterCopy("designers", language)}
+            label="設計師"
             value={filters.designer}
             onChange={(v) => setFilters({ ...filters, designer: v })}
             fullWidth
             options={[
-              { value: "all", label: portfolioFilterCopy("allDesigners", language) },
+              { value: "all", label: "全部設計師" },
               ...designerOptions,
             ]}
           />
           <FilterSelect
-            label={portfolioFilterCopy("year", language)}
+            label="年份"
             value={filters.year}
             onChange={(v) => setFilters({ ...filters, year: v })}
             fullWidth
             options={[
-              { value: "all", label: portfolioFilterCopy("allYears", language) },
+              { value: "all", label: "全部年份" },
               ...years.map((y) => ({ value: y, label: y })),
             ]}
           />
@@ -273,25 +248,25 @@ function FilterBar({
                 onClick={() => setFilters(INITIAL_FILTERS)}
                 className="text-[10px] tracking-widest text-white/40 hover:text-temo-gold transition-colors uppercase"
               >
-                {portfolioFilterCopy("clearAll", language)}
+                清除全部
               </button>
             )}
             <span className="text-[10px] text-white/25 tracking-widest">
-              {formatPortfolioResultCount(filteredCount, language)}
+              {filteredCount} 件作品
             </span>
           </div>
         </div>
         {/* 手機：件數與清除鈕獨立一列 */}
         <div className="flex md:hidden items-center justify-between">
           <span className="text-[10px] text-white/25 tracking-widest">
-            {formatPortfolioResultCount(filteredCount, language)}
+            {filteredCount} 件作品
           </span>
           {hasActive && (
             <button
               onClick={() => setFilters(INITIAL_FILTERS)}
               className="py-2.5 text-[10px] tracking-widest text-white/40 hover:text-temo-gold transition-colors uppercase"
             >
-              {portfolioFilterCopy("clearAll", language)}
+              清除全部
             </button>
           )}
         </div>
@@ -307,12 +282,12 @@ function FilterBar({
             />
           )}
           {filters.group !== "all" && (
-            <ActivePill label={localizedCatLabel(filters.group)} onRemove={() => setGroup("all")} />
+            <ActivePill label={catLabel(filters.group)} onRemove={() => setGroup("all")} />
           )}
           {filters.industries.map((i) => (
             <ActivePill
               key={i}
-              label={localizedIndLabel(i)}
+              label={indLabel(i)}
               onRemove={() => toggleIndustry(i)}
             />
           ))}
@@ -445,17 +420,15 @@ function IndustryMultiSelect({
   industries,
   selected,
   onToggle,
-  language,
 }: {
   industries: readonly Facet[]
   selected: string[]
   onToggle: (value: string) => void
-  language: PortfolioFilterLanguage
 }) {
   return (
     <label className="flex flex-col gap-1.5 w-full md:w-auto">
       <span className="flex min-h-9 items-end text-[10px] leading-snug tracking-[0.22em] text-white/30 uppercase md:min-h-7">
-        {portfolioFilterCopy("industries", language)}
+        行業分類（可複選）
       </span>
       <select
         value=""
@@ -468,16 +441,13 @@ function IndustryMultiSelect({
         )}
       >
         <option value="" className="bg-[#161412] text-white">
-          {selected.length > 0
-            ? formatPortfolioSelectedCount(selected.length, language)
-            : portfolioFilterCopy("allIndustries", language)}
+          {selected.length > 0 ? `已選 ${selected.length} 項` : "全部行業"}
         </option>
         {industries.map((ind) => {
           const active = selected.includes(ind.value)
-          const label = localizePortfolioFacet("industry", ind.value, ind.label, language)
           return (
             <option key={ind.value} value={ind.value} className="bg-[#161412] text-white">
-              {active ? `✓ ${label} (${portfolioFilterCopy("clickToRemove", language)})` : label}
+              {active ? `✓ ${ind.label}（點選移除）` : ind.label}
             </option>
           )
         })}
@@ -553,7 +523,6 @@ export function PortfolioGrid({
   categoryGroups,
   industries,
   allowedGroups,
-  portfolioFilterLanguage = "en",
 }: {
   works: Work[]
   filters: FilterState
@@ -567,8 +536,6 @@ export function PortfolioGrid({
   industries?: Facet[]
   // 分類落地頁用：只顯示這些執行項目的作品（使用者的篩選再疊加其上）；未傳＝不限制
   allowedGroups?: string[]
-  // 由 Studio 網站設定統一控制；前台訪客不提供切換入口。
-  portfolioFilterLanguage?: PortfolioFilterLanguage
 }) {
   const [hoveredId, setHoveredId] = useState<number | null>(null)
   const [visible, setVisible] = useState(false)
@@ -681,7 +648,6 @@ export function PortfolioGrid({
               filteredCount={filtered.length}
               categoryGroups={categoryGroups}
               industries={industries}
-              language={portfolioFilterLanguage}
             />
           </div>
         )}
@@ -902,12 +868,10 @@ export function PortfolioPageClient({
   works,
   categoryGroups,
   industries,
-  portfolioFilterLanguage = "en",
 }: {
   works?: Work[]
   categoryGroups?: Facet[]
   industries?: Facet[]
-  portfolioFilterLanguage?: PortfolioFilterLanguage
 } = {}) {
   // 有從 Supabase 傳入就用，否則 fallback 到本地 DEMO_WORKS
   const effectiveWorks = works && works.length > 0 ? works : DEMO_WORKS
@@ -970,7 +934,6 @@ export function PortfolioPageClient({
           setFilters={setFilters}
           categoryGroups={categoryGroups}
           industries={industries}
-          portfolioFilterLanguage={portfolioFilterLanguage}
         />
       </main>
       <Footer />

@@ -6,7 +6,6 @@ import {
   getCategoryLanding,
   getCategoryLandings,
   getCategoryGroups,
-  getSiteSettings,
 } from "@/lib/content-supabase"
 import { getAllWorks } from "@/lib/portfolio-supabase"
 
@@ -41,10 +40,9 @@ export default async function ServiceLandingPage(props: ServiceLandingPageProps)
   const [{ slug }, searchParams] = await Promise.all([props.params, props.searchParams])
   const landing = (await getCategoryLanding(slug)) ?? CATEGORY_LANDING_MAP[slug]
   if (!landing) notFound()
-  const [works, allGroups, settings] = await Promise.all([
+  const [works, allGroups] = await Promise.all([
     getAllWorks(),
     getCategoryGroups(),
-    getSiteSettings(),
   ])
   // 只顯示歸屬本落地頁的執行項目作品；migration 0018 未套用（歸屬全空）時照舊顯示全部
   const ownGroups = allGroups.filter((g) => g.landingSlug === slug)
@@ -54,7 +52,6 @@ export default async function ServiceLandingPage(props: ServiceLandingPageProps)
       works={works}
       categoryGroups={ownGroups.length > 0 ? ownGroups : undefined}
       allowedGroups={ownGroups.length > 0 ? ownGroups.map((g) => g.value) : undefined}
-      portfolioFilterLanguage={settings?.portfolio_filter_language ?? "en"}
       initialFilterParams={{
         group: firstParam(searchParams.group),
         industry: firstParam(searchParams.industry),

@@ -6,7 +6,6 @@ import { Loader2, Check, Upload } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { downscaleImage } from "@/lib/downscale-image"
 import { saveSettings, type SettingsInput } from "@/app/studio/(app)/settings/actions"
-import { PORTFOLIO_FILTER_LANGUAGE_OPTIONS } from "@/lib/portfolio-filter-language"
 
 const inputCls =
   "w-full px-4 py-3 bg-white/[0.03] border border-white/10 text-temo-white text-sm placeholder:text-white/20 focus:border-temo-gold/60 focus:bg-white/[0.05] focus:outline-none transition-all rounded-sm"
@@ -82,43 +81,8 @@ export function SettingsForm({ initial }: { initial: SettingsInput }) {
       <div>
         <p className="text-[10px] tracking-[0.5em] text-temo-gold uppercase mb-3">Settings</p>
         <h1 className="text-3xl md:text-4xl font-bold text-temo-white">網站設定</h1>
-        <p className="text-temo-warm-gray/60 text-sm mt-1">管理前台作品篩選、聯絡資訊與營業時間。社群連結在下方另外管理。</p>
+        <p className="text-temo-warm-gray/60 text-sm mt-1">聯絡資訊與營業時間，改完會顯示在聯絡頁與頁尾。社群連結在下方另外管理。</p>
       </div>
-
-      <fieldset className="space-y-4 rounded-sm border border-white/[0.08] bg-white/[0.02] p-5">
-        <legend className="text-[10px] tracking-[0.4em] text-temo-gold uppercase">
-          作品篩選顯示語言
-        </legend>
-        <p className="text-xs leading-relaxed text-temo-warm-gray/55">
-          統一控制作品列表與服務頁的篩選欄位；前台訪客不會看到切換按鈕。
-        </p>
-        <div className="grid grid-cols-3 gap-2" aria-label="作品篩選顯示語言">
-          {PORTFOLIO_FILTER_LANGUAGE_OPTIONS.map((option) => {
-            const active = f.portfolio_filter_language === option.value
-            return (
-              <label
-                key={option.value}
-                className={
-                  "flex min-h-12 cursor-pointer items-center justify-center rounded-sm border px-3 text-xs tracking-[0.12em] transition-colors focus-within:ring-2 focus-within:ring-temo-gold/60 " +
-                  (active
-                    ? "border-temo-gold bg-temo-gold text-temo-black"
-                    : "border-white/10 bg-white/[0.02] text-temo-warm-gray hover:border-white/25 hover:text-temo-white")
-                }
-              >
-                <input
-                  type="radio"
-                  name="portfolio_filter_language"
-                  value={option.value}
-                  checked={active}
-                  onChange={() => set("portfolio_filter_language", option.value)}
-                  className="sr-only"
-                />
-                {option.label}
-              </label>
-            )
-          })}
-        </div>
-      </fieldset>
 
       <div className="space-y-5">
         <SettingsField label="品牌名稱" value={f.name} onChange={(value) => set("name", value)} />
