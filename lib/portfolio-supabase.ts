@@ -313,6 +313,10 @@ export async function getAllWorks(): Promise<Work[]> {
         .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
         .filter((relation) => relation.designers?.slug)
         .map((relation) => relation.designers?.name_zh || relation.designers?.name || relation.designers?.slug || ""),
+      designerEnglishNames: (w.work_designers ?? [])
+        .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+        .filter((relation) => relation.designers?.slug)
+        .map((relation) => relation.designers?.name || relation.designers?.slug || ""),
       cover: w.cover_url ?? "/placeholder.jpg",
       coverZoom: coverCrop.zoom,
       coverPositionX: coverCrop.positionX,

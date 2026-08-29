@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useSyncExternalStore } from "react"
 import { useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
@@ -26,6 +26,21 @@ import {
   workHasAnyCategoryGroup,
   workHasCategoryGroup,
 } from "@/lib/work-category-groups"
+import {
+  PORTFOLIO_FILTER_LANGUAGE_OPTIONS,
+  formatPortfolioOptionCount,
+  formatPortfolioResultCount,
+  formatPortfolioSelectedCount,
+  getPortfolioFilterLanguageServerSnapshot,
+  getPortfolioFilterLanguageSnapshot,
+  getPortfolioDesignerFallback,
+  localizePortfolioFacet,
+  localizePortfolioPair,
+  portfolioFilterCopy,
+  setPortfolioFilterLanguage,
+  subscribePortfolioFilterLanguage,
+  type PortfolioFilterLanguage,
+} from "@/lib/portfolio-filter-language"
 
 export type { Work }
 
@@ -58,13 +73,26 @@ function deriveClientOptions(works: Work[]): Facet[] {
   )
 }
 
-function deriveDesignerOptions(works: Work[]): Facet[] {
+function deriveDesignerOptions(
+  works: Work[],
+  language: PortfolioFilterLanguage = "zh"
+): Facet[] {
   const seen = new Map<string, string>()
   works.forEach((w) => {
     ;(w.designerSlugs ?? []).forEach((slug, i) => {
       const s = slug?.trim()
       if (!s || seen.has(s)) return
-      seen.set(s, w.designerNames?.[i] || DESIGNER_MAP[s]?.name || s)
+      const fallback = getPortfolioDesignerFallback(s)
+      const zhLabel =
+        w.designerNames?.[i] ||
+        fallback?.zh ||
+        DESIGNER_MAP[s]?.nameZh ||
+        w.designerEnglishNames?.[i] ||
+        DESIGNER_MAP[s]?.name ||
+        s
+      const enLabel =
+        w.designerEnglishNames?.[i] || fallback?.en || DESIGNER_MAP[s]?.name || zhLabel
+      seen.set(s, localizePortfolioPair(zhLabel, enLabel, language))
     })
   })
   return Array.from(seen, ([value, label]) => ({ value, label })).sort((a, b) =>
@@ -115,6 +143,8 @@ function buildSearchHaystack(
     w.year,
     ...getWorkCategoryGroupValues(w).map((group) => catLabel(group)),
     ...w.industries.map((i) => indLabel(i)),
+    ...(w.designerNames ?? []),
+    ...(w.designerEnglishNames ?? []),
   ]
   const client = CLIENT_MAP[w.clientSlug]
   if (client) {
@@ -146,13 +176,26 @@ function FilterBar({
   categoryGroups?: Facet[]
   industries?: Facet[]
 }) {
+  const language = useSyncExternalStore(
+    subscribePortfolioFilterLanguage,
+    getPortfolioFilterLanguageSnapshot,
+    getPortfolioFilterLanguageServerSnapshot
+  )
   const years = useMemo(() => deriveYearOptions(works), [works])
   const clientOptions = useMemo(() => deriveClientOptions(works), [works])
-  const designerOptions = useMemo(() => deriveDesignerOptions(works), [works])
+  const designerOptions = useMemo(() => deriveDesignerOptions(works, language), [works, language])
   const groups = categoryGroups ?? CATEGORY_GROUPS
   const inds = industries ?? INDUSTRIES
   const catLabel = useMemo(() => makeCatLabel(categoryGroups), [categoryGroups])
   const indLabel = useMemo(() => makeIndLabel(industries), [industries])
+  const localizedCatLabel = (value: string) =>
+    localizePortfolioFacet("category", value, catLabel(value), language)
+  const localizedIndLabel = (value: string) =>
+    localizePortfolioFacet("industry", value, indLabel(value), language)
+
+  function changeLanguage(nextLanguage: PortfolioFilterLanguage) {
+    setPortfolioFilterLanguage(nextLanguage)
+  }
 
   function toggleIndustry(value: string) {
     const next = filters.industries.includes(value)
@@ -176,19 +219,60 @@ function FilterBar({
 
   return (
     <div className="mb-12 space-y-6">
+      <div className="flex justify-end">
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#161412]/90 p-1">
+          <span className="pl-2 text-[9px] uppercase tracking-[0.22em] text-white/35">
+            {portfolioFilterCopy("displayLanguage", language)}
+          </span>
+          <div
+            className="flex items-center gap-1"
+            role="group"
+            aria-label="篩選顯示語言 / Filter display language"
+          >
+            {PORTFOLIO_FILTER_LANGUAGE_OPTIONS.map((option) => {
+              const active = option.value === language
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-label={option.ariaLabel}
+                  aria-pressed={active}
+                  onClick={() => changeLanguage(option.value)}
+                  className={cn(
+                    "min-h-11 rounded-full px-3 text-[10px] font-medium tracking-[0.12em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70 md:min-h-8",
+                    active
+                      ? "bg-temo-gold text-black"
+                      : "text-white/55 hover:bg-white/8 hover:text-white"
+                  )}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
       {/* 五顆下拉選單：手機兩欄、桌面單列（chip 牆已退役） */}
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-x-3 gap-y-4 md:flex md:flex-wrap md:items-end md:gap-4">
           <FilterSelect
-            label="執行項目"
+            label={portfolioFilterCopy("services", language)}
             value={filters.group}
             onChange={setGroup}
             fullWidth
             options={[
-              { value: "all", label: `全部（${works.length}）` },
+              {
+                value: "all",
+                label: formatPortfolioOptionCount(portfolioFilterCopy("all", language), works.length, language),
+              },
               ...groups.map((cat) => ({
                 value: cat.value,
-                label: `${cat.label}（${works.filter((w) => workHasCategoryGroup(w, cat.value)).length}）`,
+                label: formatPortfolioOptionCount(
+                  localizePortfolioFacet("category", cat.value, cat.label, language),
+                  works.filter((w) => workHasCategoryGroup(w, cat.value)).length,
+                  language
+                ),
               })),
             ]}
           />
@@ -196,34 +280,35 @@ function FilterBar({
             industries={inds}
             selected={filters.industries}
             onToggle={toggleIndustry}
+            language={language}
           />
           <FilterSelect
-            label="客戶"
+            label={portfolioFilterCopy("clients", language)}
             value={filters.client}
             onChange={(v) => setFilters({ ...filters, client: v })}
             fullWidth
             options={[
-              { value: "all", label: "全部客戶" },
+              { value: "all", label: portfolioFilterCopy("allClients", language) },
               ...clientOptions,
             ]}
           />
           <FilterSelect
-            label="設計師"
+            label={portfolioFilterCopy("designers", language)}
             value={filters.designer}
             onChange={(v) => setFilters({ ...filters, designer: v })}
             fullWidth
             options={[
-              { value: "all", label: "全部設計師" },
+              { value: "all", label: portfolioFilterCopy("allDesigners", language) },
               ...designerOptions,
             ]}
           />
           <FilterSelect
-            label="年份"
+            label={portfolioFilterCopy("year", language)}
             value={filters.year}
             onChange={(v) => setFilters({ ...filters, year: v })}
             fullWidth
             options={[
-              { value: "all", label: "全部年份" },
+              { value: "all", label: portfolioFilterCopy("allYears", language) },
               ...years.map((y) => ({ value: y, label: y })),
             ]}
           />
@@ -234,25 +319,25 @@ function FilterBar({
                 onClick={() => setFilters(INITIAL_FILTERS)}
                 className="text-[10px] tracking-widest text-white/40 hover:text-temo-gold transition-colors uppercase"
               >
-                清除全部
+                {portfolioFilterCopy("clearAll", language)}
               </button>
             )}
             <span className="text-[10px] text-white/25 tracking-widest">
-              {filteredCount} 件作品
+              {formatPortfolioResultCount(filteredCount, language)}
             </span>
           </div>
         </div>
         {/* 手機：件數與清除鈕獨立一列 */}
         <div className="flex md:hidden items-center justify-between">
           <span className="text-[10px] text-white/25 tracking-widest">
-            {filteredCount} 件作品
+            {formatPortfolioResultCount(filteredCount, language)}
           </span>
           {hasActive && (
             <button
               onClick={() => setFilters(INITIAL_FILTERS)}
               className="py-2.5 text-[10px] tracking-widest text-white/40 hover:text-temo-gold transition-colors uppercase"
             >
-              清除全部
+              {portfolioFilterCopy("clearAll", language)}
             </button>
           )}
         </div>
@@ -268,12 +353,12 @@ function FilterBar({
             />
           )}
           {filters.group !== "all" && (
-            <ActivePill label={catLabel(filters.group)} onRemove={() => setGroup("all")} />
+            <ActivePill label={localizedCatLabel(filters.group)} onRemove={() => setGroup("all")} />
           )}
           {filters.industries.map((i) => (
             <ActivePill
               key={i}
-              label={indLabel(i)}
+              label={localizedIndLabel(i)}
               onRemove={() => toggleIndustry(i)}
             />
           ))}
@@ -285,7 +370,7 @@ function FilterBar({
           )}
           {filters.designer !== "all" && (
             <ActivePill
-              label={DESIGNER_MAP[filters.designer]?.name ?? filters.designer}
+              label={designerOptions.find((option) => option.value === filters.designer)?.label ?? filters.designer}
               onRemove={() => setFilters({ ...filters, designer: "all" })}
             />
           )}
@@ -379,13 +464,15 @@ function FilterSelect({
 }) {
   return (
     <label className={cn("flex flex-col gap-1.5", fullWidth && "w-full md:w-auto")}>
-      <span className="text-[10px] tracking-[0.3em] text-white/30 uppercase">{label}</span>
+      <span className="flex min-h-9 items-end text-[10px] leading-snug tracking-[0.22em] text-white/30 uppercase md:min-h-7">
+        {label}
+      </span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
           "bg-[#161412] border border-white/10 hover:border-white/25 text-white/80 text-base md:text-xs px-3 py-2.5 md:py-2 rounded-sm focus:outline-none focus:border-temo-gold transition-colors min-w-[140px] cursor-pointer",
-          fullWidth && "w-full min-w-0 md:w-auto md:min-w-[140px]"
+          fullWidth && "w-full min-w-0 md:w-[180px] md:max-w-[180px]"
         )}
       >
         {options.map((o) => (
@@ -404,32 +491,39 @@ function IndustryMultiSelect({
   industries,
   selected,
   onToggle,
+  language,
 }: {
   industries: readonly Facet[]
   selected: string[]
   onToggle: (value: string) => void
+  language: PortfolioFilterLanguage
 }) {
   return (
     <label className="flex flex-col gap-1.5 w-full md:w-auto">
-      <span className="text-[10px] tracking-[0.3em] text-white/30 uppercase">行業分類（可複選）</span>
+      <span className="flex min-h-9 items-end text-[10px] leading-snug tracking-[0.22em] text-white/30 uppercase md:min-h-7">
+        {portfolioFilterCopy("industries", language)}
+      </span>
       <select
         value=""
         onChange={(e) => {
           if (e.target.value) onToggle(e.target.value)
         }}
         className={cn(
-          "w-full min-w-0 md:w-auto md:min-w-[150px] bg-[#161412] border text-base md:text-xs px-3 py-2.5 md:py-2 rounded-sm focus:outline-none focus:border-temo-gold hover:border-white/25 transition-colors cursor-pointer",
+          "w-full min-w-0 md:w-[180px] md:max-w-[180px] bg-[#161412] border text-base md:text-xs px-3 py-2.5 md:py-2 rounded-sm focus:outline-none focus:border-temo-gold hover:border-white/25 transition-colors cursor-pointer",
           selected.length > 0 ? "border-temo-gold/40 text-temo-gold" : "border-white/10 text-white/80"
         )}
       >
         <option value="" className="bg-[#161412] text-white">
-          {selected.length > 0 ? `已選 ${selected.length} 項` : "全部行業"}
+          {selected.length > 0
+            ? formatPortfolioSelectedCount(selected.length, language)
+            : portfolioFilterCopy("allIndustries", language)}
         </option>
         {industries.map((ind) => {
           const active = selected.includes(ind.value)
+          const label = localizePortfolioFacet("industry", ind.value, ind.label, language)
           return (
             <option key={ind.value} value={ind.value} className="bg-[#161412] text-white">
-              {active ? `✓ ${ind.label}（點選移除）` : ind.label}
+              {active ? `✓ ${label} (${portfolioFilterCopy("clickToRemove", language)})` : label}
             </option>
           )
         })}

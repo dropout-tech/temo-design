@@ -162,8 +162,10 @@ export type Work = {
   /** 客戶顯示名稱（DB 來源才有；本地 demo 資料走 CLIENT_MAP 對照） */
   clientName?: string
   designerSlugs: string[]
-  /** 設計師顯示名稱，與 designerSlugs 同序（DB 來源才有） */
+  /** 設計師中文顯示名稱，與 designerSlugs 同序（DB 來源才有） */
   designerNames?: string[]
+  /** 設計師英文顯示名稱，與 designerSlugs 同序（DB 來源才有） */
+  designerEnglishNames?: string[]
   cover: string
   /** 作品探索卡片的封面縮放倍率；舊資料未提供時為 1。 */
   coverZoom?: number
