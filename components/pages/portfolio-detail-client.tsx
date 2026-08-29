@@ -1054,7 +1054,7 @@ function MobileProjectDetails({
       {hasClient && (
         <section className="border-b border-temo-warm-gray/15 pb-6 pt-10">
           {project.clientLogos && project.clientLogos.length > 0 && (
-            <div className="mb-3 flex flex-wrap items-center justify-center gap-6">
+            <div className="mb-1.5 flex flex-wrap items-center justify-center gap-6">
               {project.clientLogos.map((logo, index) => (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -1086,7 +1086,7 @@ function MobileProjectDetails({
                 <p className="text-base font-medium text-temo-white">{project.clientName}</p>
               )}
               {project.clientBrief && (
-                <p className="mx-auto mt-2 max-w-md whitespace-pre-line break-words text-sm leading-[1.65] text-temo-warm-gray/65">
+                <p className="mx-auto mt-1 max-w-md whitespace-pre-line break-words text-sm leading-[1.65] text-temo-warm-gray/65">
                   {project.clientBrief}
                 </p>
               )}
