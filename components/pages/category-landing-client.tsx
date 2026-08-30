@@ -13,6 +13,7 @@ import {
 } from "@/components/pages/portfolio-page-client"
 import { WORKS as DEMO_WORKS, type Work } from "@/lib/portfolio-data"
 import type { CategoryLanding } from "@/lib/category-landing-data"
+import { workHasPortfolioDesigner } from "@/lib/portfolio-designers"
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
@@ -144,7 +145,7 @@ export function CategoryLandingClient({
           ? client
           : "all",
       designer:
-        designer && effectiveWorks.some((work) => work.designerSlugs.includes(designer))
+        designer && effectiveWorks.some((work) => workHasPortfolioDesigner(work, designer))
           ? designer
           : "all",
       year:

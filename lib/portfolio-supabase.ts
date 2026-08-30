@@ -258,7 +258,7 @@ export async function getAllWorks(): Promise<Work[]> {
       `id, slug, title, subtitle, year, cover_url, cover_zoom, cover_position_x, cover_position_y, video_url, size, description, category_group,
        clients ( slug, name ),
        work_industries ( industry_value ),
-       work_designers ( sort, designers ( slug, name, name_zh ) )`
+       work_designers ( sort, designers ( slug, name, name_zh, category ) )`
     )
     .eq("published", true)
     .order("sort")
@@ -297,6 +297,9 @@ export async function getAllWorks(): Promise<Work[]> {
     const categoryGroups = normalizeCategoryGroupValues(
       linkedCategoryGroups.length > 0 ? linkedCategoryGroups : [w.category_group]
     )
+    const linkedTeamMembers = [...(w.work_designers ?? [])].sort(
+      (a, b) => (a.sort ?? 0) - (b.sort ?? 0)
+    )
 
     return {
       id: idx + 1,
@@ -311,18 +314,18 @@ export async function getAllWorks(): Promise<Work[]> {
       year: w.year ?? "",
       clientSlug: w.clients?.slug ?? "",
       clientName: w.clients?.name ?? undefined,
-      designerSlugs: (w.work_designers ?? [])
-        .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+      designerSlugs: linkedTeamMembers
         .map((relation) => relation.designers?.slug)
         .filter((value): value is string => Boolean(value)),
-      designerNames: (w.work_designers ?? [])
-        .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+      designerNames: linkedTeamMembers
         .filter((relation) => relation.designers?.slug)
         .map((relation) => relation.designers?.name_zh || relation.designers?.name || relation.designers?.slug || ""),
-      designerEnglishNames: (w.work_designers ?? [])
-        .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+      designerEnglishNames: linkedTeamMembers
         .filter((relation) => relation.designers?.slug)
         .map((relation) => relation.designers?.name || relation.designers?.slug || ""),
+      designerCategories: linkedTeamMembers
+        .filter((relation) => relation.designers?.slug)
+        .map((relation) => relation.designers?.category ?? null),
       cover: w.cover_url ?? "/placeholder.jpg",
       coverZoom: coverCrop.zoom,
       coverPositionX: coverCrop.positionX,

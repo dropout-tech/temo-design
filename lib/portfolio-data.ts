@@ -166,6 +166,8 @@ export type Work = {
   designerNames?: string[]
   /** 設計師英文顯示名稱，與 designerSlugs 同序（DB 來源才有） */
   designerEnglishNames?: string[]
+  /** 參與成員的團隊分類，與 designerSlugs 同序（用來排除顧問、攝影師等非設計師） */
+  designerCategories?: (string | null)[]
   cover: string
   /** 作品探索卡片的封面縮放倍率；舊資料未提供時為 1。 */
   coverZoom?: number

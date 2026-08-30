@@ -3,6 +3,7 @@ import {
   DEFAULT_TEAM_CATEGORY,
   getEnglishTeamCategoryLabel,
   groupTeamMembersByCategory,
+  isDesignerTeamCategory,
 } from "../lib/team-members"
 
 const members = [
@@ -48,5 +49,11 @@ assert.equal(duplicateOrder.length, 1, "duplicate category registry entries shou
 assert.equal(getEnglishTeamCategoryLabel("DESIGNER 設計團隊"), "DESIGNER")
 assert.equal(getEnglishTeamCategoryLabel("LEGAL CONSULTANT 法律顧問"), "LEGAL CONSULTANT")
 assert.equal(getEnglishTeamCategoryLabel("PATENT ATTORNEY"), "PATENT ATTORNEY")
+
+assert.equal(isDesignerTeamCategory("DESIGNER 設計團隊"), true)
+assert.equal(isDesignerTeamCategory("設計師"), true)
+assert.equal(isDesignerTeamCategory("PHOTOGRAPHER 攝影團隊"), false)
+assert.equal(isDesignerTeamCategory("BUSINESS & TECHNOLOGY 企業科技顧問"), false)
+assert.equal(isDesignerTeamCategory(null), true, "legacy blank categories should remain designers")
 
 console.log("team member grouping tests passed")

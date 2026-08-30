@@ -27,6 +27,10 @@ import {
   workHasCategoryGroup,
 } from "@/lib/work-category-groups"
 import { getPortfolioDesignerEnglishLabel } from "@/lib/portfolio-designer-label"
+import {
+  isPortfolioDesignerAt,
+  workHasPortfolioDesigner,
+} from "@/lib/portfolio-designers"
 
 export type { Work }
 
@@ -63,6 +67,7 @@ function deriveDesignerOptions(works: Work[]): Facet[] {
   const seen = new Map<string, string>()
   works.forEach((w) => {
     ;(w.designerSlugs ?? []).forEach((slug, i) => {
+      if (!isPortfolioDesignerAt(w, i)) return
       const s = slug?.trim()
       if (!s || seen.has(s)) return
       seen.set(
@@ -579,7 +584,7 @@ export function PortfolioGrid({
       if (filters.group !== "all" && !workHasCategoryGroup(w, filters.group)) return false
       // 行業分類複選採「OR」：作品命中任一選取的產業即通過
       if (filters.industries.length > 0 && !filters.industries.some((i) => (w.industries as string[]).includes(i))) return false
-      if (filters.designer !== "all" && !w.designerSlugs.includes(filters.designer)) return false
+      if (filters.designer !== "all" && !workHasPortfolioDesigner(w, filters.designer)) return false
       if (filters.client !== "all" && w.clientSlug !== filters.client) return false
       if (filters.year !== "all" && w.year !== filters.year) return false
       if (tokens.length > 0) {
@@ -898,7 +903,7 @@ export function PortfolioPageClient({
     }
 
     const designerParam = searchParams?.get("designer")
-    if (designerParam && effectiveWorks.some((w) => w.designerSlugs.includes(designerParam))) {
+    if (designerParam && effectiveWorks.some((w) => workHasPortfolioDesigner(w, designerParam))) {
       next.designer = designerParam
     }
 

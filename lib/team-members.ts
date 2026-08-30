@@ -20,6 +20,15 @@ export function getEnglishTeamCategoryLabel(category: string): string {
 }
 
 /**
+ * 作品篩選的「設計師」只包含設計類分類；攝影師、顧問等仍可保留在
+ * 作品詳情的參與名單。空白的舊資料沿用預設設計團隊分類。
+ */
+export function isDesignerTeamCategory(category?: string | null): boolean {
+  const normalized = getTeamMemberCategory({ category })
+  return /\bdesigners?\b/i.test(normalized) || /設計(?:師|團隊)/u.test(normalized)
+}
+
+/**
  * 依「團隊成員」管理頁的分類順序分組；尚未登錄的舊分類接在後面，
  * 同一分類內保留作品關聯或名冊原本的順序。
  */
