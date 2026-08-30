@@ -144,7 +144,7 @@ export function ClientDataManager({
         <div>
           <h1 className="text-3xl font-bold text-temo-white md:text-4xl">客戶資料</h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-temo-warm-gray/60">
-            這裡是客戶的唯一主檔。新增或編輯後會同步用於關聯作品，並自動出現在「關於我們 → CLIENT 合作客戶」。
+            集中管理客戶名稱與聯絡資訊。作品只需要選擇客戶，這裡的更新會套用到所有關聯作品。
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -155,7 +155,7 @@ export function ClientDataManager({
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border border-white/12 px-4 py-2.5 text-xs text-temo-warm-gray/75 transition-colors hover:border-temo-gold/40 hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/50"
           >
             <ExternalLink className="h-4 w-4" />
-            管理客戶 Logo
+            管理前台 Logo 牆
           </Link>
           <button
             type="button"
@@ -180,7 +180,7 @@ export function ClientDataManager({
                 {editingId === "new" ? "新增客戶" : `編輯 ${draft.name || "客戶資料"}`}
               </h2>
               <p className="mt-1 text-xs leading-relaxed text-temo-warm-gray/50">
-                客戶名稱、簡介與官網會用於公開介紹；電話與地址只沿用於目前的關聯作品資訊。儲存後才會更新，留空欄位不顯示。
+                客戶簡介與聯絡資料可能顯示在關聯作品前台；儲存後才會更新，留空欄位不顯示。
               </p>
             </div>
             <button

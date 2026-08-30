@@ -1,19 +1,13 @@
 import { ClientLogoManager } from "@/components/studio/client-logo-manager"
 import { getClientLogos } from "@/lib/content-supabase"
-import { createClient } from "@/lib/supabase/server"
 
 export const dynamic = "force-dynamic"
 export const metadata = { title: "客戶 Logo 牆 — TEMO Studio" }
 
 export default async function StudioClientLogosPage() {
-  const supabase = await createClient()
-  const [items, { data: clientRows }] = await Promise.all([
-    getClientLogos(),
-    supabase.from("clients").select("name").order("name"),
-  ])
+  const items = await getClientLogos()
   return (
     <ClientLogoManager
-      clientNames={(clientRows ?? []).map((client) => client.name)}
       initial={items.map((client) => ({
         key: client.id,
         id: client.id,

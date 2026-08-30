@@ -7,11 +7,10 @@ import { Footer } from "@/components/footer"
 import { LogoMeaningSection } from "@/components/sections/logo-meaning-section"
 import { StatsSection } from "@/components/sections/stats-section"
 import { ClientsHonorsSection, type ClientLogoItem, type PressLinkItem } from "@/components/sections/clients-honors-section"
-import { ArrowUpRight, Building2, ChevronDown, Instagram, Facebook, Globe, Phone, Mail, MapPin, X } from "lucide-react"
+import { ArrowUpRight, ChevronDown, Instagram, Facebook, Globe, Phone, Mail, MapPin, X } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useMediaQuery } from "@/hooks/use-media-query"
-import { buildWorksLandingHref } from "@/lib/portfolio-navigation"
 
 type Person = {
   name: string
@@ -30,19 +29,6 @@ type Person = {
 }
 
 export type TeamGroup = { category: string; members: Person[] }
-
-type AboutClient = {
-  id: string
-  slug: string
-  name: string
-  brief: string
-  website?: string
-  logoUrl?: string
-  workCount: number
-  worksLandingSlug?: string
-}
-
-const CLIENT_CATEGORY = "CLIENT 合作客戶"
 
 // 後備資料：DB 沒資料時才用（正常情況團隊由 /studio/designers 管理、Supabase 供應）
 const FALLBACK_ORDER = ["DESIGNER", "PATENT ATTORNEY", "LEGAL CONSULTANT"]
@@ -285,31 +271,10 @@ const FALLBACK_CATEGORIES: Record<string, Person[]> = {
   ],
 }
 
-function getInitials(name: string) {
-  return name
-    .split(/[\s\-_]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toLocaleUpperCase("zh-Hant-TW") || "C"
-}
-
-function ProfileCard({
-  name,
-  image,
-  imageMode = "portrait",
-  onClick,
-}: {
-  name: string
-  image?: string
-  imageMode?: "portrait" | "logo"
-  onClick?: () => void
-}) {
+function DesignerCard({ person, onClick }: { person: Person; onClick?: () => void }) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [tilt, setTilt] = useState<string>("")
   const [hovered, setHovered] = useState(false)
-  const initials = getInitials(name)
 
   const handleMouseMove = (e: ReactMouseEvent<HTMLDivElement>) => {
     const el = cardRef.current
@@ -368,30 +333,18 @@ function ProfileCard({
           transition: "box-shadow 0.4s ease",
         }}
       >
-        {image ? (
-          <Image
-            src={image}
-            alt=""
-            fill
-            sizes="(max-width: 768px) 160px, 192px"
-            unoptimized
-            className={
-              imageMode === "logo"
-                ? "h-full w-full object-contain p-8 opacity-70 grayscale transition-all duration-500 group-hover:opacity-100 group-hover:grayscale-0 pointer-coarse:opacity-100 pointer-coarse:grayscale-0 md:p-10"
-                : "h-full w-full object-cover grayscale transition-all duration-500 group-hover:grayscale-0 pointer-coarse:grayscale-0"
-            }
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_50%_35%,rgba(205,169,109,0.14),transparent_55%)] px-6 pb-12 text-center">
-            <span className="text-4xl font-semibold tracking-[0.12em] text-temo-gold/75 md:text-5xl">
-              {initials}
-            </span>
-          </div>
-        )}
+        <Image
+          src={person.image}
+          alt=""
+          fill
+          sizes="(max-width: 768px) 160px, 192px"
+          unoptimized
+          className="h-full w-full object-cover grayscale transition-all duration-500 group-hover:grayscale-0 pointer-coarse:grayscale-0"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
         <div className="absolute bottom-6 md:bottom-8 left-0 right-0 text-center px-2">
           <span className="line-clamp-2 break-words text-base font-bold leading-tight tracking-wider text-white md:text-lg">
-            {name}
+            {person.name}
           </span>
         </div>
       </div>
@@ -568,155 +521,19 @@ function DesignerDetailPanel({
   )
 }
 
-function ClientDetailPanel({
-  client,
-  onClose,
-}: {
-  client: AboutClient | null
-  onClose: () => void
-}) {
-  const open = Boolean(client)
-
-  useEffect(() => {
-    if (!open) return
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose()
-    }
-    document.addEventListener("keydown", onKey)
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-    return () => {
-      document.removeEventListener("keydown", onKey)
-      document.body.style.overflow = previousOverflow
-    }
-  }, [open, onClose])
-
-  return (
-    <>
-      <div
-        onClick={onClose}
-        aria-hidden="true"
-        className={`fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm transition-opacity duration-500 ${
-          open ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-      />
-      <aside
-        role="dialog"
-        aria-modal="true"
-        aria-hidden={!open}
-        aria-labelledby={client ? `client-title-${client.id}` : undefined}
-        className={`fixed right-0 top-0 z-[101] h-full w-full border-l border-white/10 bg-temo-black shadow-[0_0_80px_rgba(0,0,0,0.6)] transition-transform duration-[500ms] ease-[cubic-bezier(0.4,0,0.2,1)] md:w-[min(940px,94vw)] ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        {client && (
-          <div className="relative h-full overflow-y-auto">
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="關閉客戶介紹"
-              className="absolute right-6 top-6 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white/70 transition hover:border-white/60 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="grid min-h-full gap-10 p-8 pt-24 md:grid-cols-[300px_minmax(0,1fr)] md:items-center md:gap-14 md:p-16 lg:p-20">
-              <div className="relative mx-auto aspect-[3/4] w-full max-w-[300px] overflow-hidden rounded-[110px] bg-white/[0.035] md:mx-0 md:h-[500px] md:aspect-auto md:rounded-[160px]">
-                {client.logoUrl ? (
-                  <Image
-                    src={client.logoUrl}
-                    alt={`${client.name} Logo`}
-                    fill
-                    sizes="(max-width: 768px) 300px, 300px"
-                    unoptimized
-                    className="object-contain p-12 md:p-14"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_50%_35%,rgba(205,169,109,0.16),transparent_58%)] px-8 text-center">
-                    <span className="text-6xl font-semibold tracking-[0.12em] text-temo-gold/75">
-                      {getInitials(client.name)}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex min-w-0 max-w-xl flex-col gap-6">
-                <div>
-                  <h2
-                    id={`client-title-${client.id}`}
-                    className="break-words text-4xl font-bold leading-[1.02] tracking-[-0.03em] text-white md:text-6xl"
-                  >
-                    {client.name}
-                  </h2>
-                  <p className="mt-4 inline-flex items-center gap-2 text-xs tracking-[0.18em] text-temo-gold uppercase">
-                    <Building2 className="h-4 w-4" />
-                    合作客戶
-                  </p>
-                </div>
-
-                <p className="whitespace-pre-line break-words text-base leading-[1.9] text-white/75">
-                  {client.brief || "客戶介紹建置中。"}
-                </p>
-
-                <p className="text-sm text-white/50">
-                  {client.workCount > 0
-                    ? `目前收錄 ${client.workCount} 件合作案例`
-                    : "合作案例整理中"}
-                </p>
-
-                <div className="flex flex-wrap gap-3 pt-2">
-                  {client.workCount > 0 && (
-                    <Link
-                      href={buildWorksLandingHref(client.worksLandingSlug, {
-                        client: client.slug,
-                      })}
-                      onClick={onClose}
-                      className="inline-flex min-h-11 items-center gap-2 rounded-full bg-temo-gold px-5 py-3 text-sm font-semibold text-temo-black transition-[filter] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-temo-black"
-                    >
-                      查看合作案例
-                      <ArrowUpRight className="h-4 w-4" />
-                    </Link>
-                  )}
-                  {client.website && (
-                    <a
-                      href={client.website}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/20 px-5 py-3 text-sm text-white/75 transition-colors hover:border-white/50 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60"
-                    >
-                      官方網站
-                      <ArrowUpRight className="h-4 w-4" />
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </aside>
-    </>
-  )
-}
-
 export function AboutPageClient({
   clientLogos = [],
   awardLogos = [],
   pressLinks = [],
   team = [],
-  clients = [],
 }: {
   clientLogos?: ClientLogoItem[]
   awardLogos?: ClientLogoItem[]
   pressLinks?: PressLinkItem[]
   team?: TeamGroup[]
-  clients?: AboutClient[]
 }) {
   // 有 DB 團隊資料就用，否則回退到內建後備資料
-  const teamCategoryOrder = team.length > 0 ? team.map((g) => g.category) : FALLBACK_ORDER
-  const categoryOrder =
-    clients.length > 0 && !teamCategoryOrder.includes(CLIENT_CATEGORY)
-      ? [...teamCategoryOrder, CLIENT_CATEGORY]
-      : teamCategoryOrder
+  const categoryOrder = team.length > 0 ? team.map((g) => g.category) : FALLBACK_ORDER
   const categories: Record<string, Person[]> =
     team.length > 0
       ? Object.fromEntries(team.map((g) => [g.category, g.members]))
@@ -726,15 +543,13 @@ export function AboutPageClient({
   const [activeCategory, setActiveCategory] = useState<string>(categoryOrder[0] ?? "DESIGNER")
   const [menuOpen, setMenuOpen] = useState(false)
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null)
-  const [selectedClient, setSelectedClient] = useState<AboutClient | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const marqueeContainerRef = useRef<HTMLDivElement>(null)
   const marqueeTrackRef = useRef<HTMLDivElement>(null)
   const mouseXRef = useRef<number | null>(null)
   const translateXRef = useRef(0)
 
-  const isClientCategory = activeCategory === CLIENT_CATEGORY
-  const currentList = isClientCategory ? clients : categories[activeCategory] ?? []
+  const currentList = categories[activeCategory] ?? []
 
   // 觸控裝置沒有 hover：跑馬燈改用原生橫向滑動，不跑滑鼠感應動畫
   const noHover = useMediaQuery("(hover: none)")
@@ -980,7 +795,7 @@ export function AboutPageClient({
           </div>
         </section>
 
-        {/* Team and client profiles */}
+        {/* Designer Team Section */}
         <section className="relative py-16 bg-gradient-to-b from-temo-black to-temo-dark overflow-hidden">
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-temo-gold/20 to-transparent" />
@@ -1047,7 +862,7 @@ export function AboutPageClient({
               <div className="h-px w-16 md:w-24 bg-white/20" />
             </div>
 
-            {/* Profile cards — center when they fit; scroll from the start when they overflow */}
+            {/* Designer Cards — center when they fit; scroll from the start when they overflow */}
             <div
               ref={marqueeContainerRef}
               onMouseMove={noHover ? undefined : handleMarqueeMouseMove}
@@ -1075,24 +890,13 @@ export function AboutPageClient({
                 ref={marqueeTrackRef}
                 className="flex w-max min-w-full justify-center gap-6 md:gap-8 will-change-transform"
               >
-                {isClientCategory
-                  ? clients.map((client) => (
-                      <ProfileCard
-                        key={client.id}
-                        name={client.name}
-                        image={client.logoUrl}
-                        imageMode="logo"
-                        onClick={() => setSelectedClient(client)}
-                      />
-                    ))
-                  : (currentList as Person[]).map((person) => (
-                      <ProfileCard
-                        key={`${activeCategory}-${person.name}`}
-                        name={person.name}
-                        image={person.image}
-                        onClick={() => setSelectedPerson(person)}
-                      />
-                    ))}
+                {currentList.map((person) => (
+                  <DesignerCard
+                    key={`${activeCategory}-${person.name}`}
+                    person={person}
+                    onClick={() => setSelectedPerson(person)}
+                  />
+                ))}
               </div>
             </div>
           </div>
@@ -1215,7 +1019,6 @@ export function AboutPageClient({
       </main>
       <Footer />
       <DesignerDetailPanel person={selectedPerson} onClose={() => setSelectedPerson(null)} />
-      <ClientDetailPanel client={selectedClient} onClose={() => setSelectedClient(null)} />
     </>
   )
 }
