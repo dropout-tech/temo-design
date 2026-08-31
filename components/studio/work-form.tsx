@@ -1,6 +1,6 @@
 "use client"
 
-import { useId, useMemo, useRef, useState, useTransition } from "react"
+import { useEffect, useId, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Loader2, Upload, Trash2, ArrowLeft, ExternalLink, X, GripVertical, Minus, Move, Plus, RotateCcw, ChevronDown, Check } from "lucide-react"
@@ -559,12 +559,18 @@ const FORM_TABS: { id: WorkFormTab; label: string; helper: string }[] = [
   { id: "publish", label: "發布", helper: "上架狀態" },
 ]
 
+function isWorkFormTab(value: string | undefined): value is WorkFormTab {
+  return FORM_TABS.some((tab) => tab.id === value)
+}
+
 export function WorkForm({
   initial,
+  initialTab,
   workId,
   options,
 }: {
   initial?: WorkFormInitial
+  initialTab?: string
   workId?: string
   options: Options
 }) {
@@ -576,56 +582,42 @@ export function WorkForm({
   const [blocks, setBlocks] = useState<FormBlock[]>(() => initialBlocksFrom(initial))
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
-  const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null)
+  const [currentWorkId, setCurrentWorkId] = useState(workId)
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "dirty">("idle")
+  const draftRevision = useRef(0)
+  const draftMounted = useRef(false)
+  const formMounted = useRef(true)
   const [pending, startTransition] = useTransition()
-  const [activeTab, setActiveTab] = useState<WorkFormTab>("basics")
+  const [activeTab, setActiveTab] = useState<WorkFormTab>(() =>
+    isWorkFormTab(initialTab) ? initialTab : "basics"
+  )
+  const activeTabRef = useRef(activeTab)
 
-  const draftInput = useMemo<WorkInput>(() => ({
-    slug: f.slug, title: f.title, subtitle: f.subtitle,
-    categoryGroupValues: f.categoryGroupValues, year: f.year, client_id: f.client_id,
-    cover_url: f.cover_url, cover_zoom: f.cover_zoom, cover_position_x: f.cover_position_x,
-    cover_position_y: f.cover_position_y, hero_url: heroUrl, client_logo_urls: clientLogos, video_url: f.video_url, size: f.size,
-    description: f.description, services: toLines(f.services),
-    deliverables: toLines(f.deliverables), challenge: f.challenge,
-    approach: f.approach, result: f.result, quote_text: f.quote_text,
-    quote_author: f.quote_author, awards: toLines(f.awards), press_mentions: toLines(f.press),
-    published: f.published, industryValues: f.industryValues, customIndustryNames: f.customIndustryNames, designerIds: f.designerIds,
-    guestDesignerNames: f.guestDesignerNames,
-    collaboratorNames: f.collaboratorNames,
-    blocks: blocks.map((b) => ({
-      type: b.type,
-      src: b.src,
-      alt: b.alt,
-      width: b.width ?? null,
-      height: b.height ?? null,
-      desktop_height_percent: normalizeOptionalImageHeightPercent(b.desktop_height_percent),
-      src2: b.src2,
-      alt2: b.alt2,
-      width2: b.width2 ?? null,
-      height2: b.height2 ?? null,
-      desktop_height_percent2: normalizeOptionalImageHeightPercent(
-        b.desktop_height_percent2
-      ),
-      text_content: b.text_content,
-      video_url: b.video_url,
-      caption: b.caption,
-      caption_mobile: b.caption_mobile,
-      divider_color: b.divider_color,
-      divider_width: b.divider_width,
-      divider_thickness: b.divider_thickness,
-      button_text: b.button_text,
-      button_url: b.button_url,
-      button_open_new_tab: b.button_open_new_tab,
-      button_width: b.button_width,
-      button_height: b.button_height,
-      button_text_color: b.button_text_color,
-      button_background_color: b.button_background_color,
-      button_font_size: b.button_font_size,
-      button_font_weight: b.button_font_weight,
-    })),
-  }), [blocks, clientLogos, f, heroUrl])
-  const draftFingerprint = useMemo(() => JSON.stringify(draftInput), [draftInput])
-  const saved = savedFingerprint === draftFingerprint
+  useEffect(() => {
+    activeTabRef.current = activeTab
+  }, [activeTab])
+
+  useEffect(() => {
+    formMounted.current = true
+    return () => {
+      formMounted.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!draftMounted.current) return
+    draftRevision.current += 1
+    setSaveStatus("dirty")
+  }, [blocks, clientLogos, f, heroUrl])
+
+  useEffect(() => {
+    draftMounted.current = true
+    return () => {
+      draftMounted.current = false
+    }
+  }, [])
+
+  const saved = saveStatus === "saved"
 
   const set = <K extends keyof WorkFormInitial>(k: K, v: WorkFormInitial[K]) =>
     setF((prev) => ({ ...prev, [k]: v }))
@@ -791,26 +783,83 @@ export function WorkForm({
       return
     }
 
-    const submittedFingerprint = draftFingerprint
+    const input: WorkInput = {
+      slug: f.slug, title: f.title, subtitle: f.subtitle,
+      categoryGroupValues: f.categoryGroupValues, year: f.year, client_id: f.client_id,
+      cover_url: f.cover_url, cover_zoom: f.cover_zoom, cover_position_x: f.cover_position_x,
+      cover_position_y: f.cover_position_y, hero_url: heroUrl, client_logo_urls: clientLogos, video_url: f.video_url, size: f.size,
+      description: f.description, services: toLines(f.services),
+      deliverables: toLines(f.deliverables), challenge: f.challenge,
+      approach: f.approach, result: f.result, quote_text: f.quote_text,
+      quote_author: f.quote_author, awards: toLines(f.awards), press_mentions: toLines(f.press),
+      published: f.published, industryValues: f.industryValues, customIndustryNames: f.customIndustryNames, designerIds: f.designerIds,
+      guestDesignerNames: f.guestDesignerNames,
+      collaboratorNames: f.collaboratorNames,
+      blocks: blocks.map((b) => ({
+        type: b.type,
+        src: b.src,
+        alt: b.alt,
+        width: b.width ?? null,
+        height: b.height ?? null,
+        desktop_height_percent: normalizeOptionalImageHeightPercent(b.desktop_height_percent),
+        src2: b.src2,
+        alt2: b.alt2,
+        width2: b.width2 ?? null,
+        height2: b.height2 ?? null,
+        desktop_height_percent2: normalizeOptionalImageHeightPercent(
+          b.desktop_height_percent2
+        ),
+        text_content: b.text_content,
+        video_url: b.video_url,
+        caption: b.caption,
+        caption_mobile: b.caption_mobile,
+        divider_color: b.divider_color,
+        divider_width: b.divider_width,
+        divider_thickness: b.divider_thickness,
+        button_text: b.button_text,
+        button_url: b.button_url,
+        button_open_new_tab: b.button_open_new_tab,
+        button_width: b.button_width,
+        button_height: b.button_height,
+        button_text_color: b.button_text_color,
+        button_background_color: b.button_background_color,
+        button_font_size: b.button_font_size,
+        button_font_weight: b.button_font_weight,
+      })),
+    }
+    const submittedRevision = draftRevision.current
     startTransition(async () => {
-      const res = await saveWork(draftInput, workId)
+      const res = await saveWork(input, currentWorkId)
+      if (!formMounted.current) return
+
       if ("error" in res) {
         setError(res.error)
         return
       }
 
-      setSavedFingerprint(submittedFingerprint)
-      if (!workId) {
-        router.replace(`/studio/works/${res.id}`, { scroll: false })
+      const isLatestDraft = draftRevision.current === submittedRevision
+      const savedWorkId = currentWorkId ?? res.id
+
+      if (!currentWorkId) {
+        setCurrentWorkId(res.id)
+      }
+      if (isLatestDraft) {
+        setSaveStatus("saved")
+        if (window.location.pathname === "/studio/works/new") {
+          router.replace(
+            `/studio/works/${savedWorkId}?tab=${activeTabRef.current}`,
+            { scroll: false }
+          )
+        }
       }
     })
   }
 
   function onDelete() {
-    if (!workId) return
+    if (!currentWorkId) return
     if (!confirm(`確定要刪除「${f.title}」嗎？此動作無法復原。`)) return
     startTransition(async () => {
-      const res = await deleteWork(workId)
+      const res = await deleteWork(currentWorkId)
       if (res?.error) setError(res.error)
     })
   }
@@ -838,12 +887,13 @@ export function WorkForm({
             <button
               type="button"
               onClick={() => router.push("/studio/works")}
-              className="inline-flex items-center gap-1.5 text-temo-warm-gray/60 hover:text-temo-gold text-sm mb-4 transition-colors"
+              disabled={busy}
+              className="mb-4 inline-flex items-center gap-1.5 text-sm text-temo-warm-gray/60 transition-colors hover:text-temo-gold disabled:cursor-wait disabled:opacity-40"
             >
               <ArrowLeft className="w-4 h-4" /> 返回作品列表
             </button>
             <h1 className="text-2xl md:text-3xl font-bold text-temo-white">
-              {workId ? "編輯作品" : "新增作品"}
+              {currentWorkId ? "編輯作品" : "新增作品"}
             </h1>
             <p className="text-sm text-temo-warm-gray/55 mt-2">
               目前在「{activeTabLabel}」工作區。底部固定列可隨時儲存，不必捲回頁尾。
@@ -1354,10 +1404,10 @@ export function WorkForm({
                 <span className="inline-flex items-center gap-1.5 text-temo-gold">
                   <Check className="h-3.5 w-3.5" /> 已儲存，可繼續編輯
                 </span>
-              ) : savedFingerprint ? (
+              ) : saveStatus === "dirty" ? (
                 <span className="text-temo-warm-gray/75">尚有未儲存的變更</span>
               ) : (
-                <>{workId ? "編輯中" : "建立新作品"} · {f.published ? "儲存後會在前台顯示" : "儲存為草稿"}</>
+                <>{currentWorkId ? "編輯中" : "建立新作品"} · {f.published ? "儲存後會在前台顯示" : "儲存為草稿"}</>
               )}
             </p>
             {error && <p className="text-sm text-red-400/90 mt-1" role="alert">{error}</p>}
@@ -1365,12 +1415,12 @@ export function WorkForm({
           <div className="flex items-center gap-3">
             <button type="submit" disabled={busy} className="inline-flex items-center gap-2 px-6 py-3 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.2em] uppercase hover:brightness-110 active:scale-[0.98] disabled:opacity-60 transition-all rounded-sm">
               {pending && <Loader2 className="w-4 h-4 animate-spin" />}
-              {pending ? "儲存中…" : saved ? "已儲存" : workId ? "儲存變更" : "建立作品"}
+              {pending ? "儲存中…" : saved ? "已儲存" : currentWorkId ? "儲存變更" : "建立作品"}
             </button>
-            <button type="button" onClick={() => router.push("/studio/works")} className="px-5 py-3 text-temo-warm-gray/70 hover:text-temo-white text-xs tracking-wider transition-colors">
+            <button type="button" onClick={() => router.push("/studio/works")} disabled={busy} className="px-5 py-3 text-temo-warm-gray/70 hover:text-temo-white text-xs tracking-wider transition-colors disabled:cursor-wait disabled:opacity-40">
               取消
             </button>
-            {workId && (
+            {currentWorkId && (
               <button type="button" onClick={onDelete} disabled={busy} className="ml-auto inline-flex items-center gap-1.5 px-4 py-3 text-red-400/80 hover:text-red-400 text-xs tracking-wider transition-colors disabled:opacity-60">
                 <Trash2 className="w-3.5 h-3.5" /> 刪除
               </button>
