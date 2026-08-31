@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { ChevronRight, Instagram, Facebook } from "lucide-react"
@@ -28,11 +28,45 @@ const socialLinks = [
 ]
 
 export function HeroSection() {
+  const videoRef = useRef<HTMLVideoElement>(null)
   const [visible, setVisible] = useState(false)
+  const [videoPlaying, setVideoPlaying] = useState(false)
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80)
     return () => clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    let mounted = true
+    const showVideo = () => {
+      if (mounted) setVideoPlaying(true)
+    }
+    const showPoster = () => {
+      if (mounted) setVideoPlaying(false)
+    }
+
+    video.addEventListener("playing", showVideo)
+    video.addEventListener("pause", showPoster)
+    video.addEventListener("ended", showPoster)
+    video.addEventListener("error", showPoster)
+
+    if (!video.paused && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      showVideo()
+    } else {
+      void video.play().then(showVideo).catch(showPoster)
+    }
+
+    return () => {
+      mounted = false
+      video.removeEventListener("playing", showVideo)
+      video.removeEventListener("pause", showPoster)
+      video.removeEventListener("ended", showPoster)
+      video.removeEventListener("error", showPoster)
+    }
   }, [])
 
   return (
@@ -40,9 +74,27 @@ export function HeroSection() {
 
       {/* Background video — full section */}
       <div className="absolute inset-0 z-0">
+        <Image
+          src="/images/hero-poster.jpg"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          aria-hidden="true"
+          className="object-cover"
+        />
         <video
-          autoPlay loop muted playsInline
-          className="absolute inset-0 w-full h-full object-cover"
+          ref={videoRef}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          controls={false}
+          disablePictureInPicture
+          tabIndex={-1}
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-0 h-full w-full object-cover ${videoPlaying ? "opacity-100" : "opacity-0"}`}
           poster="/images/hero-poster.jpg"
         >
           <source
