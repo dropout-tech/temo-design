@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react"
 import { useInView } from "@/hooks/use-in-view"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import Link from "next/link"
+import { ArrowUp } from "lucide-react"
 
 type ChartType = "bars" | "scatter" | "ring" | "radar"
 
 const stats: {
   value: number
   suffix: string
+  trend?: "up"
   label: string
   sublabel: string
   description: string
@@ -25,7 +27,8 @@ const stats: {
   },
   {
     value: 20,
-    suffix: "%↑",
+    suffix: "%",
+    trend: "up",
     label: "配合客戶後業績提升",
     sublabel: "Revenue Growth",
     description: "與我們合作後，客戶業績平均提升逾兩成，設計不只是美感，更是驅動商業成長的實質力量。",
@@ -67,8 +70,32 @@ function useProgress(run: boolean, duration = 1600) {
   return p
 }
 
-function Counter({ value, suffix, progress }: { value: number; suffix: string; progress: number }) {
-  return <>{Math.round(progress * value)}{suffix}</>
+function Counter({
+  value,
+  suffix,
+  trend,
+  progress,
+}: {
+  value: number
+  suffix: string
+  trend?: "up"
+  progress: number
+}) {
+  return (
+    <>
+      <span>{Math.round(progress * value)}{suffix}</span>
+      {trend === "up" && (
+        <>
+          <ArrowUp
+            aria-hidden="true"
+            className="ml-[0.02em] mt-[0.08em] h-[0.34em] w-[0.34em] shrink-0"
+            strokeWidth={2}
+          />
+          <span className="sr-only">上升</span>
+        </>
+      )}
+    </>
+  )
 }
 
 function MiniChart({ type, progress, active }: { type: ChartType; progress: number; active: boolean }) {
@@ -273,14 +300,16 @@ export function StatsSection() {
 
                 {/* Number */}
                 <div
-                  className="text-[2.6rem] sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-3 leading-none"
+                  className={`inline-flex max-w-full items-start whitespace-nowrap text-[2.6rem] sm:text-5xl ${
+                    stat.trend ? "md:text-5xl lg:text-7xl xl:text-8xl" : "md:text-7xl lg:text-8xl"
+                  } font-bold tracking-tight mb-3 leading-none`}
                   style={{
                     color: active ? "var(--temo-warm)" : "rgba(240,234,221,0.18)",
                     transition: "color 0.4s ease",
                     fontVariantNumeric: "tabular-nums",
                   }}
                 >
-                  <Counter value={stat.value} suffix={stat.suffix} progress={progress} />
+                  <Counter value={stat.value} suffix={stat.suffix} trend={stat.trend} progress={progress} />
                 </div>
 
                 {/* Mini chart */}
