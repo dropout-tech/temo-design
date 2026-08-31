@@ -608,7 +608,7 @@ export function WorkForm({
     if (!draftMounted.current) return
     draftRevision.current += 1
     setSaveStatus("dirty")
-  }, [blocks, clientLogos, f, heroUrl])
+  }, [blocks, clientLogoDraft, clientLogos, f, heroUrl])
 
   useEffect(() => {
     draftMounted.current = true
