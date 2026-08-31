@@ -1253,20 +1253,20 @@ export function WorkForm({
                   <textarea className={cn(inputCls, "min-h-24 resize-y")} value={f.services} onChange={(e) => set("services", e.target.value)} placeholder={"品牌策略\nLogo 設計"} />
                 </Field>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)]">
-                  <Field label="引言 Quote" hint="顯示於案例敘事區；留空時前台不顯示">
+                  <Field label="實際數據" hint="顯示於案例敘事區；留空時前台不顯示">
                     <textarea
                       className={cn(inputCls, "min-h-20 resize-y")}
                       value={f.quote_text}
                       onChange={(e) => set("quote_text", e.target.value)}
-                      placeholder="輸入客戶引言或案例前言"
+                      placeholder="輸入實際數據或成果摘要"
                     />
                   </Field>
-                  <Field label="引言出處（選填）">
+                  <Field label="數據來源（選填）">
                     <input
                       className={inputCls}
                       value={f.quote_author}
                       onChange={(e) => set("quote_author", e.target.value)}
-                      placeholder="例如：客戶姓名／品牌名稱"
+                      placeholder="例如：客戶提供／內部統計"
                     />
                   </Field>
                 </div>
