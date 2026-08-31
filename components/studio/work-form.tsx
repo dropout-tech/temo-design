@@ -1,9 +1,9 @@
 "use client"
 
-import { useId, useRef, useState, useTransition } from "react"
+import { useId, useMemo, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Loader2, Upload, Trash2, ArrowLeft, ExternalLink, X, GripVertical, Minus, Move, Plus, RotateCcw, ChevronDown } from "lucide-react"
+import { Loader2, Upload, Trash2, ArrowLeft, ExternalLink, X, GripVertical, Minus, Move, Plus, RotateCcw, ChevronDown, Check } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { downscaleImage } from "@/lib/downscale-image"
 import { isVideoUrl } from "@/lib/video"
@@ -576,8 +576,56 @@ export function WorkForm({
   const [blocks, setBlocks] = useState<FormBlock[]>(() => initialBlocksFrom(initial))
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState("")
+  const [savedFingerprint, setSavedFingerprint] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
   const [activeTab, setActiveTab] = useState<WorkFormTab>("basics")
+
+  const draftInput = useMemo<WorkInput>(() => ({
+    slug: f.slug, title: f.title, subtitle: f.subtitle,
+    categoryGroupValues: f.categoryGroupValues, year: f.year, client_id: f.client_id,
+    cover_url: f.cover_url, cover_zoom: f.cover_zoom, cover_position_x: f.cover_position_x,
+    cover_position_y: f.cover_position_y, hero_url: heroUrl, client_logo_urls: clientLogos, video_url: f.video_url, size: f.size,
+    description: f.description, services: toLines(f.services),
+    deliverables: toLines(f.deliverables), challenge: f.challenge,
+    approach: f.approach, result: f.result, quote_text: f.quote_text,
+    quote_author: f.quote_author, awards: toLines(f.awards), press_mentions: toLines(f.press),
+    published: f.published, industryValues: f.industryValues, customIndustryNames: f.customIndustryNames, designerIds: f.designerIds,
+    guestDesignerNames: f.guestDesignerNames,
+    collaboratorNames: f.collaboratorNames,
+    blocks: blocks.map((b) => ({
+      type: b.type,
+      src: b.src,
+      alt: b.alt,
+      width: b.width ?? null,
+      height: b.height ?? null,
+      desktop_height_percent: normalizeOptionalImageHeightPercent(b.desktop_height_percent),
+      src2: b.src2,
+      alt2: b.alt2,
+      width2: b.width2 ?? null,
+      height2: b.height2 ?? null,
+      desktop_height_percent2: normalizeOptionalImageHeightPercent(
+        b.desktop_height_percent2
+      ),
+      text_content: b.text_content,
+      video_url: b.video_url,
+      caption: b.caption,
+      caption_mobile: b.caption_mobile,
+      divider_color: b.divider_color,
+      divider_width: b.divider_width,
+      divider_thickness: b.divider_thickness,
+      button_text: b.button_text,
+      button_url: b.button_url,
+      button_open_new_tab: b.button_open_new_tab,
+      button_width: b.button_width,
+      button_height: b.button_height,
+      button_text_color: b.button_text_color,
+      button_background_color: b.button_background_color,
+      button_font_size: b.button_font_size,
+      button_font_weight: b.button_font_weight,
+    })),
+  }), [blocks, clientLogos, f, heroUrl])
+  const draftFingerprint = useMemo(() => JSON.stringify(draftInput), [draftInput])
+  const saved = savedFingerprint === draftFingerprint
 
   const set = <K extends keyof WorkFormInitial>(k: K, v: WorkFormInitial[K]) =>
     setF((prev) => ({ ...prev, [k]: v }))
@@ -743,53 +791,18 @@ export function WorkForm({
       return
     }
 
-    const input: WorkInput = {
-      slug: f.slug, title: f.title, subtitle: f.subtitle,
-      categoryGroupValues: f.categoryGroupValues, year: f.year, client_id: f.client_id,
-      cover_url: f.cover_url, cover_zoom: f.cover_zoom, cover_position_x: f.cover_position_x,
-      cover_position_y: f.cover_position_y, hero_url: heroUrl, client_logo_urls: clientLogos, video_url: f.video_url, size: f.size,
-      description: f.description, services: toLines(f.services),
-      deliverables: toLines(f.deliverables), challenge: f.challenge,
-      approach: f.approach, result: f.result, quote_text: f.quote_text,
-      quote_author: f.quote_author, awards: toLines(f.awards), press_mentions: toLines(f.press),
-      published: f.published, industryValues: f.industryValues, customIndustryNames: f.customIndustryNames, designerIds: f.designerIds,
-      guestDesignerNames: f.guestDesignerNames,
-      collaboratorNames: f.collaboratorNames,
-      blocks: blocks.map((b) => ({
-        type: b.type,
-        src: b.src,
-        alt: b.alt,
-        width: b.width ?? null,
-        height: b.height ?? null,
-        desktop_height_percent: normalizeOptionalImageHeightPercent(b.desktop_height_percent),
-        src2: b.src2,
-        alt2: b.alt2,
-        width2: b.width2 ?? null,
-        height2: b.height2 ?? null,
-        desktop_height_percent2: normalizeOptionalImageHeightPercent(
-          b.desktop_height_percent2
-        ),
-        text_content: b.text_content,
-        video_url: b.video_url,
-        caption: b.caption,
-        caption_mobile: b.caption_mobile,
-        divider_color: b.divider_color,
-        divider_width: b.divider_width,
-        divider_thickness: b.divider_thickness,
-        button_text: b.button_text,
-        button_url: b.button_url,
-        button_open_new_tab: b.button_open_new_tab,
-        button_width: b.button_width,
-        button_height: b.button_height,
-        button_text_color: b.button_text_color,
-        button_background_color: b.button_background_color,
-        button_font_size: b.button_font_size,
-        button_font_weight: b.button_font_weight,
-      })),
-    }
+    const submittedFingerprint = draftFingerprint
     startTransition(async () => {
-      const res = await saveWork(input, workId)
-      if (res?.error) setError(res.error)
+      const res = await saveWork(draftInput, workId)
+      if ("error" in res) {
+        setError(res.error)
+        return
+      }
+
+      setSavedFingerprint(submittedFingerprint)
+      if (!workId) {
+        router.replace(`/studio/works/${res.id}`, { scroll: false })
+      }
     })
   }
 
@@ -1336,15 +1349,23 @@ export function WorkForm({
       <div className="sticky bottom-0 z-30 border-t border-white/10 bg-[#141210]/95 backdrop-blur px-6 md:px-10 py-3">
         <div className="max-w-6xl flex flex-col md:flex-row md:items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-temo-warm-gray/55">
-              {workId ? "編輯中" : "建立新作品"} · {f.published ? "儲存後會在前台顯示" : "儲存為草稿"}
+            <p className="text-xs text-temo-warm-gray/55" aria-live="polite">
+              {saved ? (
+                <span className="inline-flex items-center gap-1.5 text-temo-gold">
+                  <Check className="h-3.5 w-3.5" /> 已儲存，可繼續編輯
+                </span>
+              ) : savedFingerprint ? (
+                <span className="text-temo-warm-gray/75">尚有未儲存的變更</span>
+              ) : (
+                <>{workId ? "編輯中" : "建立新作品"} · {f.published ? "儲存後會在前台顯示" : "儲存為草稿"}</>
+              )}
             </p>
             {error && <p className="text-sm text-red-400/90 mt-1" role="alert">{error}</p>}
           </div>
           <div className="flex items-center gap-3">
             <button type="submit" disabled={busy} className="inline-flex items-center gap-2 px-6 py-3 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.2em] uppercase hover:brightness-110 active:scale-[0.98] disabled:opacity-60 transition-all rounded-sm">
               {pending && <Loader2 className="w-4 h-4 animate-spin" />}
-              {workId ? "儲存變更" : "建立作品"}
+              {pending ? "儲存中…" : saved ? "已儲存" : workId ? "儲存變更" : "建立作品"}
             </button>
             <button type="button" onClick={() => router.push("/studio/works")} className="px-5 py-3 text-temo-warm-gray/70 hover:text-temo-white text-xs tracking-wider transition-colors">
               取消

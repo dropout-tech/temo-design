@@ -150,11 +150,11 @@ function toRow(input: WorkInput, categoryGroupValues: string[]) {
   }
 }
 
-/** 新增或更新作品（含 行業 / 設計師 關聯）。成功則導回列表，失敗回傳 { error }。 */
+/** 新增或更新作品（含 行業 / 設計師 關聯）。成功回傳作品 ID，失敗回傳 { error }。 */
 export async function saveWork(
   input: WorkInput,
   id?: string
-): Promise<{ error: string } | void> {
+): Promise<{ error: string } | { id: string }> {
   const supabase = await createClient()
   const normalizedSlug = normalizeWorkSlug(input.slug)
 
@@ -389,7 +389,7 @@ export async function saveWork(
   revalidatePath("/studio/works")
   revalidatePath("/portfolio")
   revalidatePath("/portfolio/[slug]", "page")
-  redirect("/studio/works")
+  return { id: workId! }
 }
 
 export async function deleteWork(id: string): Promise<{ error: string } | void> {
