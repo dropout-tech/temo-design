@@ -44,6 +44,7 @@ type Row = {
   photo_url: string
   instagram: string
   facebook: string
+  line_url: string
   website: string
   phone: string
   address: string
@@ -93,6 +94,7 @@ export function DesignerManager({
         photo_url: "",
         instagram: "",
         facebook: "",
+        line_url: "",
         website: "",
         phone: "",
         address: "",
@@ -505,6 +507,7 @@ function Card({
           photo_url: row.photo_url,
           instagram: row.instagram,
           facebook: row.facebook,
+          line_url: row.line_url,
           website: row.website,
           phone: row.phone,
           address: row.address,
@@ -649,19 +652,23 @@ function Card({
           </div>
 
           {/* 社群連結（前台成員卡會顯示 icon） */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className={labelCls}>Instagram 連結</label>
-              <input className={inputCls} value={row.instagram} onChange={(e) => set({ instagram: e.target.value })} placeholder="https://instagram.com/..." />
+              <input type="url" maxLength={500} className={inputCls} value={row.instagram} onChange={(e) => set({ instagram: e.target.value })} placeholder="https://instagram.com/..." />
             </div>
             <div>
               <label className={labelCls}>Facebook 連結</label>
-              <input className={inputCls} value={row.facebook} onChange={(e) => set({ facebook: e.target.value })} placeholder="https://facebook.com/..." />
+              <input type="url" maxLength={500} className={inputCls} value={row.facebook} onChange={(e) => set({ facebook: e.target.value })} placeholder="https://facebook.com/..." />
             </div>
-          </div>
-          <div>
-            <label className={labelCls}>個人網站連結</label>
-            <input className={inputCls} value={row.website} onChange={(e) => set({ website: e.target.value })} placeholder="https://..." />
+            <div>
+              <label className={labelCls}>LINE 連結</label>
+              <input type="url" maxLength={500} className={inputCls} value={row.line_url} onChange={(e) => set({ line_url: e.target.value })} placeholder="https://lin.ee/..." />
+            </div>
+            <div>
+              <label className={labelCls}>個人網站連結</label>
+              <input type="url" maxLength={500} className={inputCls} value={row.website} onChange={(e) => set({ website: e.target.value })} placeholder="https://..." />
+            </div>
           </div>
 
           {/* 個人聯絡（是否公開由下方開關控制） */}

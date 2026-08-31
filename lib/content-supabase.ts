@@ -380,6 +380,7 @@ export type TeamMemberRow = {
   photo_url: string | null
   instagram: string | null
   facebook: string | null
+  line_url: string | null
   website: string | null
   phone: string | null
   address: string | null
@@ -400,6 +401,7 @@ export type TeamMember = {
   image: string
   instagram?: string
   facebook?: string
+  lineUrl?: string
   website?: string
   /** 只有 showContact=true 時才帶值（前台據此決定是否公開顯示個人聯絡） */
   phone?: string
@@ -416,7 +418,7 @@ export type TeamGroup = { category: string; members: TeamMember[] }
 export type TeamCategory = { id: string; name: string; sort: number }
 
 const TEAM_SELECT =
-  "id, slug, name, name_zh, role, category, photo_url, instagram, facebook, website, phone, address, email, show_contact, bio, achievements, tags, has_page, sort"
+  "id, slug, name, name_zh, role, category, photo_url, instagram, facebook, line_url, website, phone, address, email, show_contact, bio, achievements, tags, has_page, sort"
 
 /** 後台：所有團隊成員（含全部欄位，依 sort） */
 export async function getTeamForStudio(): Promise<TeamMemberRow[]> {
@@ -457,6 +459,7 @@ export async function getTeamGrouped(): Promise<TeamGroup[]> {
       image: r.photo_url ?? "",
       instagram: r.instagram ?? undefined,
       facebook: r.facebook ?? undefined,
+      lineUrl: r.line_url ?? undefined,
       website: r.website ?? undefined,
       phone: r.show_contact ? r.phone ?? undefined : undefined,
       address: r.show_contact ? r.address ?? undefined : undefined,

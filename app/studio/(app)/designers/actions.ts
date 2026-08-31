@@ -12,6 +12,7 @@ export type DesignerInput = {
   photo_url: string
   instagram: string
   facebook: string
+  line_url: string
   website: string
   phone: string
   address: string
@@ -24,6 +25,29 @@ export type DesignerInput = {
   sort: number
 }
 
+function cleanPublicUrl(
+  value: string,
+  label: string,
+  options: { httpsOnly?: boolean } = {}
+): { value: string | null; error?: string } {
+  const clean = value.trim()
+  if (!clean) return { value: null }
+  if (clean.length > 500) return { value: null, error: `${label}不可超過 500 個字元` }
+
+  try {
+    const url = new URL(clean)
+    const allowed = options.httpsOnly
+      ? url.protocol === "https:"
+      : url.protocol === "http:" || url.protocol === "https:"
+    if (!allowed) throw new Error("unsupported protocol")
+  } catch {
+    const prefix = options.httpsOnly ? "https://" : "http:// 或 https://"
+    return { value: null, error: `${label}格式錯誤，請貼上以 ${prefix} 開頭的完整網址` }
+  }
+
+  return { value: clean }
+}
+
 export async function saveDesigner(
   input: DesignerInput,
   id?: string
@@ -31,6 +55,14 @@ export async function saveDesigner(
   const supabase = await createClient()
   if (!input.name.trim()) return { error: "英文名（name）為必填" }
   if (!input.category.trim()) return { error: "分類為必填" }
+
+  const instagram = cleanPublicUrl(input.instagram, "Instagram 連結")
+  const facebook = cleanPublicUrl(input.facebook, "Facebook 連結")
+  const lineUrl = cleanPublicUrl(input.line_url, "LINE 連結", { httpsOnly: true })
+  const website = cleanPublicUrl(input.website, "個人網站連結")
+  const invalidUrl = [instagram, facebook, lineUrl, website].find((result) => result.error)
+  if (invalidUrl?.error) return { error: invalidUrl.error }
+
   const row = {
     slug: input.slug.trim() || null,
     name: input.name.trim(),
@@ -38,9 +70,10 @@ export async function saveDesigner(
     role: input.role.trim() || null,
     category: input.category.trim(),
     photo_url: input.photo_url.trim() || null,
-    instagram: input.instagram.trim() || null,
-    facebook: input.facebook.trim() || null,
-    website: input.website.trim() || null,
+    instagram: instagram.value,
+    facebook: facebook.value,
+    line_url: lineUrl.value,
+    website: website.value,
     phone: input.phone.trim() || null,
     address: input.address.trim() || null,
     email: input.email.trim() || null,

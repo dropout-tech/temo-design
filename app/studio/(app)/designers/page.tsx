@@ -23,6 +23,7 @@ export default async function StudioDesignersPage() {
         photo_url: r.photo_url ?? "",
         instagram: r.instagram ?? "",
         facebook: r.facebook ?? "",
+        line_url: r.line_url ?? "",
         website: r.website ?? "",
         phone: r.phone ?? "",
         address: r.address ?? "",

@@ -7,7 +7,8 @@ import { Footer } from "@/components/footer"
 import { LogoMeaningSection } from "@/components/sections/logo-meaning-section"
 import { StatsSection } from "@/components/sections/stats-section"
 import { ClientsHonorsSection, type ClientLogoItem, type PressLinkItem } from "@/components/sections/clients-honors-section"
-import { ArrowUpRight, ChevronDown, Instagram, Facebook, Globe, Phone, Mail, MapPin, X } from "lucide-react"
+import { SocialIcon } from "@/components/social-icons"
+import { ArrowUpRight, ChevronDown, Globe, Phone, Mail, MapPin, X } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { useMediaQuery } from "@/hooks/use-media-query"
@@ -19,6 +20,7 @@ type Person = {
   image: string
   instagram?: string
   facebook?: string
+  lineUrl?: string
   website?: string
   phone?: string
   address?: string
@@ -352,6 +354,48 @@ function DesignerCard({ person, onClick }: { person: Person; onClick?: () => voi
   )
 }
 
+function toSafeExternalUrl(value?: string): string | undefined {
+  if (!value) return undefined
+  try {
+    const url = new URL(value)
+    return url.protocol === "http:" || url.protocol === "https:" ? value : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function DesignerSocialLinks({ person }: { person: Person }) {
+  const links = [
+    { href: toSafeExternalUrl(person.instagram), label: "Instagram", platform: "instagram" },
+    { href: toSafeExternalUrl(person.facebook), label: "Facebook", platform: "facebook" },
+    { href: toSafeExternalUrl(person.lineUrl), label: "LINE", platform: "line" },
+    { href: toSafeExternalUrl(person.website), label: "個人網站", platform: "website" },
+  ].filter((link): link is typeof link & { href: string } => Boolean(link.href))
+
+  if (links.length === 0) return null
+
+  return (
+    <div className="flex flex-wrap gap-3">
+      {links.map(({ href, label, platform }) => (
+        <a
+          key={label}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`前往 ${person.name} 的 ${label}`}
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white/70 transition hover:border-white/60 hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
+        >
+          {platform === "website" ? (
+            <Globe className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <SocialIcon platform={platform} className="h-4 w-4" />
+          )}
+        </a>
+      ))}
+    </div>
+  )
+}
+
 function DesignerDetailPanel({
   person,
   onClose,
@@ -435,28 +479,7 @@ function DesignerDetailPanel({
                   {person.role}
                 </p>
 
-                {(person.instagram || person.facebook || person.website) && (
-                  <div className="flex flex-wrap gap-3">
-                    {[
-                      { href: person.instagram, label: "Instagram", Icon: Instagram },
-                      { href: person.facebook, label: "Facebook", Icon: Facebook },
-                      { href: person.website, label: "個人網站", Icon: Globe },
-                    ]
-                      .filter((s) => s.href)
-                      .map(({ href, label, Icon }) => (
-                        <a
-                          key={label}
-                          href={href}
-                          target="_blank"
-                          rel="noreferrer"
-                          aria-label={label}
-                          className="inline-flex w-11 h-11 rounded-full border border-white/20 items-center justify-center text-white/70 hover:text-white hover:border-white/60 hover:bg-white/5 transition"
-                        >
-                          <Icon className="w-4 h-4" />
-                        </a>
-                      ))}
-                  </div>
-                )}
+                <DesignerSocialLinks person={person} />
 
                 {(person.phone || person.email || person.address) && (
                   <div className="flex flex-col gap-2.5 text-sm text-white/70 mt-1">
