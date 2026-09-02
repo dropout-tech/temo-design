@@ -3,6 +3,7 @@ import type { WorkFormInitial } from "@/components/studio/work-form"
 import { normalizeCoverCrop } from "@/lib/cover-crop"
 import { normalizeCollaboratorNames } from "@/lib/collaborator-names"
 import { normalizeCategoryGroupValues } from "@/lib/work-category-groups"
+import { mergeGuestDesignerCredits } from "@/lib/work-team-credits"
 
 // work_blocks 的原始 DB 欄位形狀（後台表單之後直接讀寫這個形狀即可，不做欄位改名）。
 export type WorkBlockRow = {
@@ -45,7 +46,11 @@ export type WorkForEditWithBlocks = WorkFormInitial & {
 
 type WorkIndustryRelationRow = { industry_value: string }
 type WorkCategoryGroupRelationRow = { category_group_value: string; sort: number | null }
-type WorkDesignerRelationRow = { designer_id: string }
+type WorkDesignerRelationRow = {
+  designer_id: string
+  credit_title?: string | null
+  sort?: number | null
+}
 type WorkGalleryRow = {
   src: string
   alt: string | null
@@ -81,6 +86,7 @@ type WorkEditRow = {
   published: boolean | null
   custom_industry_names: string[] | null
   guest_designer_names: string[] | null
+  guest_designer_credits?: unknown
   collaborator_names: string[] | null
   work_industries: WorkIndustryRelationRow[] | null
   work_designers: WorkDesignerRelationRow[] | null
@@ -130,7 +136,7 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
   const { data } = await supabase
     .from("works")
     .select(
-      "*, work_industries(industry_value), work_designers(designer_id), work_gallery(src, alt, caption, sort)"
+      "*, work_industries(industry_value), work_designers(designer_id, sort), work_gallery(src, alt, caption, sort)"
     )
     .eq("id", id)
     .single()
@@ -160,6 +166,23 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
   }
   if (categoryGroupValues.length === 0) {
     categoryGroupValues = normalizeCategoryGroupValues([w.category_group])
+  }
+
+  // 作品署名 Title 用獨立查詢，讓 migration 尚未套用時仍可開啟既有作品表單。
+  let designerCredits = [...(w.work_designers ?? [])].sort(
+    (a, b) => (a.sort ?? 0) - (b.sort ?? 0)
+  )
+  try {
+    const { data: creditRows, error: creditError } = await supabase
+      .from("work_designers")
+      .select("designer_id, credit_title, sort")
+      .eq("work_id", id)
+      .order("sort")
+    if (!creditError && Array.isArray(creditRows)) {
+      designerCredits = creditRows as WorkDesignerRelationRow[]
+    }
+  } catch {
+    // migration 尚未套用時沿用既有 designer_id / sort，Title 留空。
   }
 
   // ── blocks：獨立查詢 work_blocks（migration 未套用/表不存在/查詢失敗 → 回空陣列，表單走既有 gallery 欄位）──
@@ -214,12 +237,16 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
           .map((name: unknown) => String(name).trim())
           .filter(Boolean)
       : [],
-    designerIds: (w.work_designers ?? []).map((r) => r.designer_id),
-    guestDesignerNames: Array.isArray(w.guest_designer_names)
-      ? w.guest_designer_names
-          .map((name: unknown) => String(name).trim())
-          .filter(Boolean)
-      : [],
+    designerIds: designerCredits.map((credit) => credit.designer_id),
+    designerCreditTitles: Object.fromEntries(
+      designerCredits
+        .map((credit) => [credit.designer_id, String(credit.credit_title ?? "").trim()])
+        .filter(([, title]) => Boolean(title))
+    ),
+    guestDesignerCredits: mergeGuestDesignerCredits(
+      w.guest_designer_credits,
+      w.guest_designer_names
+    ),
     collaboratorNames: Array.isArray(w.collaborator_names)
       ? w.collaborator_names
           .map((name: unknown) => String(name).trim())

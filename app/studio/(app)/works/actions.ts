@@ -18,6 +18,11 @@ import {
   normalizeOptionalImageHeightPercent,
 } from "@/lib/work-block-config"
 import { normalizeCategoryGroupValues } from "@/lib/work-category-groups"
+import {
+  WORK_CREDIT_TITLE_MAX,
+  normalizeGuestDesignerCredits,
+  normalizeWorkCreditTitle,
+} from "@/lib/work-team-credits"
 
 export type WorkInput = {
   slug: string
@@ -51,9 +56,10 @@ export type WorkInput = {
   industryValues: string[]
   /** 作品專屬、未列入固定選項的行業顯示名稱 */
   customIndustryNames: string[]
-  designerIds: string[]
-  /** 作品專屬的外部／單次合作設計師顯示名稱 */
-  guestDesignerNames: string[]
+  /** 正式成員與其在此作品中的自訂署名 Title。 */
+  designerCredits: { designerId: string; creditTitle: string }[]
+  /** 作品專屬的外部／單次合作設計師與署名 Title。 */
+  guestDesignerCredits: { name: string; creditTitle: string }[]
   /** 作品專屬的攝影師、顧問或外部合作團隊顯示名稱 */
   collaboratorNames: string[]
   blocks: {
@@ -108,12 +114,34 @@ function normalizeCustomNames(names: unknown) {
   return normalized
 }
 
+function normalizeDesignerCredits(value: unknown) {
+  if (!Array.isArray(value)) return []
+  const seen = new Set<string>()
+  const credits: { designerId: string; creditTitle: string }[] = []
+
+  for (const raw of value) {
+    if (!raw || typeof raw !== "object") continue
+    const item = raw as { designerId?: unknown; creditTitle?: unknown }
+    const designerId = typeof item.designerId === "string" ? item.designerId.trim() : ""
+    if (!designerId || seen.has(designerId)) continue
+    seen.add(designerId)
+    credits.push({
+      designerId,
+      creditTitle: normalizeWorkCreditTitle(item.creditTitle),
+    })
+  }
+
+  return credits
+}
+
 function toRow(input: WorkInput, categoryGroupValues: string[]) {
   const coverCrop = normalizeCoverCrop({
     zoom: input.cover_zoom,
     positionX: input.cover_position_x,
     positionY: input.cover_position_y,
   })
+
+  const guestDesignerCredits = normalizeGuestDesignerCredits(input.guestDesignerCredits)
 
   return {
     slug: normalizeWorkSlug(input.slug),
@@ -144,7 +172,9 @@ function toRow(input: WorkInput, categoryGroupValues: string[]) {
     awards: input.awards,
     press_mentions: input.press_mentions,
     custom_industry_names: normalizeCustomNames(input.customIndustryNames),
-    guest_designer_names: normalizeCustomNames(input.guestDesignerNames),
+    // 既有姓名陣列持續雙寫，確保舊版前台與「合作夥伴」彙整頁可以安全回退。
+    guest_designer_names: guestDesignerCredits.map((credit) => credit.name),
+    guest_designer_credits: guestDesignerCredits,
     collaborator_names: normalizeCustomNames(input.collaboratorNames),
     published: input.published,
   }
@@ -168,12 +198,19 @@ export async function saveWork(
   if (customIndustryNames.some((name) => name.length > CUSTOM_NAME_MAX)) {
     return { error: `其他行業名稱請控制在 ${CUSTOM_NAME_MAX} 個字內` }
   }
-  const guestDesignerNames = normalizeCustomNames(input.guestDesignerNames)
-  if (guestDesignerNames.length > CUSTOM_NAME_LIMIT) {
+  const designerCredits = normalizeDesignerCredits(input.designerCredits)
+  if (designerCredits.some((credit) => credit.creditTitle.length > WORK_CREDIT_TITLE_MAX)) {
+    return { error: `正式成員的 Title 請控制在 ${WORK_CREDIT_TITLE_MAX} 個字內` }
+  }
+  const guestDesignerCredits = normalizeGuestDesignerCredits(input.guestDesignerCredits)
+  if (guestDesignerCredits.length > CUSTOM_NAME_LIMIT) {
     return { error: `每件作品最多可新增 ${CUSTOM_NAME_LIMIT} 位其他合作設計師` }
   }
-  if (guestDesignerNames.some((name) => name.length > CUSTOM_NAME_MAX)) {
+  if (guestDesignerCredits.some((credit) => credit.name.length > CUSTOM_NAME_MAX)) {
     return { error: `其他合作設計師名稱請控制在 ${CUSTOM_NAME_MAX} 個字內` }
+  }
+  if (guestDesignerCredits.some((credit) => credit.creditTitle.length > WORK_CREDIT_TITLE_MAX)) {
+    return { error: `其他合作設計師的 Title 請控制在 ${WORK_CREDIT_TITLE_MAX} 個字內` }
   }
   const collaboratorNames = normalizeCustomNames(input.collaboratorNames)
   if (collaboratorNames.length > CUSTOM_NAME_LIMIT) {
@@ -273,11 +310,22 @@ export async function saveWork(
   }
 
   // 重建 設計師 關聯
-  await supabase.from("work_designers").delete().eq("work_id", workId!)
-  if (input.designerIds.length > 0) {
+  const { error: deleteDesignerError } = await supabase
+    .from("work_designers")
+    .delete()
+    .eq("work_id", workId!)
+  if (deleteDesignerError) return { error: deleteDesignerError.message }
+  if (designerCredits.length > 0) {
     const { error } = await supabase
       .from("work_designers")
-      .insert(input.designerIds.map((d, i) => ({ work_id: workId!, designer_id: d, sort: i })))
+      .insert(
+        designerCredits.map((credit, index) => ({
+          work_id: workId!,
+          designer_id: credit.designerId,
+          credit_title: credit.creditTitle || null,
+          sort: index,
+        }))
+      )
     if (error) return { error: error.message }
   }
 

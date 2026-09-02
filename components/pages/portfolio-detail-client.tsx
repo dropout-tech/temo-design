@@ -30,6 +30,8 @@ export type DetailDesigner = {
   name: string
   nameZh?: string
   role: string
+  /** 此成員在單一作品中的自訂署名；有值時原樣顯示，不套用全域職稱的語言轉換。 */
+  creditTitle?: string
   photo: string
   /** 沿用「團隊成員」管理頁的分類名稱，例如 DESIGNER 設計團隊、LEGAL CONSULTANT 法律顧問。 */
   category?: string
@@ -59,6 +61,10 @@ function getEnglishRole(role: string): string {
     })
     .filter(Boolean)
     .join(" / ")
+}
+
+function getDisplayedCreditTitle(member: DetailDesigner): string {
+  return member.creditTitle?.trim() || getEnglishRole(member.role)
 }
 
 // 新聞報導單行解析：「媒體名稱 https://連結」→ { label, url }。
@@ -929,9 +935,9 @@ function DesktopTeamMemberList({ members }: { members: DetailDesigner[] }) {
                 <p className="break-words text-sm tracking-wider text-temo-white transition-colors group-hover:text-temo-gold">
                   {member.name}
                 </p>
-                {member.role && (
+                {getDisplayedCreditTitle(member) && (
                   <p className="truncate text-xs text-temo-warm-gray/60">
-                    {getEnglishRole(member.role)}
+                    {getDisplayedCreditTitle(member)}
                   </p>
                 )}
               </div>
@@ -940,9 +946,9 @@ function DesktopTeamMemberList({ members }: { members: DetailDesigner[] }) {
           ) : (
             <div className="-mx-2 px-2 py-1.5">
               <p className="break-words text-sm tracking-wider text-temo-white">{member.name}</p>
-              {member.role && (
+              {getDisplayedCreditTitle(member) && (
                 <p className="mt-1 text-xs text-temo-warm-gray/60">
-                  {getEnglishRole(member.role)}
+                  {getDisplayedCreditTitle(member)}
                 </p>
               )}
             </div>
@@ -1288,7 +1294,7 @@ function MobileEditorialPeople({
                   {member.nameZh || member.name}
                 </span>
                 <span className="mt-1 block text-[11px] leading-snug text-temo-warm-gray/55">
-                  {member.role ? getEnglishRole(member.role) : category}
+                  {getDisplayedCreditTitle(member) || category}
                 </span>
               </span>
               <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-temo-gold" aria-hidden="true" />

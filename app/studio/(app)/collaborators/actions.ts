@@ -10,11 +10,17 @@ import {
   replaceCollaboratorName,
   type TemporaryNameKind,
 } from "@/lib/collaborator-names"
+import {
+  mergeGuestDesignerCredits,
+  renameGuestDesignerCredits,
+  type GuestDesignerCredit,
+} from "@/lib/work-team-credits"
 
 type WorkCollaboratorRow = {
   id: string
   slug: string
   guest_designer_names: unknown
+  guest_designer_credits: unknown
   collaborator_names: unknown
 }
 
@@ -22,6 +28,7 @@ type UpdatedWork = {
   id: string
   slug: string
   before: string[]
+  beforeCredits?: GuestDesignerCredit[]
 }
 
 export async function renameCollaborator(
@@ -50,13 +57,32 @@ export async function renameCollaborator(
 
   if (error) return { error: error.message }
 
+  let creditsAvailable = false
+  const creditsByWork = new Map<string, unknown>()
+  if (kind === "guest-designer") {
+    const { data: creditRows, error: creditError } = await supabase
+      .from("works")
+      .select("id, guest_designer_credits")
+    if (!creditError && Array.isArray(creditRows)) {
+      creditsAvailable = true
+      for (const row of creditRows) {
+        creditsByWork.set(row.id, row.guest_designer_credits)
+      }
+    }
+  }
+
   const affected = ((data ?? []) as unknown as WorkCollaboratorRow[])
     .map((work) => {
       const before = normalizeCollaboratorNames(work[column])
       if (!before.some((name) => collaboratorNameKey(name) === sourceKey)) return null
 
       const after = replaceCollaboratorName(before, sourceName, nextName)
-      return { ...work, before, after }
+      return {
+        ...work,
+        guest_designer_credits: creditsByWork.get(work.id),
+        before,
+        after,
+      }
     })
     .filter((work): work is WorkCollaboratorRow & { before: string[]; after: string[] } => Boolean(work))
 
@@ -66,9 +92,24 @@ export async function renameCollaborator(
 
   const completed: UpdatedWork[] = []
   for (const work of affected) {
+    const beforeCredits =
+      kind === "guest-designer" && creditsAvailable
+        ? mergeGuestDesignerCredits(work.guest_designer_credits, work.before)
+        : undefined
+    const update =
+      kind === "guest-designer" && creditsAvailable
+        ? {
+            [column]: work.after,
+            guest_designer_credits: renameGuestDesignerCredits(
+              beforeCredits,
+              sourceName,
+              nextName
+            ),
+          }
+        : { [column]: work.after }
     const { error: updateError } = await supabase
       .from("works")
-      .update({ [column]: work.after })
+      .update(update)
       .eq("id", work.id)
 
     if (updateError) {
@@ -76,14 +117,21 @@ export async function renameCollaborator(
         completed.map((saved) =>
           supabase
             .from("works")
-            .update({ [column]: saved.before })
+            .update(
+              kind === "guest-designer" && creditsAvailable
+                ? {
+                    [column]: saved.before,
+                    guest_designer_credits: saved.beforeCredits ?? [],
+                  }
+                : { [column]: saved.before }
+            )
             .eq("id", saved.id)
         )
       )
       return { error: `更新失敗，已嘗試還原先前作品：${updateError.message}` }
     }
 
-    completed.push({ id: work.id, slug: work.slug, before: work.before })
+    completed.push({ id: work.id, slug: work.slug, before: work.before, beforeCredits })
   }
 
   revalidatePath("/studio/collaborators")

@@ -42,6 +42,10 @@ import {
   type CoverCrop,
 } from "@/lib/cover-crop"
 import { DEFAULT_TEAM_CATEGORY, groupTeamMembersByCategory } from "@/lib/team-members"
+import {
+  WORK_CREDIT_TITLE_MAX,
+  type GuestDesignerCredit,
+} from "@/lib/work-team-credits"
 
 type TeamMemberOption = {
   id: string
@@ -96,8 +100,10 @@ export type WorkFormInitial = {
   /** 不在既有行業分類中的作品專屬顯示名稱 */
   customIndustryNames: string[]
   designerIds: string[]
-  /** 不在正式團隊名冊中的單次合作設計師，只在作品與後台彙整頁保留名稱 */
-  guestDesignerNames: string[]
+  /** 正式成員在此作品中的署名 Title；空白時沿用團隊名冊的全域職稱。 */
+  designerCreditTitles: Record<string, string>
+  /** 不在正式團隊名冊中的單次合作設計師與作品署名 Title。 */
+  guestDesignerCredits: GuestDesignerCredit[]
   /** 攝影師、顧問或外部團隊等其他合作夥伴，只存作品專屬顯示名稱 */
   collaboratorNames: string[]
   /** 舊資料：僅用於表單初始化時的一次性 fallback，不再被編輯或送出 */
@@ -112,7 +118,7 @@ const EMPTY: WorkFormInitial = {
   cover_position_y: DEFAULT_COVER_CROP.positionY, hero_url: "", client_logo_urls: [], video_url: "", size: "medium", description: "", services: "",
   deliverables: "", challenge: "", approach: "", result: "", quote_text: "",
   quote_author: "", awards: "", press: "", published: true, industryValues: [], customIndustryNames: [], designerIds: [],
-  guestDesignerNames: [], collaboratorNames: [],
+  designerCreditTitles: {}, guestDesignerCredits: [], collaboratorNames: [],
   gallery: [], blocks: [],
 }
 
@@ -626,6 +632,23 @@ export function WorkForm({
     return list.includes(v) ? list.filter((x) => x !== v) : [...list, v]
   }
 
+  function toggleDesigner(id: string) {
+    setF((prev) => {
+      const designerIds = toggle(prev.designerIds, id)
+      if (designerIds.includes(id)) return { ...prev, designerIds }
+      const designerCreditTitles = { ...prev.designerCreditTitles }
+      delete designerCreditTitles[id]
+      return { ...prev, designerIds, designerCreditTitles }
+    })
+  }
+
+  function setDesignerCreditTitle(id: string, creditTitle: string) {
+    setF((prev) => ({
+      ...prev,
+      designerCreditTitles: { ...prev.designerCreditTitles, [id]: creditTitle },
+    }))
+  }
+
   async function uploadToStorage(raw: File): Promise<string | null> {
     // 作品是大圖展示 → 上限放寬到 1920px（只砍超大怪圖，正常尺寸原檔不動）
     const file = await downscaleImage(raw, 1920, 0.9)
@@ -792,8 +815,12 @@ export function WorkForm({
       deliverables: toLines(f.deliverables), challenge: f.challenge,
       approach: f.approach, result: f.result, quote_text: f.quote_text,
       quote_author: f.quote_author, awards: toLines(f.awards), press_mentions: toLines(f.press),
-      published: f.published, industryValues: f.industryValues, customIndustryNames: f.customIndustryNames, designerIds: f.designerIds,
-      guestDesignerNames: f.guestDesignerNames,
+      published: f.published, industryValues: f.industryValues, customIndustryNames: f.customIndustryNames,
+      designerCredits: f.designerIds.map((designerId) => ({
+        designerId,
+        creditTitle: f.designerCreditTitles[designerId] ?? "",
+      })),
+      guestDesignerCredits: f.guestDesignerCredits,
       collaboratorNames: f.collaboratorNames,
       blocks: blocks.map((b) => ({
         type: b.type,
@@ -1045,17 +1072,19 @@ export function WorkForm({
                   </Field>
                   <Field
                     label="團隊成員與顧問（可複選）"
-                    hint="正式名單同步自「團隊成員」管理頁；不在名冊中的單次合作設計師，可在 DESIGNER 分類使用「＋ 其他」新增。"
+                    hint="選取後可為每位人員設定這件作品的 Title；留空會沿用團隊名冊職稱。不在名冊中的單次合作設計師，可在 DESIGNER 分類使用「＋ 其他」新增姓名與 Title。"
                   >
                     <TeamMemberSelector
                       members={options.teamMembers}
                       categoryOrder={options.teamCategories}
                       selected={f.designerIds}
-                      onToggle={(v) => set("designerIds", toggle(f.designerIds, v))}
+                      creditTitles={f.designerCreditTitles}
+                      onToggle={toggleDesigner}
+                      onTitleChange={setDesignerCreditTitle}
                       designerExtras={
-                        <CustomNameChips
-                          values={f.guestDesignerNames}
-                          onChange={(values) => set("guestDesignerNames", values)}
+                        <GuestDesignerCreditsInput
+                          values={f.guestDesignerCredits}
+                          onChange={(values) => set("guestDesignerCredits", values)}
                           nameLabel="其他合作設計師"
                           placeholder="設計師名稱"
                           suggestions={options.guestDesignerNames}
@@ -1388,7 +1417,7 @@ export function WorkForm({
                 <p>媒體：{mediaSummary.length > 0 ? mediaSummary.join("、") : "尚未補媒體"}</p>
                 <p>文字：{storySummary.length > 0 ? storySummary.join("、") : "尚未補案例文字"}</p>
                 <p>
-                  關聯：{f.industryValues.length + f.customIndustryNames.length} 個行業 · {f.designerIds.length + f.guestDesignerNames.length} 位團隊成員／臨時設計師 · {f.collaboratorNames.length} 個合作夥伴
+                  關聯：{f.industryValues.length + f.customIndustryNames.length} 個行業 · {f.designerIds.length + f.guestDesignerCredits.length} 位團隊成員／臨時設計師 · {f.collaboratorNames.length} 個合作夥伴
                 </p>
               </div>
             </div>
@@ -2165,13 +2194,17 @@ function TeamMemberSelector({
   members,
   categoryOrder,
   selected,
+  creditTitles,
   onToggle,
+  onTitleChange,
   designerExtras,
 }: {
   members: TeamMemberOption[]
   categoryOrder: string[]
   selected: string[]
+  creditTitles: Record<string, string>
   onToggle: (id: string) => void
+  onTitleChange: (id: string, title: string) => void
   designerExtras?: React.ReactNode
 }) {
   const groups = groupTeamMembersByCategory(members, categoryOrder)
@@ -2187,23 +2220,58 @@ function TeamMemberSelector({
 
   return (
     <div className="space-y-4">
-      {groups.map((group) => (
-        <div key={group.category} className="space-y-2">
-          <p className="break-words text-[11px] font-medium tracking-[0.12em] text-temo-warm-gray/55">
-            {group.category}
-          </p>
-          <ChipGroup
-            items={group.members.map((member) => ({
-              value: member.id,
-              label: member.name_zh ? `${member.name}（${member.name_zh}）` : member.name,
-            }))}
-            selected={selected}
-            onToggle={onToggle}
-          >
-            {/designer/i.test(group.category) ? designerExtras : null}
-          </ChipGroup>
-        </div>
-      ))}
+      {groups.map((group) => {
+        const selectedMembers = group.members.filter((member) => selected.includes(member.id))
+        return (
+          <div key={group.category} className="space-y-2">
+            <p className="break-words text-[11px] font-medium tracking-[0.12em] text-temo-warm-gray/55">
+              {group.category}
+            </p>
+            <ChipGroup
+              items={group.members.map((member) => ({
+                value: member.id,
+                label: member.name_zh ? `${member.name}（${member.name_zh}）` : member.name,
+              }))}
+              selected={selected}
+              onToggle={onToggle}
+            >
+              {/designer/i.test(group.category) ? designerExtras : null}
+            </ChipGroup>
+            {selectedMembers.length > 0 && (
+              <div className="grid gap-2 pt-1">
+                {selectedMembers.map((member) => (
+                  <label
+                    key={`credit-${member.id}`}
+                    className="grid gap-2 rounded-md border border-white/[0.08] bg-black/20 p-3 sm:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)] sm:items-center"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-xs font-medium text-temo-white">
+                        {member.name_zh ? `${member.name}（${member.name_zh}）` : member.name}
+                      </span>
+                      <span className="mt-1 block truncate text-[10px] text-temo-warm-gray/45">
+                        {member.role ? `預設：${member.role}` : "目前沒有預設職稱"}
+                      </span>
+                    </span>
+                    <span className="block min-w-0">
+                      <span className="mb-1.5 block text-[10px] tracking-[0.14em] text-temo-warm-gray/55 uppercase">
+                        本作品 Title
+                      </span>
+                      <input
+                        className={`${inputCls} py-2.5`}
+                        value={creditTitles[member.id] ?? ""}
+                        onChange={(event) => onTitleChange(member.id, event.target.value)}
+                        maxLength={WORK_CREDIT_TITLE_MAX}
+                        placeholder={member.role ? "留空沿用預設職稱" : "例如：設計總監、統籌"}
+                        aria-label={`${member.name} 的本作品 Title`}
+                      />
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
       {!hasDesignerGroup && designerExtras && (
         <div className="space-y-2">
           <p className="break-words text-[11px] font-medium tracking-[0.12em] text-temo-warm-gray/55">
@@ -2212,6 +2280,203 @@ function TeamMemberSelector({
           <div className="flex flex-wrap gap-2">{designerExtras}</div>
         </div>
       )}
+    </div>
+  )
+}
+
+function GuestDesignerCreditsInput({
+  values,
+  onChange,
+  nameLabel,
+  placeholder,
+  suggestions = [],
+  onError,
+}: {
+  values: GuestDesignerCredit[]
+  onChange: (values: GuestDesignerCredit[]) => void
+  nameLabel: string
+  placeholder: string
+  suggestions?: string[]
+  onError: (message: string) => void
+}) {
+  const [nameDraft, setNameDraft] = useState("")
+  const [titleDraft, setTitleDraft] = useState("")
+  const [open, setOpen] = useState(false)
+  const suggestionListId = useId()
+
+  function close() {
+    setNameDraft("")
+    setTitleDraft("")
+    setOpen(false)
+    onError("")
+  }
+
+  function add(nameInput = nameDraft, creditTitleInput = titleDraft) {
+    const name = normalizeCustomName(nameInput)
+    const creditTitle = normalizeCustomName(creditTitleInput)
+    if (!name) return
+    if (name.length > CUSTOM_NAME_MAX) {
+      onError(`${nameLabel}名稱請控制在 ${CUSTOM_NAME_MAX} 個字內`)
+      return
+    }
+    if (creditTitle.length > WORK_CREDIT_TITLE_MAX) {
+      onError(`Title 請控制在 ${WORK_CREDIT_TITLE_MAX} 個字內`)
+      return
+    }
+    if (values.length >= CUSTOM_NAME_LIMIT) {
+      onError(`每件作品最多可新增 ${CUSTOM_NAME_LIMIT} 個${nameLabel}`)
+      return
+    }
+    const key = name.toLocaleLowerCase()
+    if (values.some((existing) => normalizeCustomName(existing.name).toLocaleLowerCase() === key)) {
+      onError(`這個${nameLabel}已經新增過了`)
+      return
+    }
+    onChange([...values, { name, creditTitle }])
+    close()
+  }
+
+  const selectedKeys = new Set(
+    values.map((value) => normalizeCustomName(value.name).toLocaleLowerCase())
+  )
+  const availableSuggestions = suggestions.filter(
+    (name) => !selectedKeys.has(normalizeCustomName(name).toLocaleLowerCase())
+  )
+
+  return (
+    <div className="w-full space-y-2">
+      {values.map((designer, index) => (
+        <div
+          key={`${designer.name}-${index}`}
+          className="grid gap-2 rounded-md border border-temo-gold/25 bg-temo-gold/[0.05] p-3 sm:grid-cols-[minmax(0,0.75fr)_minmax(0,1.25fr)_auto] sm:items-center"
+        >
+          <span className="truncate text-xs font-medium text-temo-gold">{designer.name}</span>
+          <label className="block min-w-0">
+            <span className="mb-1.5 block text-[10px] tracking-[0.14em] text-temo-warm-gray/55 uppercase">
+              本作品 Title
+            </span>
+            <input
+              className={`${inputCls} py-2.5`}
+              value={designer.creditTitle}
+              onChange={(event) =>
+                onChange(
+                  values.map((value, valueIndex) =>
+                    valueIndex === index ? { ...value, creditTitle: event.target.value } : value
+                  )
+                )
+              }
+              maxLength={WORK_CREDIT_TITLE_MAX}
+              placeholder="例如：設計總監、統籌"
+              aria-label={`${designer.name} 的本作品 Title`}
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => {
+              onChange(values.filter((_, valueIndex) => valueIndex !== index))
+              onError("")
+            }}
+            className="inline-flex min-h-10 items-center justify-center rounded-sm px-3 text-temo-warm-gray/55 transition-colors hover:bg-white/[0.04] hover:text-temo-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60"
+            aria-label={`移除${nameLabel} ${designer.name}`}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ))}
+
+      <div className="flex flex-wrap gap-2">
+        {availableSuggestions.slice(0, 8).map((name) => (
+          <button
+            key={`guest-suggestion-${name}`}
+            type="button"
+            onClick={() => add(name, "")}
+            className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs text-temo-warm-gray/55 transition-colors hover:border-temo-gold/45 hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span className="truncate">{name}</span>
+          </button>
+        ))}
+
+        {open ? (
+          <div className="grid w-full gap-2 rounded-md border border-temo-gold/35 bg-temo-gold/[0.04] p-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1.5 block text-[10px] tracking-[0.14em] text-temo-warm-gray/55 uppercase">
+                姓名
+              </span>
+              <input
+                autoFocus
+                className={inputCls}
+                value={nameDraft}
+                onChange={(event) => setNameDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+                    event.preventDefault()
+                    add()
+                  }
+                  if (event.key === "Escape") close()
+                }}
+                maxLength={CUSTOM_NAME_MAX}
+                placeholder={placeholder}
+                aria-label={`${nameLabel}名稱`}
+                list={suggestions.length > 0 ? suggestionListId : undefined}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1.5 block text-[10px] tracking-[0.14em] text-temo-warm-gray/55 uppercase">
+                本作品 Title
+              </span>
+              <input
+                className={inputCls}
+                value={titleDraft}
+                onChange={(event) => setTitleDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+                    event.preventDefault()
+                    add()
+                  }
+                  if (event.key === "Escape") close()
+                }}
+                maxLength={WORK_CREDIT_TITLE_MAX}
+                placeholder="例如：設計總監、統籌"
+                aria-label={`${nameLabel}的本作品 Title`}
+              />
+            </label>
+            {suggestions.length > 0 && (
+              <datalist id={suggestionListId}>
+                {availableSuggestions.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
+            )}
+            <div className="flex gap-2 sm:col-span-2 sm:justify-end">
+              <button
+                type="button"
+                onClick={close}
+                className="min-h-10 rounded-sm px-4 text-xs text-temo-warm-gray/55 transition-colors hover:text-temo-white"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={() => add()}
+                disabled={!nameDraft.trim() || values.length >= CUSTOM_NAME_LIMIT}
+                className="min-h-10 rounded-sm bg-temo-gold px-4 text-xs font-medium text-temo-black transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                新增設計師
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-white/20 px-3 py-1.5 text-xs text-temo-warm-gray/65 transition-colors hover:border-temo-gold/50 hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/60"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            其他
+          </button>
+        )}
+      </div>
     </div>
   )
 }

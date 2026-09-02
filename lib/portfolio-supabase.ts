@@ -6,6 +6,7 @@ import type { Work, Designer } from "@/lib/portfolio-data"
 import { normalizeCoverCrop } from "@/lib/cover-crop"
 import { normalizeCategoryGroupValues } from "@/lib/work-category-groups"
 import { DEFAULT_TEAM_CATEGORY } from "@/lib/team-members"
+import { mergeGuestDesignerCredits } from "@/lib/work-team-credits"
 
 // ─── 作品內容區塊（Adobe Portfolio 式：圖片/文字/YouTube 影片，可同列雙圖） ─────
 // 這是後台表單與前台渲染共用的合約型別，欄位形狀不得隨意更動。
@@ -70,7 +71,11 @@ type WorkIndustryDbRow = {
   industry_value?: Work["industries"][number]
   industries?: IndustryDbRow | null
 }
-type WorkDesignerDbRow = { sort: number | null; designers: DesignerDbRow | null }
+type WorkDesignerDbRow = {
+  designer_id?: string
+  sort: number | null
+  designers: DesignerDbRow | null
+}
 type WorkCategoryGroupDbRow = {
   work_id?: string
   category_group_value: string
@@ -194,7 +199,7 @@ const DETAIL_SELECT = `
   category_groups:category_groups!works_category_group_fkey ( value, label ),
   clients ( slug, name, brief ),
   work_industries ( industries ( value, label ) ),
-  work_designers ( sort, designers ( slug, name, name_zh, role, category, photo_url ) ),
+  work_designers ( designer_id, sort, designers ( slug, name, name_zh, role, category, photo_url ) ),
   work_gallery ( src, alt, caption, sort )
 `
 
@@ -470,18 +475,40 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     }
   }
 
+  // 正式成員的作品署名 Title 獨立讀取；migration 尚未套用時沿用全域 role。
+  const creditTitlesByDesigner = new Map<string, string>()
+  try {
+    const { data: creditRows, error: creditError } = await supa
+      .from("work_designers")
+      .select("designer_id, credit_title")
+      .eq("work_id", w.id)
+    if (!creditError && Array.isArray(creditRows)) {
+      for (const row of creditRows) {
+        const creditTitle = String(row.credit_title ?? "").trim()
+        if (creditTitle) creditTitlesByDesigner.set(row.designer_id, creditTitle)
+      }
+    }
+  } catch {
+    creditTitlesByDesigner.clear()
+  }
+
   const linkedDesigners = (w.work_designers ?? [])
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
-    .map((relation) => relation.designers)
-    .filter((designer): designer is DesignerDbRow => Boolean(designer))
-    .map((d) => ({
-      slug: d.slug ?? "",
-      name: d.name,
-      nameZh: d.name_zh ?? undefined,
-      role: d.role ?? "",
-      photo: d.photo_url ?? "",
-      category: d.category ?? undefined,
-    }))
+    .flatMap((relation) => {
+      const designer = relation.designers
+      if (!designer) return []
+      return [{
+        slug: designer.slug ?? "",
+        name: designer.name,
+        nameZh: designer.name_zh ?? undefined,
+        role: designer.role ?? "",
+        creditTitle: relation.designer_id
+          ? creditTitlesByDesigner.get(relation.designer_id)
+          : undefined,
+        photo: designer.photo_url ?? "",
+        category: designer.category ?? undefined,
+      }]
+    })
 
   // 單次合作設計師仍屬於設計團隊，只是不建立人物檔案或個人頁。
   let guestDesignerNames: string[] = []
@@ -501,12 +528,31 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     guestDesignerNames = []
   }
 
+  let guestDesignerCredits: unknown = []
+  try {
+    const { data: guestCreditRow, error: guestCreditError } = await supa
+      .from("works")
+      .select("guest_designer_credits")
+      .eq("slug", slug)
+      .maybeSingle()
+    if (!guestCreditError) {
+      guestDesignerCredits = (
+        guestCreditRow as unknown as { guest_designer_credits?: unknown }
+      )?.guest_designer_credits
+    }
+  } catch {
+    guestDesignerCredits = []
+  }
+
+  const guestCredits = mergeGuestDesignerCredits(guestDesignerCredits, guestDesignerNames)
+
   const designers = [
     ...linkedDesigners,
-    ...guestDesignerNames.map((name) => ({
+    ...guestCredits.map((credit) => ({
       slug: "",
-      name,
+      name: credit.name,
       role: "",
+      creditTitle: credit.creditTitle || undefined,
       photo: "",
       category: DEFAULT_TEAM_CATEGORY,
     })),
