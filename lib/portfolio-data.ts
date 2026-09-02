@@ -48,6 +48,10 @@ export type Designer = {
   role: string
   photo: string
   instagram?: string
+  threadsUrl?: string
+  facebook?: string
+  lineUrl?: string
+  website?: string
   bio: string[]
   expertise: CategoryGroupValue[]
 }

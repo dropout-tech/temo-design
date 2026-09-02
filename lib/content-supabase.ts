@@ -1,6 +1,7 @@
 // FAQ / 見證 / 網站設定的讀取層（前台與後台顯示共用，走公開 anon，RLS 允許公開讀）。
 import "server-only"
 import { createPublicClient } from "@/lib/supabase/public"
+import { getVisibleDesignerSocialLinks } from "@/lib/designer-social-links"
 import type { CategoryLanding } from "@/lib/category-landing-data"
 import type { BriefSection } from "@/lib/quote-brief-questions"
 import type { BriefSectionDbRow } from "@/lib/brief-supabase-types"
@@ -381,7 +382,13 @@ export type TeamMemberRow = {
   instagram: string | null
   facebook: string | null
   line_url: string | null
+  threads_url: string | null
   website: string | null
+  show_instagram: boolean
+  show_facebook: boolean
+  show_line: boolean
+  show_threads: boolean
+  show_website: boolean
   phone: string | null
   address: string | null
   email: string | null
@@ -402,6 +409,7 @@ export type TeamMember = {
   instagram?: string
   facebook?: string
   lineUrl?: string
+  threadsUrl?: string
   website?: string
   /** 只有 showContact=true 時才帶值（前台據此決定是否公開顯示個人聯絡） */
   phone?: string
@@ -417,14 +425,37 @@ export type TeamGroup = { category: string; members: TeamMember[] }
 /** 分類大項目（team_categories 登錄表；含 id 供後台編輯，依 sort） */
 export type TeamCategory = { id: string; name: string; sort: number }
 
-const TEAM_SELECT =
+const TEAM_SELECT_LEGACY =
   "id, slug, name, name_zh, role, category, photo_url, instagram, facebook, line_url, website, phone, address, email, show_contact, bio, achievements, tags, has_page, sort"
+const TEAM_SELECT =
+  "id, slug, name, name_zh, role, category, photo_url, instagram, facebook, line_url, threads_url, website, show_instagram, show_facebook, show_line, show_threads, show_website, phone, address, email, show_contact, bio, achievements, tags, has_page, sort"
 
 /** 後台：所有團隊成員（含全部欄位，依 sort） */
 export async function getTeamForStudio(): Promise<TeamMemberRow[]> {
   const supa = createPublicClient()
-  const { data } = await supa.from("designers").select(TEAM_SELECT).order("sort")
-  return (data as TeamMemberRow[]) ?? []
+  const current = await supa.from("designers").select(TEAM_SELECT).order("sort")
+  if (!current.error) return (current.data as TeamMemberRow[]) ?? []
+  if (current.error.code !== "42703") return []
+
+  // 新 migration 尚未套用時維持舊站行為；只針對「欄位不存在」降級，其他錯誤仍 fail closed。
+  const legacy = await supa.from("designers").select(TEAM_SELECT_LEGACY).order("sort")
+  return ((legacy.data ?? []) as unknown as Omit<
+    TeamMemberRow,
+    | "threads_url"
+    | "show_instagram"
+    | "show_facebook"
+    | "show_line"
+    | "show_threads"
+    | "show_website"
+  >[]).map((row) => ({
+    ...row,
+    threads_url: null,
+    show_instagram: true,
+    show_facebook: true,
+    show_line: true,
+    show_threads: true,
+    show_website: true,
+  }))
 }
 
 /** 分類大項目清單（依 sort）；表不存在時容錯回空陣列 */
@@ -457,10 +488,8 @@ export async function getTeamGrouped(): Promise<TeamGroup[]> {
       nameZh: r.name_zh ?? undefined,
       role: r.role ?? "",
       image: r.photo_url ?? "",
-      instagram: r.instagram ?? undefined,
-      facebook: r.facebook ?? undefined,
-      lineUrl: r.line_url ?? undefined,
-      website: r.website ?? undefined,
+      // 顯示開關在 server-only 資料層先套用；停用的網址不會進入前台 client payload。
+      ...getVisibleDesignerSocialLinks(r),
       phone: r.show_contact ? r.phone ?? undefined : undefined,
       address: r.show_contact ? r.address ?? undefined : undefined,
       email: r.show_contact ? r.email ?? undefined : undefined,

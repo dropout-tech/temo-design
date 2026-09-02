@@ -19,6 +19,7 @@ type Person = {
   role: string
   image: string
   instagram?: string
+  threadsUrl?: string
   facebook?: string
   lineUrl?: string
   website?: string
@@ -367,7 +368,8 @@ function toSafeExternalUrl(value?: string): string | undefined {
 function DesignerSocialLinks({ person }: { person: Person }) {
   const links = [
     { href: toSafeExternalUrl(person.instagram), label: "Instagram", platform: "instagram" },
-    { href: toSafeExternalUrl(person.facebook), label: "Facebook", platform: "facebook" },
+    { href: toSafeExternalUrl(person.threadsUrl), label: "Threads", platform: "threads" },
+    { href: toSafeExternalUrl(person.facebook), label: "Facebook／Meta", platform: "facebook" },
     { href: toSafeExternalUrl(person.lineUrl), label: "LINE", platform: "line" },
     { href: toSafeExternalUrl(person.website), label: "個人網站", platform: "website" },
   ].filter((link): link is typeof link & { href: string } => Boolean(link.href))

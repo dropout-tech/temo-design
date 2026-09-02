@@ -13,7 +13,13 @@ export type DesignerInput = {
   instagram: string
   facebook: string
   line_url: string
+  threads_url: string
   website: string
+  show_instagram: boolean
+  show_facebook: boolean
+  show_line: boolean
+  show_threads: boolean
+  show_website: boolean
   phone: string
   address: string
   email: string
@@ -59,8 +65,11 @@ export async function saveDesigner(
   const instagram = cleanPublicUrl(input.instagram, "Instagram 連結")
   const facebook = cleanPublicUrl(input.facebook, "Facebook 連結")
   const lineUrl = cleanPublicUrl(input.line_url, "LINE 連結", { httpsOnly: true })
+  const threadsUrl = cleanPublicUrl(input.threads_url, "Threads 連結")
   const website = cleanPublicUrl(input.website, "個人網站連結")
-  const invalidUrl = [instagram, facebook, lineUrl, website].find((result) => result.error)
+  const invalidUrl = [instagram, facebook, lineUrl, threadsUrl, website].find(
+    (result) => result.error
+  )
   if (invalidUrl?.error) return { error: invalidUrl.error }
 
   const row = {
@@ -73,7 +82,13 @@ export async function saveDesigner(
     instagram: instagram.value,
     facebook: facebook.value,
     line_url: lineUrl.value,
+    threads_url: threadsUrl.value,
     website: website.value,
+    show_instagram: input.show_instagram,
+    show_facebook: input.show_facebook,
+    show_line: input.show_line,
+    show_threads: input.show_threads,
+    show_website: input.show_website,
     phone: input.phone.trim() || null,
     address: input.address.trim() || null,
     email: input.email.trim() || null,
@@ -88,6 +103,7 @@ export async function saveDesigner(
     const { error } = await supabase.from("designers").update(row).eq("id", id)
     if (error) return { error: error.message }
     revalidatePath("/about")
+    revalidatePath("/team/[slug]", "page")
     return { id }
   }
   const { data, error } = await supabase
@@ -97,6 +113,7 @@ export async function saveDesigner(
     .single()
   if (error) return { error: error.message }
   revalidatePath("/about")
+  revalidatePath("/team/[slug]", "page")
   return { id: data.id }
 }
 
@@ -105,6 +122,7 @@ export async function deleteDesigner(id: string): Promise<{ error?: string }> {
   const { error } = await supabase.from("designers").delete().eq("id", id)
   if (error) return { error: error.message }
   revalidatePath("/about")
+  revalidatePath("/team/[slug]", "page")
   return {}
 }
 

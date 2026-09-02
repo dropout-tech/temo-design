@@ -1,6 +1,7 @@
 // 前台從 Supabase 讀作品資料，並映射成前台元件既有的型別（Work / DetailProject）。
 import "server-only"
 import { createPublicClient } from "@/lib/supabase/public"
+import { getVisibleDesignerSocialLinks } from "@/lib/designer-social-links"
 import type { DetailProject } from "@/components/pages/portfolio-detail-client"
 import type { Work, Designer } from "@/lib/portfolio-data"
 import { normalizeCoverCrop } from "@/lib/cover-crop"
@@ -71,6 +72,15 @@ type DesignerDbRow = {
   category?: string | null
   photo_url: string | null
   instagram?: string | null
+  threads_url?: string | null
+  facebook?: string | null
+  line_url?: string | null
+  website?: string | null
+  show_instagram?: boolean | null
+  show_threads?: boolean | null
+  show_facebook?: boolean | null
+  show_line?: boolean | null
+  show_website?: boolean | null
   bio?: string[] | null
 }
 
@@ -257,20 +267,34 @@ export async function getDesignerSlugs(): Promise<string[]> {
 /** 單一設計師，映射成前台 Designer 形狀（expertise 目前留空，前台會自動隱藏該區） */
 export async function getDesignerBySlug(slug: string): Promise<Designer | null> {
   const supa = createPublicClient()
-  const { data } = await supa
+  const current = await supa
     .from("designers")
-    .select("slug, name, name_zh, role, photo_url, instagram, bio")
+    .select(
+      "slug, name, name_zh, role, photo_url, instagram, threads_url, facebook, line_url, website, show_instagram, show_threads, show_facebook, show_line, show_website, bio"
+    )
     .eq("slug", slug)
     .maybeSingle()
+  const legacy =
+    current.error?.code === "42703"
+      ? await supa
+          .from("designers")
+          .select("slug, name, name_zh, role, photo_url, instagram, bio")
+          .eq("slug", slug)
+          .maybeSingle()
+      : null
+  const data = current.error ? legacy?.data : current.data
   if (!data) return null
   const d = data as unknown as DesignerDbRow
+  const socialSource = legacy
+    ? { ...d, show_instagram: true }
+    : d
   return {
     slug: d.slug ?? slug,
     name: d.name,
     nameZh: d.name_zh ?? undefined,
     role: d.role ?? "",
     photo: d.photo_url ?? "",
-    instagram: d.instagram ?? undefined,
+    ...getVisibleDesignerSocialLinks(socialSource),
     bio: d.bio ?? [],
     expertise: [],
   }

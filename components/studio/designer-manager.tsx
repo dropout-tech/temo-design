@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useTransition } from "react"
+import { useId, useRef, useState, useTransition } from "react"
 import Image from "next/image"
 import {
   Loader2,
@@ -13,7 +13,9 @@ import {
   GripVertical,
   Pencil,
   X,
+  Globe,
 } from "lucide-react"
+import { SocialIcon } from "@/components/social-icons"
 import { createClient } from "@/lib/supabase/client"
 import { downscaleImage } from "@/lib/downscale-image"
 import {
@@ -45,7 +47,13 @@ type Row = {
   instagram: string
   facebook: string
   line_url: string
+  threads_url: string
   website: string
+  show_instagram: boolean
+  show_facebook: boolean
+  show_line: boolean
+  show_threads: boolean
+  show_website: boolean
   phone: string
   address: string
   email: string
@@ -56,6 +64,57 @@ type Row = {
   has_page: boolean
   sort: number
 }
+
+type SocialUrlKey = "instagram" | "facebook" | "line_url" | "threads_url" | "website"
+type SocialVisibilityKey =
+  | "show_instagram"
+  | "show_facebook"
+  | "show_line"
+  | "show_threads"
+  | "show_website"
+
+const SOCIAL_FIELDS: {
+  urlKey: SocialUrlKey
+  visibilityKey: SocialVisibilityKey
+  label: string
+  placeholder: string
+  platform?: string
+}[] = [
+  {
+    urlKey: "instagram",
+    visibilityKey: "show_instagram",
+    label: "Instagram",
+    placeholder: "https://instagram.com/...",
+    platform: "instagram",
+  },
+  {
+    urlKey: "facebook",
+    visibilityKey: "show_facebook",
+    label: "Facebook／Meta",
+    placeholder: "https://facebook.com/...",
+    platform: "facebook",
+  },
+  {
+    urlKey: "line_url",
+    visibilityKey: "show_line",
+    label: "LINE",
+    placeholder: "https://lin.ee/...",
+    platform: "line",
+  },
+  {
+    urlKey: "threads_url",
+    visibilityKey: "show_threads",
+    label: "Threads",
+    placeholder: "https://threads.net/@...",
+    platform: "threads",
+  },
+  {
+    urlKey: "website",
+    visibilityKey: "show_website",
+    label: "個人網站",
+    placeholder: "https://...",
+  },
+]
 
 type Cat = { id: string; name: string }
 
@@ -95,7 +154,13 @@ export function DesignerManager({
         instagram: "",
         facebook: "",
         line_url: "",
+        threads_url: "",
         website: "",
+        show_instagram: true,
+        show_facebook: true,
+        show_line: true,
+        show_threads: true,
+        show_website: true,
         phone: "",
         address: "",
         email: "",
@@ -467,6 +532,7 @@ function Card({
   const [uploading, setUploading] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState("")
+  const socialFieldId = useId()
 
   const set = (patch: Partial<Row>) => {
     onChange(patch)
@@ -508,7 +574,13 @@ function Card({
           instagram: row.instagram,
           facebook: row.facebook,
           line_url: row.line_url,
+          threads_url: row.threads_url,
           website: row.website,
+          show_instagram: row.show_instagram,
+          show_facebook: row.show_facebook,
+          show_line: row.show_line,
+          show_threads: row.show_threads,
+          show_website: row.show_website,
           phone: row.phone,
           address: row.address,
           email: row.email,
@@ -651,25 +723,68 @@ function Card({
             <input className={inputCls} value={row.slug} onChange={(e) => set({ slug: e.target.value })} placeholder="kevin" />
           </div>
 
-          {/* 社群連結（前台成員卡會顯示 icon） */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {/* 社群連結：網址與前台顯示狀態分開儲存，隱藏不會清除網址。 */}
+          <fieldset className="space-y-3 border-t border-white/8 pt-4">
+            <legend className="sr-only">社群連結與前台顯示設定</legend>
             <div>
-              <label className={labelCls}>Instagram 連結</label>
-              <input type="url" maxLength={500} className={inputCls} value={row.instagram} onChange={(e) => set({ instagram: e.target.value })} placeholder="https://instagram.com/..." />
+              <p className="text-[11px] tracking-[0.15em] text-temo-gold uppercase">社群連結</p>
+              <p className="mt-1 text-[11px] leading-relaxed text-temo-warm-gray/50">
+                關閉「前台顯示」只會隱藏連結，不會清除已填入的網址。
+              </p>
             </div>
-            <div>
-              <label className={labelCls}>Facebook 連結</label>
-              <input type="url" maxLength={500} className={inputCls} value={row.facebook} onChange={(e) => set({ facebook: e.target.value })} placeholder="https://facebook.com/..." />
+            <div className="grid min-w-0 grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2">
+              {SOCIAL_FIELDS.map((field) => {
+                const inputId = `${socialFieldId}-${field.urlKey}`
+                return (
+                  <div key={field.urlKey} className="min-w-0 space-y-2">
+                    <div className="flex min-w-0 items-center justify-between gap-3">
+                      <label
+                        htmlFor={inputId}
+                        className="flex min-w-0 items-center gap-2 text-[11px] tracking-[0.12em] text-temo-warm-gray/70 uppercase"
+                      >
+                        {field.platform ? (
+                          <SocialIcon
+                            platform={field.platform}
+                            className="h-4 w-4 shrink-0 text-temo-gold/75"
+                          />
+                        ) : (
+                          <Globe
+                            className="h-4 w-4 shrink-0 text-temo-gold/75"
+                            aria-hidden="true"
+                          />
+                        )}
+                        <span className="truncate">{field.label}</span>
+                      </label>
+                      <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] text-temo-warm-gray/70">
+                        <input
+                          type="checkbox"
+                          checked={row[field.visibilityKey]}
+                          onChange={(event) =>
+                            set({ [field.visibilityKey]: event.target.checked } as Partial<Row>)
+                          }
+                          className="h-4 w-4 accent-temo-gold"
+                        />
+                        <span className="sr-only">{field.label}</span>
+                        前台顯示
+                      </label>
+                    </div>
+                    <input
+                      id={inputId}
+                      type="url"
+                      inputMode="url"
+                      maxLength={500}
+                      className={inputCls}
+                      value={row[field.urlKey]}
+                      onChange={(event) =>
+                        set({ [field.urlKey]: event.target.value } as Partial<Row>)
+                      }
+                      placeholder={field.placeholder}
+                    />
+                  </div>
+                )
+              })}
             </div>
-            <div>
-              <label className={labelCls}>LINE 連結</label>
-              <input type="url" maxLength={500} className={inputCls} value={row.line_url} onChange={(e) => set({ line_url: e.target.value })} placeholder="https://lin.ee/..." />
-            </div>
-            <div>
-              <label className={labelCls}>個人網站連結</label>
-              <input type="url" maxLength={500} className={inputCls} value={row.website} onChange={(e) => set({ website: e.target.value })} placeholder="https://..." />
-            </div>
-          </div>
+          </fieldset>
 
           {/* 個人聯絡（是否公開由下方開關控制） */}
           <div className="rounded-md border border-white/8 bg-white/[0.015] p-3.5 space-y-3">

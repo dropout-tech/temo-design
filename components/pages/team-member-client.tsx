@@ -3,13 +3,24 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowLeft, ArrowUpRight, Instagram } from "lucide-react"
+import { ArrowLeft, ArrowUpRight, Globe } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
+import { SocialIcon } from "@/components/social-icons"
 import { cn } from "@/lib/utils"
 import { getCategoryLabel, type Designer, type Work } from "@/lib/portfolio-data"
 import { getCoverCropStyle } from "@/lib/cover-crop"
 import { getWorkCategoryGroupValues } from "@/lib/work-category-groups"
+
+function toSafeExternalUrl(value?: string): string | undefined {
+  if (!value) return undefined
+  try {
+    const url = new URL(value)
+    return url.protocol === "http:" || url.protocol === "https:" ? value : undefined
+  } catch {
+    return undefined
+  }
+}
 
 export function TeamMemberClient({
   designer,
@@ -24,6 +35,13 @@ export function TeamMemberClient({
   const catLabel = (v: string) =>
     categoryGroups?.find((g) => g.value === v)?.label ?? getCategoryLabel(v as never)
   const [visible, setVisible] = useState(false)
+  const socialLinks = [
+    { href: toSafeExternalUrl(designer.instagram), label: "Instagram", platform: "instagram" },
+    { href: toSafeExternalUrl(designer.threadsUrl), label: "Threads", platform: "threads" },
+    { href: toSafeExternalUrl(designer.facebook), label: "Facebook／Meta", platform: "facebook" },
+    { href: toSafeExternalUrl(designer.lineUrl), label: "LINE", platform: "line" },
+    { href: toSafeExternalUrl(designer.website), label: "個人網站", platform: "website" },
+  ].filter((link): link is typeof link & { href: string } => Boolean(link.href))
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80)
     return () => clearTimeout(t)
@@ -113,21 +131,27 @@ export function TeamMemberClient({
                 )}
 
                 {/* Social */}
-                <div className="flex items-center gap-4 mt-8 pt-8 border-t border-white/8">
-                  {designer.instagram && (
-                    <Link
-                      href={designer.instagram}
+                <div className="flex flex-wrap items-center gap-3 mt-8 pt-8 border-t border-white/8">
+                  {socialLinks.map(({ href, label, platform }) => (
+                    <a
+                      key={platform}
+                      href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 py-3 text-white/50 hover:text-temo-gold transition-colors text-xs tracking-widest"
+                      aria-label={`前往 ${designer.name} 的 ${label}`}
+                      title={label}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 text-white/50 transition-colors hover:border-temo-gold/50 hover:text-temo-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-temo-gold/70"
                     >
-                      <Instagram className="w-4 h-4" />
-                      INSTAGRAM
-                    </Link>
-                  )}
+                      {platform === "website" ? (
+                        <Globe className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <SocialIcon platform={platform} className="h-4 w-4" />
+                      )}
+                    </a>
+                  ))}
                   <Link
                     href="/contact"
-                    className="ml-auto inline-flex items-center gap-2 px-6 py-3 bg-temo-gold text-black text-[11px] font-bold tracking-[0.25em] uppercase rounded-sm hover:brightness-110 transition-all"
+                    className="ml-auto inline-flex min-h-11 items-center gap-2 px-6 py-3 bg-temo-gold text-black text-[11px] font-bold tracking-[0.25em] uppercase rounded-sm hover:brightness-110 transition-all"
                   >
                     合作邀約
                     <ArrowUpRight className="w-3.5 h-3.5" />
