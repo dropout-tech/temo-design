@@ -3,6 +3,7 @@
 // 後台「文字」區塊用的富文本編輯器（Quill）。內容以 HTML 字串進出，實際落地前
 // server action 會再跑一次 lib/sanitize-rich-text.ts 消毒，這裡只負責編輯體驗。
 import dynamic from "next/dynamic"
+import type { CSSProperties } from "react"
 import "react-quill-new/dist/quill.snow.css"
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false })
@@ -52,13 +53,29 @@ export function RichTextEditor({
   value,
   onChange,
   placeholder,
+  fontSize,
+  lineHeight,
+  letterSpacing,
+  fontWeight,
 }: {
   value: string
   onChange: (html: string) => void
   placeholder?: string
+  fontSize?: number
+  lineHeight?: number
+  letterSpacing?: number
+  fontWeight?: number
 }) {
+  const previewStyle = {
+    "--studio-rte-font-size": fontSize ? `${fontSize}px` : undefined,
+    "--studio-rte-line-height": lineHeight ?? undefined,
+    "--studio-rte-letter-spacing":
+      letterSpacing === undefined ? undefined : `${letterSpacing}em`,
+    "--studio-rte-font-weight": fontWeight ?? undefined,
+  } as CSSProperties
+
   return (
-    <div className="studio-rte">
+    <div className="studio-rte" style={previewStyle}>
       <ReactQuill
         theme="snow"
         value={value}

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "test:contact": "tsx scripts/contact-submission.test.ts && tsx scripts/contact-mailer.test.ts && tsx scripts/google-apps-script-contact-mailer.test.ts",
+    "test:work-blocks": "tsx --test scripts/work-block-config.test.ts scripts/sanitize-rich-text.test.ts",
     "test:work-team-credits": "tsx scripts/work-team-credits.test.ts"
   },
   "dependencies": {

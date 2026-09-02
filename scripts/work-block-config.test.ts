@@ -3,11 +3,19 @@ import test from "node:test"
 import {
   BUTTON_DEFAULTS,
   IMAGE_HEIGHT_DEFAULTS,
+  TEXT_BLOCK_DEFAULTS,
   clampInteger,
+  getWorkImageCount,
   getSafeWorkBlockHref,
+  hasCompleteWorkImageSlots,
   isButtonFontWeight,
   normalizeHexColor,
   normalizeOptionalImageHeightPercent,
+  normalizeOptionalTextFontSize,
+  normalizeOptionalTextFontWeight,
+  normalizeOptionalTextLetterSpacing,
+  normalizeOptionalTextLineHeight,
+  normalizeWorkImageCount,
 } from "../lib/work-block-config"
 
 test("button links accept supported destinations", () => {
@@ -45,4 +53,42 @@ test("optional desktop image heights preserve auto mode and clamp custom values"
     normalizeOptionalImageHeightPercent("invalid"),
     IMAGE_HEIGHT_DEFAULTS.desktopPercent
   )
+})
+
+test("text block typography preserves website defaults and clamps explicit values", () => {
+  assert.equal(normalizeOptionalTextFontSize(null), null)
+  assert.equal(normalizeOptionalTextFontSize(96), 72)
+  assert.equal(normalizeOptionalTextLineHeight("1.675"), 1.675)
+  assert.equal(normalizeOptionalTextLineHeight(0.5), 1)
+  assert.equal(normalizeOptionalTextLetterSpacing("0.126"), 0.126)
+  assert.equal(normalizeOptionalTextLetterSpacing(1), 0.3)
+  assert.equal(normalizeOptionalTextFontWeight("700"), 700)
+  assert.equal(normalizeOptionalTextFontWeight(600), TEXT_BLOCK_DEFAULTS.fontWeight)
+})
+
+test("image count is normalized and inferred from the highest populated slot", () => {
+  assert.equal(normalizeWorkImageCount(0), 1)
+  assert.equal(normalizeWorkImageCount(9), 4)
+  assert.equal(getWorkImageCount({ src: "one.jpg" }), 1)
+  assert.equal(getWorkImageCount({ src: "one.jpg", src2: "two.jpg" }), 2)
+  assert.equal(getWorkImageCount({ src: "one.jpg", src3: "three.jpg" }), 3)
+  assert.equal(getWorkImageCount({ src: "one.jpg", src4: "four.jpg" }), 4)
+})
+
+test("image layouts require every active slot to be populated", () => {
+  const fourImages = {
+    src: "one.jpg",
+    src2: "two.jpg",
+    src3: "three.jpg",
+    src4: "four.jpg",
+  }
+
+  assert.equal(hasCompleteWorkImageSlots(fourImages, 4), true)
+  assert.equal(hasCompleteWorkImageSlots({ src: "one.jpg" }, 1), true)
+  assert.equal(hasCompleteWorkImageSlots({ src: "one.jpg" }, 2), false)
+  assert.equal(
+    hasCompleteWorkImageSlots({ src: "one.jpg", src2: "two.jpg", src4: "four.jpg" }, 4),
+    false
+  )
+  assert.equal(hasCompleteWorkImageSlots({ src: "   " }, 1), false)
 })

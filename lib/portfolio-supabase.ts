@@ -23,7 +23,21 @@ export type WorkBlock = {
   width2?: number | null
   height2?: number | null
   desktopHeightPercent2?: number | null
+  src3?: string | null
+  alt3?: string | null
+  width3?: number | null
+  height3?: number | null
+  desktopHeightPercent3?: number | null
+  src4?: string | null
+  alt4?: string | null
+  width4?: number | null
+  height4?: number | null
+  desktopHeightPercent4?: number | null
   text?: string | null // 對應 DB 欄 text_content
+  textFontSize?: number | null
+  textLineHeight?: number | null
+  textLetterSpacing?: number | null
+  textFontWeight?: number | null
   videoUrl?: string | null // 對應 DB 欄 video_url
   caption?: string | null
   captionMobile?: string | null // 對應 DB 欄 caption_mobile；空值時前台沿用 caption
@@ -171,7 +185,21 @@ type WorkBlockDbRow = {
   width2: number | null
   height2: number | null
   desktop_height_percent2: number | null
+  src3: string | null
+  alt3: string | null
+  width3: number | null
+  height3: number | null
+  desktop_height_percent3: number | null
+  src4: string | null
+  alt4: string | null
+  width4: number | null
+  height4: number | null
+  desktop_height_percent4: number | null
   text_content: string | null
+  text_font_size: number | null
+  text_line_height: number | null
+  text_letter_spacing: number | null
+  text_font_weight: number | null
   video_url: string | null
   caption: string | null
   caption_mobile: string | null
@@ -655,7 +683,21 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
         width2: b.width2 ?? null,
         height2: b.height2 ?? null,
         desktopHeightPercent2: b.desktop_height_percent2 ?? null,
+        src3: b.src3 ?? null,
+        alt3: b.alt3 ?? null,
+        width3: b.width3 ?? null,
+        height3: b.height3 ?? null,
+        desktopHeightPercent3: b.desktop_height_percent3 ?? null,
+        src4: b.src4 ?? null,
+        alt4: b.alt4 ?? null,
+        width4: b.width4 ?? null,
+        height4: b.height4 ?? null,
+        desktopHeightPercent4: b.desktop_height_percent4 ?? null,
         text: b.text_content ?? null,
+        textFontSize: b.text_font_size ?? null,
+        textLineHeight: b.text_line_height ?? null,
+        textLetterSpacing: b.text_letter_spacing ?? null,
+        textFontWeight: b.text_font_weight ?? null,
         videoUrl: b.video_url ?? null,
         caption: b.caption ?? null,
         captionMobile: b.caption_mobile ?? null,

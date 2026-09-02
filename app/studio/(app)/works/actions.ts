@@ -12,10 +12,16 @@ import {
   WORK_BLOCK_LIMITS,
   clampInteger,
   getSafeWorkBlockHref,
+  hasCompleteWorkImageSlots,
   isButtonFontWeight,
   isHexColor,
   normalizeHexColor,
   normalizeOptionalImageHeightPercent,
+  normalizeOptionalTextFontSize,
+  normalizeOptionalTextFontWeight,
+  normalizeOptionalTextLetterSpacing,
+  normalizeOptionalTextLineHeight,
+  normalizeWorkImageCount,
 } from "@/lib/work-block-config"
 import { normalizeCategoryGroupValues } from "@/lib/work-category-groups"
 import {
@@ -64,6 +70,8 @@ export type WorkInput = {
   collaboratorNames: string[]
   blocks: {
     type: "image" | "video" | "text" | "divider" | "button"
+    /** 僅供儲存時驗證／裁切欄位；DB 由 src2～src4 是否有值反推。 */
+    image_count: number
     src: string
     alt: string
     width: number | null
@@ -74,7 +82,21 @@ export type WorkInput = {
     width2: number | null
     height2: number | null
     desktop_height_percent2: number | null
+    src3: string
+    alt3: string
+    width3: number | null
+    height3: number | null
+    desktop_height_percent3: number | null
+    src4: string
+    alt4: string
+    width4: number | null
+    height4: number | null
+    desktop_height_percent4: number | null
     text_content: string
+    text_font_size: number | null
+    text_line_height: number | null
+    text_letter_spacing: number | null
+    text_font_weight: number | null
     video_url: string
     caption: string
     caption_mobile: string
@@ -233,6 +255,18 @@ export async function saveWork(
   }
 
   for (const [index, block] of input.blocks.entries()) {
+    if (block.type === "image") {
+      const imageCount = normalizeWorkImageCount(block.image_count)
+      if (!hasCompleteWorkImageSlots(block, imageCount)) {
+        return {
+          error:
+            imageCount === 1
+              ? `第 ${index + 1} 個圖片區塊尚未上傳圖片`
+              : `第 ${index + 1} 個多圖區塊尚未放滿圖片`,
+        }
+      }
+    }
+
     if (block.type === "button") {
       if (!block.button_text.trim()) {
         return { error: `第 ${index + 1} 個按鈕區塊尚未填寫按鈕文字` }
@@ -329,109 +363,136 @@ export async function saveWork(
     if (error) return { error: error.message }
   }
 
-  // 重建 內容區塊（work_blocks，取代 work_gallery 成為作品內容的唯一來源）
-  // 注意：migration 0015 尚未套用到 DB 時，work_blocks 表不存在，這裡會回傳錯誤並讓 saveWork 失敗——
-  // 這是預期行為（資料層就緒前不假裝存檔成功），不吞掉錯誤。
-  await supabase.from("work_blocks").delete().eq("work_id", workId!)
-  if (input.blocks.length > 0) {
-    const { error } = await supabase.from("work_blocks").insert(
-      input.blocks.map((b, i) => {
-        const cleanText = b.type === "text" ? sanitizeRichText(b.text_content) : b.text_content.trim()
-        const safeButtonUrl = b.type === "button" ? getSafeWorkBlockHref(b.button_url) : null
-        return {
-          work_id: workId!,
-          type: b.type,
-          src: b.src.trim() || null,
-          alt: b.alt.trim() || null,
-          width: b.width,
-          height: b.height,
-          desktop_height_percent:
-            b.type === "image"
-              ? normalizeOptionalImageHeightPercent(b.desktop_height_percent)
-              : null,
-          src2: b.src2.trim() || null,
-          alt2: b.alt2.trim() || null,
-          width2: b.width2,
-          height2: b.height2,
-          desktop_height_percent2:
-            b.type === "image" && b.src2.trim()
-              ? normalizeOptionalImageHeightPercent(b.desktop_height_percent2)
-              : null,
-          text_content:
-            b.type === "text" ? (richTextIsEmpty(cleanText) ? null : cleanText) : cleanText || null,
-          video_url: b.video_url.trim() || null,
-          caption: b.caption.trim() || null,
-          caption_mobile: b.caption_mobile.trim() || null,
-          divider_color:
-            b.type === "divider" ? normalizeHexColor(b.divider_color, DIVIDER_DEFAULTS.color) : null,
-          divider_width:
-            b.type === "divider"
-              ? clampInteger(
-                  b.divider_width,
-                  WORK_BLOCK_LIMITS.dividerWidth.min,
-                  WORK_BLOCK_LIMITS.dividerWidth.max,
-                  DIVIDER_DEFAULTS.width
-                )
-              : null,
-          divider_thickness:
-            b.type === "divider"
-              ? clampInteger(
-                  b.divider_thickness,
-                  WORK_BLOCK_LIMITS.dividerThickness.min,
-                  WORK_BLOCK_LIMITS.dividerThickness.max,
-                  DIVIDER_DEFAULTS.thickness
-                )
-              : null,
-          button_text: b.type === "button" ? b.button_text.trim() : null,
-          button_url: safeButtonUrl,
-          button_open_new_tab: b.type === "button" ? Boolean(b.button_open_new_tab) : null,
-          button_width:
-            b.type === "button"
-              ? clampInteger(
-                  b.button_width,
-                  WORK_BLOCK_LIMITS.buttonWidth.min,
-                  WORK_BLOCK_LIMITS.buttonWidth.max,
-                  BUTTON_DEFAULTS.width
-                )
-              : null,
-          button_height:
-            b.type === "button"
-              ? clampInteger(
-                  b.button_height,
-                  WORK_BLOCK_LIMITS.buttonHeight.min,
-                  WORK_BLOCK_LIMITS.buttonHeight.max,
-                  BUTTON_DEFAULTS.height
-                )
-              : null,
-          button_text_color:
-            b.type === "button"
-              ? normalizeHexColor(b.button_text_color, BUTTON_DEFAULTS.textColor)
-              : null,
-          button_background_color:
-            b.type === "button"
-              ? normalizeHexColor(b.button_background_color, BUTTON_DEFAULTS.backgroundColor)
-              : null,
-          button_font_size:
-            b.type === "button"
-              ? clampInteger(
-                  b.button_font_size,
-                  WORK_BLOCK_LIMITS.buttonFontSize.min,
-                  WORK_BLOCK_LIMITS.buttonFontSize.max,
-                  BUTTON_DEFAULTS.fontSize
-                )
-              : null,
-          button_font_weight:
-            b.type === "button"
-              ? isButtonFontWeight(b.button_font_weight)
-                ? Number(b.button_font_weight)
-                : BUTTON_DEFAULTS.fontWeight
-              : null,
-          sort: i,
-        }
-      })
-    )
-    if (error) return { error: error.message }
-  }
+  // 一次 RPC 交易式替換全部內容區塊。若新欄位或任一列驗證失敗，既有區塊不會先被刪除。
+  const blockRows = input.blocks.map((b, i) => {
+    const imageCount = normalizeWorkImageCount(b.image_count)
+    const cleanText =
+      b.type === "text" ? sanitizeRichText(b.text_content) : b.text_content.trim()
+    const safeButtonUrl = b.type === "button" ? getSafeWorkBlockHref(b.button_url) : null
+    return {
+      type: b.type,
+      src: b.type === "image" ? b.src.trim() || null : null,
+      alt: b.type === "image" ? b.alt.trim() || null : null,
+      width: b.type === "image" ? b.width : null,
+      height: b.type === "image" ? b.height : null,
+      desktop_height_percent:
+        b.type === "image"
+          ? normalizeOptionalImageHeightPercent(b.desktop_height_percent)
+          : null,
+      src2: b.type === "image" && imageCount >= 2 ? b.src2.trim() || null : null,
+      alt2: b.type === "image" && imageCount >= 2 ? b.alt2.trim() || null : null,
+      width2: b.type === "image" && imageCount >= 2 ? b.width2 : null,
+      height2: b.type === "image" && imageCount >= 2 ? b.height2 : null,
+      desktop_height_percent2:
+        b.type === "image" && imageCount >= 2 && b.src2.trim()
+          ? normalizeOptionalImageHeightPercent(b.desktop_height_percent2)
+          : null,
+      src3: b.type === "image" && imageCount >= 3 ? b.src3.trim() || null : null,
+      alt3: b.type === "image" && imageCount >= 3 ? b.alt3.trim() || null : null,
+      width3: b.type === "image" && imageCount >= 3 ? b.width3 : null,
+      height3: b.type === "image" && imageCount >= 3 ? b.height3 : null,
+      desktop_height_percent3:
+        b.type === "image" && imageCount >= 3
+          ? normalizeOptionalImageHeightPercent(b.desktop_height_percent3)
+          : null,
+      src4: b.type === "image" && imageCount >= 4 ? b.src4.trim() || null : null,
+      alt4: b.type === "image" && imageCount >= 4 ? b.alt4.trim() || null : null,
+      width4: b.type === "image" && imageCount >= 4 ? b.width4 : null,
+      height4: b.type === "image" && imageCount >= 4 ? b.height4 : null,
+      desktop_height_percent4:
+        b.type === "image" && imageCount >= 4
+          ? normalizeOptionalImageHeightPercent(b.desktop_height_percent4)
+          : null,
+      text_content:
+        b.type === "text" ? (richTextIsEmpty(cleanText) ? null : cleanText) : null,
+      text_font_size:
+        b.type === "text" ? normalizeOptionalTextFontSize(b.text_font_size) : null,
+      text_line_height:
+        b.type === "text" ? normalizeOptionalTextLineHeight(b.text_line_height) : null,
+      text_letter_spacing:
+        b.type === "text"
+          ? normalizeOptionalTextLetterSpacing(b.text_letter_spacing)
+          : null,
+      text_font_weight:
+        b.type === "text" ? normalizeOptionalTextFontWeight(b.text_font_weight) : null,
+      video_url: b.type === "video" ? b.video_url.trim() || null : null,
+      caption: b.caption.trim() || null,
+      caption_mobile: b.caption_mobile.trim() || null,
+      divider_color:
+        b.type === "divider"
+          ? normalizeHexColor(b.divider_color, DIVIDER_DEFAULTS.color)
+          : null,
+      divider_width:
+        b.type === "divider"
+          ? clampInteger(
+              b.divider_width,
+              WORK_BLOCK_LIMITS.dividerWidth.min,
+              WORK_BLOCK_LIMITS.dividerWidth.max,
+              DIVIDER_DEFAULTS.width
+            )
+          : null,
+      divider_thickness:
+        b.type === "divider"
+          ? clampInteger(
+              b.divider_thickness,
+              WORK_BLOCK_LIMITS.dividerThickness.min,
+              WORK_BLOCK_LIMITS.dividerThickness.max,
+              DIVIDER_DEFAULTS.thickness
+            )
+          : null,
+      button_text: b.type === "button" ? b.button_text.trim() : null,
+      button_url: safeButtonUrl,
+      button_open_new_tab: b.type === "button" ? Boolean(b.button_open_new_tab) : null,
+      button_width:
+        b.type === "button"
+          ? clampInteger(
+              b.button_width,
+              WORK_BLOCK_LIMITS.buttonWidth.min,
+              WORK_BLOCK_LIMITS.buttonWidth.max,
+              BUTTON_DEFAULTS.width
+            )
+          : null,
+      button_height:
+        b.type === "button"
+          ? clampInteger(
+              b.button_height,
+              WORK_BLOCK_LIMITS.buttonHeight.min,
+              WORK_BLOCK_LIMITS.buttonHeight.max,
+              BUTTON_DEFAULTS.height
+            )
+          : null,
+      button_text_color:
+        b.type === "button"
+          ? normalizeHexColor(b.button_text_color, BUTTON_DEFAULTS.textColor)
+          : null,
+      button_background_color:
+        b.type === "button"
+          ? normalizeHexColor(b.button_background_color, BUTTON_DEFAULTS.backgroundColor)
+          : null,
+      button_font_size:
+        b.type === "button"
+          ? clampInteger(
+              b.button_font_size,
+              WORK_BLOCK_LIMITS.buttonFontSize.min,
+              WORK_BLOCK_LIMITS.buttonFontSize.max,
+              BUTTON_DEFAULTS.fontSize
+            )
+          : null,
+      button_font_weight:
+        b.type === "button"
+          ? isButtonFontWeight(b.button_font_weight)
+            ? Number(b.button_font_weight)
+            : BUTTON_DEFAULTS.fontWeight
+          : null,
+      sort: i,
+    }
+  })
+
+  const { error: replaceBlocksError } = await supabase.rpc("replace_work_blocks", {
+    p_work_id: workId!,
+    p_blocks: blockRows,
+  })
+  if (replaceBlocksError) return { error: replaceBlocksError.message }
 
   // 後台與前台一起刷新（前台立即反映，不必等 ISR 60 秒）
   revalidatePath("/studio/works")

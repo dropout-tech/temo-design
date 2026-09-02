@@ -25,11 +25,22 @@ import {
   BUTTON_FONT_WEIGHTS,
   DIVIDER_DEFAULTS,
   IMAGE_HEIGHT_DEFAULTS,
+  TEXT_BLOCK_DEFAULTS,
+  TEXT_BLOCK_FONT_WEIGHTS,
   WORK_BLOCK_LIMITS,
+  WORK_IMAGE_SLOTS,
   getSafeWorkBlockHref,
+  getWorkImageCount,
+  hasCompleteWorkImageSlots,
   isHexColor,
   normalizeHexColor,
   normalizeOptionalImageHeightPercent,
+  normalizeOptionalTextFontSize,
+  normalizeOptionalTextFontWeight,
+  normalizeOptionalTextLetterSpacing,
+  normalizeOptionalTextLineHeight,
+  type WorkImageCount,
+  type WorkImageSlot,
 } from "@/lib/work-block-config"
 import {
   COVER_POSITION_MAX,
@@ -128,8 +139,8 @@ type BlockType = "image" | "video" | "text" | "divider" | "button"
 type FormBlock = {
   key: string
   type: BlockType
-  /** UI 專用旗標：image 類型是否顯示第二張上傳格（DB 沒有這欄，由 src2 是否有值反推形狀） */
-  dual: boolean
+  /** UI 專用：DB 由最後一個有內容的 src 欄位反推 1～4 圖版型。 */
+  imageCount: WorkImageCount
   src: string
   alt: string
   width?: number
@@ -140,7 +151,21 @@ type FormBlock = {
   width2?: number
   height2?: number
   desktop_height_percent2?: number
+  src3: string
+  alt3: string
+  width3?: number
+  height3?: number
+  desktop_height_percent3?: number
+  src4: string
+  alt4: string
+  width4?: number
+  height4?: number
+  desktop_height_percent4?: number
   text_content: string
+  text_font_size?: number
+  text_line_height?: number
+  text_letter_spacing?: number
+  text_font_weight?: number
   video_url: string
   caption: string
   caption_mobile: string
@@ -162,13 +187,21 @@ function newKey() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
 }
 
-function emptyBlock(type: BlockType, dual = false): FormBlock {
+function emptyBlock(type: BlockType, imageCount: WorkImageCount = 1): FormBlock {
   return {
-    key: newKey(), type, dual, src: "", alt: "", width: undefined, height: undefined,
+    key: newKey(), type, imageCount, src: "", alt: "", width: undefined, height: undefined,
     desktop_height_percent: undefined,
     src2: "", alt2: "", width2: undefined, height2: undefined,
     desktop_height_percent2: undefined,
+    src3: "", alt3: "", width3: undefined, height3: undefined,
+    desktop_height_percent3: undefined,
+    src4: "", alt4: "", width4: undefined, height4: undefined,
+    desktop_height_percent4: undefined,
     text_content: "", video_url: "", caption: "", caption_mobile: "",
+    text_font_size: undefined,
+    text_line_height: undefined,
+    text_letter_spacing: undefined,
+    text_font_weight: undefined,
     divider_color: DIVIDER_DEFAULTS.color,
     divider_width: DIVIDER_DEFAULTS.width,
     divider_thickness: DIVIDER_DEFAULTS.thickness,
@@ -188,7 +221,7 @@ function blockRowToForm(b: WorkBlockRow): FormBlock {
   return {
     key: b.id || newKey(),
     type: b.type,
-    dual: b.type === "image" && !!b.src2,
+    imageCount: b.type === "image" ? getWorkImageCount(b) : 1,
     src: b.src ?? "",
     alt: b.alt ?? "",
     width: b.width ?? undefined,
@@ -199,11 +232,25 @@ function blockRowToForm(b: WorkBlockRow): FormBlock {
     width2: b.width2 ?? undefined,
     height2: b.height2 ?? undefined,
     desktop_height_percent2: b.desktop_height_percent2 ?? undefined,
+    src3: b.src3 ?? "",
+    alt3: b.alt3 ?? "",
+    width3: b.width3 ?? undefined,
+    height3: b.height3 ?? undefined,
+    desktop_height_percent3: b.desktop_height_percent3 ?? undefined,
+    src4: b.src4 ?? "",
+    alt4: b.alt4 ?? "",
+    width4: b.width4 ?? undefined,
+    height4: b.height4 ?? undefined,
+    desktop_height_percent4: b.desktop_height_percent4 ?? undefined,
     // 舊資料若還是純文字（非 HTML），開進編輯器前先轉成段落結構，無痛接軌既有內容。
     text_content:
       b.text_content && !looksLikeHtml(b.text_content)
         ? plainTextToHtml(b.text_content)
         : b.text_content ?? "",
+    text_font_size: b.text_font_size ?? undefined,
+    text_line_height: b.text_line_height ?? undefined,
+    text_letter_spacing: b.text_letter_spacing ?? undefined,
+    text_font_weight: b.text_font_weight ?? undefined,
     video_url: b.video_url ?? "",
     caption: b.caption ?? "",
     caption_mobile: b.caption_mobile ?? "",
@@ -231,7 +278,7 @@ function initialBlocksFrom(initial?: WorkFormInitial): FormBlock[] {
     return initial.gallery.map((g) => ({
       key: newKey(),
       type: "image" as const,
-      dual: false,
+      imageCount: 1 as const,
       src: g.src,
       alt: g.alt ?? "",
       width: undefined,
@@ -242,7 +289,21 @@ function initialBlocksFrom(initial?: WorkFormInitial): FormBlock[] {
       width2: undefined,
       height2: undefined,
       desktop_height_percent2: undefined,
+      src3: "",
+      alt3: "",
+      width3: undefined,
+      height3: undefined,
+      desktop_height_percent3: undefined,
+      src4: "",
+      alt4: "",
+      width4: undefined,
+      height4: undefined,
+      desktop_height_percent4: undefined,
       text_content: "",
+      text_font_size: undefined,
+      text_line_height: undefined,
+      text_letter_spacing: undefined,
+      text_font_weight: undefined,
       video_url: "",
       caption: g.caption ?? "",
       caption_mobile: "",
@@ -261,6 +322,67 @@ function initialBlocksFrom(initial?: WorkFormInitial): FormBlock[] {
     }))
   }
   return []
+}
+
+type ImageSlotFields = {
+  src: string
+  alt: string
+  width?: number
+  height?: number
+  desktopHeightPercent?: number
+}
+
+function getImageSlotFields(block: FormBlock, slot: WorkImageSlot): ImageSlotFields {
+  if (slot === 1) {
+    return {
+      src: block.src,
+      alt: block.alt,
+      width: block.width,
+      height: block.height,
+      desktopHeightPercent: block.desktop_height_percent,
+    }
+  }
+  if (slot === 2) {
+    return {
+      src: block.src2,
+      alt: block.alt2,
+      width: block.width2,
+      height: block.height2,
+      desktopHeightPercent: block.desktop_height_percent2,
+    }
+  }
+  if (slot === 3) {
+    return {
+      src: block.src3,
+      alt: block.alt3,
+      width: block.width3,
+      height: block.height3,
+      desktopHeightPercent: block.desktop_height_percent3,
+    }
+  }
+  return {
+    src: block.src4,
+    alt: block.alt4,
+    width: block.width4,
+    height: block.height4,
+    desktopHeightPercent: block.desktop_height_percent4,
+  }
+}
+
+function getImageSlotPatch(
+  slot: WorkImageSlot,
+  patch: Partial<ImageSlotFields>
+): Partial<FormBlock> {
+  const suffix = slot === 1 ? "" : String(slot)
+  const result: Record<string, unknown> = {}
+  if ("src" in patch) result[`src${suffix}`] = patch.src
+  if ("alt" in patch) result[`alt${suffix}`] = patch.alt
+  if ("width" in patch) result[`width${suffix}`] = patch.width
+  if ("height" in patch) result[`height${suffix}`] = patch.height
+  if ("desktopHeightPercent" in patch) {
+    result[`desktop_height_percent${suffix}`] = patch.desktopHeightPercent
+  }
+  return result as Partial<FormBlock>
 }
 
 function measureImage(url: string): Promise<{ width: number; height: number } | null> {
@@ -733,8 +855,8 @@ export function WorkForm({
     setClientLogoDraft("")
   }
 
-  function addBlock(type: BlockType, dual = false, afterIndex?: number) {
-    const nextBlock = emptyBlock(type, dual)
+  function addBlock(type: BlockType, imageCount: WorkImageCount = 1, afterIndex?: number) {
+    const nextBlock = emptyBlock(type, imageCount)
     setBlocks((prev) => {
       if (typeof afterIndex !== "number") return [...prev, nextBlock]
       const next = [...prev]
@@ -761,8 +883,8 @@ export function WorkForm({
     setBlocks((prev) => prev.map((b, i) => (i === idx ? { ...b, ...patch } : b)))
   }
 
-  /** 區塊圖片上傳：slot 1＝主圖（單圖／雙圖第一張），slot 2＝雙圖第二張；上傳完量出實際像素尺寸存起來，前台靠它做形狀自適應。 */
-  async function onBlockImage(idx: number, slot: 1 | 2, e: React.ChangeEvent<HTMLInputElement>) {
+  /** 區塊圖片上傳：支援 1～4 圖；上傳完量出實際像素尺寸，前台靠它做形狀自適應。 */
+  async function onBlockImage(idx: number, slot: WorkImageSlot, e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     setUploading(true)
@@ -770,12 +892,11 @@ export function WorkForm({
     const url = await uploadToStorage(file)
     if (url) {
       const dim = await measureImage(url)
-      updateBlock(
-        idx,
-        slot === 1
-          ? { src: url, width: dim?.width, height: dim?.height }
-          : { src2: url, width2: dim?.width, height2: dim?.height }
-      )
+      updateBlock(idx, getImageSlotPatch(slot, {
+        src: url,
+        width: dim?.width,
+        height: dim?.height,
+      }))
     }
     setUploading(false)
     e.target.value = ""
@@ -796,12 +917,25 @@ export function WorkForm({
     const invalidDividerIndex = blocks.findIndex(
       (block) => block.type === "divider" && !isHexColor(block.divider_color)
     )
-    if (invalidButtonIndex >= 0 || invalidDividerIndex >= 0) {
+    const incompleteImageIndex = blocks.findIndex(
+      (block) =>
+        block.type === "image" &&
+        !hasCompleteWorkImageSlots(block, block.imageCount)
+    )
+    if (
+      invalidButtonIndex >= 0 ||
+      invalidDividerIndex >= 0 ||
+      incompleteImageIndex >= 0
+    ) {
       setActiveTab("blocks")
       setError(
         invalidButtonIndex >= 0
           ? `第 ${invalidButtonIndex + 1} 個按鈕尚未填妥文字、有效連結與顏色。`
-          : `第 ${invalidDividerIndex + 1} 個分隔線顏色格式不正確。`
+          : invalidDividerIndex >= 0
+            ? `第 ${invalidDividerIndex + 1} 個分隔線顏色格式不正確。`
+            : blocks[incompleteImageIndex]?.imageCount === 1
+              ? `第 ${incompleteImageIndex + 1} 個圖片區塊尚未上傳圖片。`
+              : `第 ${incompleteImageIndex + 1} 個多圖區塊尚未放滿圖片。`
       )
       return
     }
@@ -824,6 +958,7 @@ export function WorkForm({
       collaboratorNames: f.collaboratorNames,
       blocks: blocks.map((b) => ({
         type: b.type,
+        image_count: b.imageCount,
         src: b.src,
         alt: b.alt,
         width: b.width ?? null,
@@ -836,7 +971,27 @@ export function WorkForm({
         desktop_height_percent2: normalizeOptionalImageHeightPercent(
           b.desktop_height_percent2
         ),
+        src3: b.imageCount >= 3 ? b.src3 : "",
+        alt3: b.imageCount >= 3 ? b.alt3 : "",
+        width3: b.imageCount >= 3 ? b.width3 ?? null : null,
+        height3: b.imageCount >= 3 ? b.height3 ?? null : null,
+        desktop_height_percent3:
+          b.imageCount >= 3
+            ? normalizeOptionalImageHeightPercent(b.desktop_height_percent3)
+            : null,
+        src4: b.imageCount >= 4 ? b.src4 : "",
+        alt4: b.imageCount >= 4 ? b.alt4 : "",
+        width4: b.imageCount >= 4 ? b.width4 ?? null : null,
+        height4: b.imageCount >= 4 ? b.height4 ?? null : null,
+        desktop_height_percent4:
+          b.imageCount >= 4
+            ? normalizeOptionalImageHeightPercent(b.desktop_height_percent4)
+            : null,
         text_content: b.text_content,
+        text_font_size: normalizeOptionalTextFontSize(b.text_font_size),
+        text_line_height: normalizeOptionalTextLineHeight(b.text_line_height),
+        text_letter_spacing: normalizeOptionalTextLetterSpacing(b.text_letter_spacing),
+        text_font_weight: normalizeOptionalTextFontWeight(b.text_font_weight),
         video_url: b.video_url,
         caption: b.caption,
         caption_mobile: b.caption_mobile,
@@ -1278,7 +1433,7 @@ export function WorkForm({
 
                 <BlockAddBar
                   label={blocks.length > 0 ? "新增到最下方" : "新增第一個區塊"}
-                  onAdd={(type, dual) => addBlock(type, dual)}
+                  onAdd={(type, imageCount) => addBlock(type, imageCount)}
                 />
 
                 {blocks.length > 0 && (
@@ -1306,7 +1461,7 @@ export function WorkForm({
                           <BlockAddBar
                             compact
                             label={`在第 ${i + 1} 個區塊後插入`}
-                            onAdd={(type, dual) => addBlock(type, dual, i)}
+                            onAdd={(type, imageCount) => addBlock(type, imageCount, i)}
                           />
                         </div>
                       )
@@ -1465,8 +1620,10 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <p className="text-[10px] tracking-[0.4em] text-temo-gold uppercase pb-2 border-b border-white/[0.06]">{children}</p>
 }
 
-const blockTypeLabel = (b: { type: BlockType; dual: boolean }) => {
-  if (b.type === "image") return b.dual ? "雙圖" : "單圖"
+const blockTypeLabel = (b: { type: BlockType; imageCount: WorkImageCount }) => {
+  if (b.type === "image") {
+    return ["", "單圖", "雙圖", "三圖", "四圖"][b.imageCount]
+  }
   if (b.type === "video") return "影片"
   if (b.type === "text") return "文字"
   if (b.type === "divider") return "分隔線"
@@ -1480,11 +1637,13 @@ function BlockAddBar({
 }: {
   label: string
   compact?: boolean
-  onAdd: (type: BlockType, dual?: boolean) => void
+  onAdd: (type: BlockType, imageCount?: WorkImageCount) => void
 }) {
-  const buttons: { label: string; type: BlockType; dual?: boolean }[] = [
-    { label: "單圖", type: "image" },
-    { label: "雙圖", type: "image", dual: true },
+  const buttons: { label: string; type: BlockType; imageCount?: WorkImageCount }[] = [
+    { label: "單圖", type: "image", imageCount: 1 },
+    { label: "雙圖", type: "image", imageCount: 2 },
+    { label: "三圖", type: "image", imageCount: 3 },
+    { label: "四圖", type: "image", imageCount: 4 },
     { label: "文字", type: "text" },
     { label: "影片", type: "video" },
     { label: "分隔線", type: "divider" },
@@ -1513,7 +1672,7 @@ function BlockAddBar({
           <button
             key={`${button.type}-${button.label}`}
             type="button"
-            onClick={() => onAdd(button.type, button.dual)}
+            onClick={() => onAdd(button.type, button.imageCount)}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-sm border text-xs transition-colors",
               compact
@@ -1606,17 +1765,26 @@ function ImageHeightControls({
   block: FormBlock
   onChange: (patch: Partial<FormBlock>) => void
 }) {
-  const firstHeight = normalizeOptionalImageHeightPercent(block.desktop_height_percent)
-  const secondHeight = normalizeOptionalImageHeightPercent(block.desktop_height_percent2)
+  const activeSlots = WORK_IMAGE_SLOTS.slice(0, block.imageCount)
+  const heights = activeSlots.map((slot) =>
+    normalizeOptionalImageHeightPercent(getImageSlotFields(block, slot).desktopHeightPercent)
+  )
   const imagesAreEqualHeight =
-    block.dual && firstHeight !== null && firstHeight === secondHeight
+    block.imageCount > 1 && heights[0] !== null && heights.every((height) => height === heights[0])
 
   function makeImagesEqualHeight() {
-    const sharedHeight = firstHeight ?? secondHeight ?? IMAGE_HEIGHT_DEFAULTS.desktopPercent
-    onChange({
-      desktop_height_percent: sharedHeight,
-      desktop_height_percent2: sharedHeight,
-    })
+    const sharedHeight =
+      heights.find((height): height is number => height !== null) ??
+      IMAGE_HEIGHT_DEFAULTS.desktopPercent
+    onChange(
+      activeSlots.reduce<Partial<FormBlock>>(
+        (patch, slot) => ({
+          ...patch,
+          ...getImageSlotPatch(slot, { desktopHeightPercent: sharedHeight }),
+        }),
+        {}
+      )
+    )
   }
 
   return (
@@ -1628,7 +1796,7 @@ function ImageHeightControls({
             100% 代表高度等於圖片欄寬；自訂高度會置中裁切，手機仍顯示自然比例。
           </p>
         </div>
-        {block.dual && (
+        {block.imageCount > 1 && (
           <button
             type="button"
             onClick={makeImagesEqualHeight}
@@ -1639,29 +1807,186 @@ function ImageHeightControls({
                 : "border-white/12 text-temo-warm-gray/70 hover:border-temo-gold/40 hover:text-temo-gold"
             )}
           >
-            {imagesAreEqualHeight ? `目前等高 ${firstHeight}%` : "一鍵設為等高"}
+            {imagesAreEqualHeight ? `目前等高 ${heights[0]}%` : "一鍵設為等高"}
           </button>
         )}
       </div>
-      <div className={cn("grid gap-3", block.dual && "md:grid-cols-2")}>
-        <ImageHeightField
-          label={block.dual ? "第 1 張" : "圖片高度"}
-          value={block.desktop_height_percent}
-          onChange={(desktop_height_percent) => onChange({ desktop_height_percent })}
-        />
-        {block.dual && (
-          <ImageHeightField
-            label="第 2 張"
-            value={block.desktop_height_percent2}
-            onChange={(desktop_height_percent2) => onChange({ desktop_height_percent2 })}
-          />
+      <div
+        className={cn(
+          "grid gap-3",
+          block.imageCount > 1 && "md:grid-cols-2",
+          block.imageCount === 3 && "xl:grid-cols-3",
+          block.imageCount === 4 && "xl:grid-cols-4"
         )}
+      >
+        {activeSlots.map((slot) => (
+          <ImageHeightField
+            key={slot}
+            label={block.imageCount === 1 ? "圖片高度" : `第 ${slot} 張`}
+            value={getImageSlotFields(block, slot).desktopHeightPercent}
+            onChange={(desktopHeightPercent) =>
+              onChange(getImageSlotPatch(slot, { desktopHeightPercent }))
+            }
+          />
+        ))}
       </div>
-      {block.dual && (
+      {block.imageCount > 1 && (
         <p className="text-[11px] leading-relaxed text-temo-warm-gray/45">
-          兩張設定相同數值就是等高；調整其中一張為不同數值，就會保留高低差。
+          各張設定相同數值就是等高；調整其中一張為不同數值，就會保留高低差。
         </p>
       )}
+    </div>
+  )
+}
+
+function OptionalTypographyRange({
+  label,
+  value,
+  defaultValue,
+  min,
+  max,
+  step,
+  suffix,
+  onChange,
+}: {
+  label: string
+  value?: number
+  defaultValue: number
+  min: number
+  max: number
+  step: number
+  suffix: string
+  onChange: (value?: number) => void
+}) {
+  return (
+    <div className="rounded-md bg-black/25 p-3 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs text-temo-warm-gray/70">{label}</span>
+        <output className="text-xs tabular-nums text-temo-white">
+          {value === undefined ? "網站預設" : `${value}${suffix}`}
+        </output>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value ?? defaultValue}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="h-2 w-full cursor-pointer accent-temo-gold"
+        aria-label={label}
+      />
+      <button
+        type="button"
+        onClick={() => onChange(undefined)}
+        disabled={value === undefined}
+        className="min-h-8 rounded-sm border border-white/10 px-2.5 text-[11px] text-temo-warm-gray/60 transition-colors hover:border-temo-gold/40 hover:text-temo-gold disabled:cursor-default disabled:opacity-35"
+      >
+        恢復網站預設
+      </button>
+    </div>
+  )
+}
+
+function TextTypographyControls({
+  block,
+  onChange,
+}: {
+  block: FormBlock
+  onChange: (patch: Partial<FormBlock>) => void
+}) {
+  const hasCustomStyle =
+    block.text_font_size !== undefined ||
+    block.text_line_height !== undefined ||
+    block.text_letter_spacing !== undefined ||
+    block.text_font_weight !== undefined
+
+  return (
+    <div className="rounded-md border border-white/[0.08] bg-white/[0.018] p-3 space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-xs font-medium text-temo-white">區塊整體字體</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-temo-warm-gray/50">
+            這裡控制整個文字區塊；上方工具列仍可對反白文字單獨套用粗體、大小與顏色。
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() =>
+            onChange({
+              text_font_size: undefined,
+              text_line_height: undefined,
+              text_letter_spacing: undefined,
+              text_font_weight: undefined,
+            })
+          }
+          disabled={!hasCustomStyle}
+          className="min-h-9 shrink-0 rounded-sm border border-white/12 px-3 text-[11px] text-temo-warm-gray/70 transition-colors hover:border-temo-gold/40 hover:text-temo-gold disabled:cursor-default disabled:opacity-35"
+        >
+          全部恢復預設
+        </button>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <OptionalTypographyRange
+          label="字體大小"
+          value={block.text_font_size}
+          defaultValue={TEXT_BLOCK_DEFAULTS.fontSize}
+          min={WORK_BLOCK_LIMITS.textFontSize.min}
+          max={WORK_BLOCK_LIMITS.textFontSize.max}
+          step={1}
+          suffix="px"
+          onChange={(text_font_size) => onChange({ text_font_size })}
+        />
+        <OptionalTypographyRange
+          label="行距"
+          value={block.text_line_height}
+          defaultValue={TEXT_BLOCK_DEFAULTS.lineHeight}
+          min={WORK_BLOCK_LIMITS.textLineHeight.min}
+          max={WORK_BLOCK_LIMITS.textLineHeight.max}
+          step={0.025}
+          suffix=""
+          onChange={(text_line_height) => onChange({ text_line_height })}
+        />
+        <OptionalTypographyRange
+          label="字距"
+          value={block.text_letter_spacing}
+          defaultValue={TEXT_BLOCK_DEFAULTS.letterSpacing}
+          min={WORK_BLOCK_LIMITS.textLetterSpacing.min}
+          max={WORK_BLOCK_LIMITS.textLetterSpacing.max}
+          step={0.005}
+          suffix="em"
+          onChange={(text_letter_spacing) => onChange({ text_letter_spacing })}
+        />
+        <label className="rounded-md bg-black/25 p-3 space-y-3">
+          <span className="flex items-center justify-between gap-3 text-xs text-temo-warm-gray/70">
+            字重
+            <span className="text-temo-white">
+              {block.text_font_weight === undefined
+                ? "網站預設"
+                : block.text_font_weight >= 700
+                  ? `${block.text_font_weight} 粗體`
+                  : String(block.text_font_weight)}
+            </span>
+          </span>
+          <select
+            value={block.text_font_weight ?? ""}
+            onChange={(event) =>
+              onChange({
+                text_font_weight:
+                  event.target.value === "" ? undefined : Number(event.target.value),
+              })
+            }
+            className={cn(inputCls, "min-h-11")}
+          >
+            <option value="">網站預設</option>
+            {TEXT_BLOCK_FONT_WEIGHTS.map((weight) => (
+              <option key={weight} value={weight}>
+                {weight}{weight >= 700 ? "（粗體）" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
     </div>
   )
 }
@@ -1696,7 +2021,7 @@ function BlockCard({
   onMove: (dir: -1 | 1) => void
   onRemove: () => void
   onChange: (patch: Partial<FormBlock>) => void
-  onUploadImage: (slot: 1 | 2, e: React.ChangeEvent<HTMLInputElement>) => void
+  onUploadImage: (slot: WorkImageSlot, e: React.ChangeEvent<HTMLInputElement>) => void
 }) {
   return (
     <div className="p-4 rounded-lg border border-white/10 bg-white/[0.02] space-y-3">
@@ -1719,7 +2044,7 @@ function BlockCard({
         </div>
       </div>
 
-      {block.type === "image" && !block.dual && (
+      {block.type === "image" && block.imageCount === 1 && (
         <div className="space-y-3">
           <div className="flex items-start gap-3">
             <div className="w-24 h-24 rounded-md overflow-hidden bg-white/[0.04] shrink-0 border border-white/10">
@@ -1742,16 +2067,18 @@ function BlockCard({
         </div>
       )}
 
-      {block.type === "image" && block.dual && (
+      {block.type === "image" && block.imageCount > 1 && (
         <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-3">
-            {[1, 2].map((slot) => {
-              const src = slot === 1 ? block.src : block.src2
-              const alt = slot === 1 ? block.alt : block.alt2
-              const width = slot === 1 ? block.width : block.width2
-              const height = slot === 1 ? block.height : block.height2
-              const desktopHeightPercent =
-                slot === 1 ? block.desktop_height_percent : block.desktop_height_percent2
+          <div
+            className={cn(
+              "grid grid-cols-2 gap-3",
+              block.imageCount === 3 && "xl:grid-cols-3",
+              block.imageCount === 4 && "xl:grid-cols-4"
+            )}
+          >
+            {WORK_IMAGE_SLOTS.slice(0, block.imageCount).map((slot) => {
+              const { src, alt, width, height, desktopHeightPercent } =
+                getImageSlotFields(block, slot)
               return (
                 <div key={slot} className="space-y-2">
                   <div
@@ -1772,12 +2099,12 @@ function BlockCard({
                   <label className={cn("inline-flex items-center gap-2 px-3 py-2 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors w-full justify-center", uploading && "opacity-60 pointer-events-none")}>
                     {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                     {src ? `更換第${slot}張` : `上傳第${slot}張`}
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => onUploadImage(slot as 1 | 2, e)} disabled={uploading} />
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => onUploadImage(slot, e)} disabled={uploading} />
                   </label>
                   <input
                     className={inputCls}
                     value={alt}
-                    onChange={(e) => onChange(slot === 1 ? { alt: e.target.value } : { alt2: e.target.value })}
+                    onChange={(e) => onChange(getImageSlotPatch(slot, { alt: e.target.value }))}
                     placeholder={`第${slot}張 alt（選填）`}
                   />
                 </div>
@@ -1785,7 +2112,7 @@ function BlockCard({
             })}
           </div>
           <ImageHeightControls block={block} onChange={onChange} />
-          <ResponsiveCaptionFields block={block} contextLabel="兩張圖片的共用說明" onChange={onChange} />
+          <ResponsiveCaptionFields block={block} contextLabel={`${block.imageCount} 張圖片的共用說明`} onChange={onChange} />
         </div>
       )}
 
@@ -1795,7 +2122,12 @@ function BlockCard({
             value={block.text_content}
             onChange={(html) => onChange({ text_content: html })}
             placeholder="輸入段落文字，支援粗體、顏色、列表等格式"
+            fontSize={block.text_font_size}
+            lineHeight={block.text_line_height}
+            letterSpacing={block.text_letter_spacing}
+            fontWeight={block.text_font_weight}
           />
+          <TextTypographyControls block={block} onChange={onChange} />
         </div>
       )}
 

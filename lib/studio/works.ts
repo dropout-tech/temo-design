@@ -19,7 +19,21 @@ export type WorkBlockRow = {
   width2?: number | null
   height2?: number | null
   desktop_height_percent2?: number | null
+  src3?: string | null
+  alt3?: string | null
+  width3?: number | null
+  height3?: number | null
+  desktop_height_percent3?: number | null
+  src4?: string | null
+  alt4?: string | null
+  width4?: number | null
+  height4?: number | null
+  desktop_height_percent4?: number | null
   text_content?: string | null
+  text_font_size?: number | null
+  text_line_height?: number | null
+  text_letter_spacing?: number | null
+  text_font_weight?: number | null
   video_url?: string | null
   caption?: string | null
   caption_mobile?: string | null

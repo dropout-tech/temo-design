@@ -225,7 +225,24 @@ html {
 .studio-rte .ql-editor {
   min-height: 7rem;
   color: var(--temo-white);
-  font-size: 0.875rem;
+  font-size: var(--studio-rte-font-size, 1rem);
+  line-height: var(--studio-rte-line-height, 1.625);
+  letter-spacing: var(--studio-rte-letter-spacing, normal);
+  font-weight: var(--studio-rte-font-weight, 400);
+}
+@media (min-width: 768px) {
+  .studio-rte .ql-editor {
+    font-size: var(--studio-rte-font-size, 1.125rem);
+  }
+}
+.studio-rte .ql-editor .ql-size-small {
+  font-size: 0.78em;
+}
+.studio-rte .ql-editor .ql-size-large {
+  font-size: 1.4em;
+}
+.studio-rte .ql-editor .ql-size-huge {
+  font-size: 1.9em;
 }
 .studio-rte .ql-editor.ql-blank::before {
   color: rgba(255, 255, 255, 0.3);

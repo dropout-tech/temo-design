@@ -12,15 +12,21 @@ import { isVideoUrl } from "@/lib/video"
 import { isUploadedVideoUrl } from "@/lib/media-url"
 import { proxyImage } from "@/lib/portfolio-data"
 import type { WorkBlock } from "@/lib/portfolio-supabase"
+import { cn } from "@/lib/utils"
 import {
   BUTTON_DEFAULTS,
   DIVIDER_DEFAULTS,
   WORK_BLOCK_LIMITS,
   clampInteger,
   getSafeWorkBlockHref,
+  getWorkImageCount,
   isButtonFontWeight,
   normalizeHexColor,
   normalizeOptionalImageHeightPercent,
+  normalizeOptionalTextFontSize,
+  normalizeOptionalTextFontWeight,
+  normalizeOptionalTextLetterSpacing,
+  normalizeOptionalTextLineHeight,
 } from "@/lib/work-block-config"
 import { buildWorksLandingHref } from "@/lib/portfolio-navigation"
 import { getEnglishTeamCategoryLabel, groupTeamMembersByCategory } from "@/lib/team-members"
@@ -658,6 +664,16 @@ function BlockItem({
 }) {
   if (block.type === "text") {
     if (!block.text) return null
+    const fontSize = normalizeOptionalTextFontSize(block.textFontSize)
+    const lineHeight = normalizeOptionalTextLineHeight(block.textLineHeight)
+    const letterSpacing = normalizeOptionalTextLetterSpacing(block.textLetterSpacing)
+    const fontWeight = normalizeOptionalTextFontWeight(block.textFontWeight)
+    const textStyle = {
+      fontSize: fontSize === null ? undefined : `${fontSize}px`,
+      lineHeight: lineHeight ?? undefined,
+      letterSpacing: letterSpacing === null ? undefined : `${letterSpacing}em`,
+      fontWeight: fontWeight ?? undefined,
+    } satisfies React.CSSProperties
     // 新資料是後台 Quill 富文本編輯器存下的 HTML（存檔時已消毒過）；舊資料仍是純文字，
     // 沿用原本的 "\n\n" 分段渲染，兩者向後相容並存。
     const isHtml = /<[a-z][\s\S]*>/i.test(block.text)
@@ -666,6 +682,7 @@ function BlockItem({
         {isHtml ? (
           <div
             className="rich-text max-w-3xl mx-auto text-base md:text-lg text-temo-warm-gray leading-relaxed"
+            style={textStyle}
             dangerouslySetInnerHTML={{ __html: block.text }}
           />
         ) : (
@@ -674,6 +691,7 @@ function BlockItem({
               <p
                 key={i}
                 className="text-base md:text-lg text-temo-warm-gray leading-relaxed whitespace-pre-line break-words"
+                style={textStyle}
               >
                 {p}
               </p>
@@ -781,28 +799,64 @@ function BlockItem({
     )
   }
 
-  // image：src2 有值＝同列雙圖。桌機可由 Studio 個別設定高度；手機維持自然比例堆疊。
+  // image：由最後一個有內容的 src 欄位反推 1～4 圖。桌機可個別設定高度，手機自然比例堆疊。
   if (!block.src) return null
-  const hasSecond = Boolean(block.src2)
+  const imageCount = getWorkImageCount(block)
+  const images = [
+    {
+      src: block.src,
+      alt: block.alt,
+      width: block.width,
+      height: block.height,
+      desktopHeightPercent: block.desktopHeightPercent,
+    },
+    {
+      src: block.src2,
+      alt: block.alt2,
+      width: block.width2,
+      height: block.height2,
+      desktopHeightPercent: block.desktopHeightPercent2,
+    },
+    {
+      src: block.src3,
+      alt: block.alt3,
+      width: block.width3,
+      height: block.height3,
+      desktopHeightPercent: block.desktopHeightPercent3,
+    },
+    {
+      src: block.src4,
+      alt: block.alt4,
+      width: block.width4,
+      height: block.height4,
+      desktopHeightPercent: block.desktopHeightPercent4,
+    },
+  ].slice(0, imageCount)
 
   return (
     <figure className="space-y-3">
-      {hasSecond ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 items-start">
-          <BlockImage
-            src={block.src}
-            alt={block.alt || `${projectTitle} ${index + 1}`}
-            width={block.width}
-            height={block.height}
-            desktopHeightPercent={block.desktopHeightPercent}
-          />
-          <BlockImage
-            src={block.src2!}
-            alt={block.alt2 || `${projectTitle} ${index + 1}-2`}
-            width={block.width2}
-            height={block.height2}
-            desktopHeightPercent={block.desktopHeightPercent2}
-          />
+      {imageCount > 1 ? (
+        <div
+          className={cn(
+            "grid grid-cols-1 gap-4 md:gap-8 items-start",
+            imageCount === 2 && "md:grid-cols-2",
+            imageCount === 3 && "md:grid-cols-3",
+            imageCount === 4 && "md:grid-cols-2 lg:grid-cols-4"
+          )}
+        >
+          {images.map((image, imageIndex) =>
+            image.src ? (
+              <BlockImage
+                key={`${image.src}-${imageIndex}`}
+                src={image.src}
+                alt={image.alt || `${projectTitle} ${index + 1}-${imageIndex + 1}`}
+                width={image.width}
+                height={image.height}
+                desktopHeightPercent={image.desktopHeightPercent}
+                columnCount={imageCount}
+              />
+            ) : null
+          )}
         </div>
       ) : (
         <BlockImage
@@ -811,6 +865,7 @@ function BlockItem({
           width={block.width}
           height={block.height}
           desktopHeightPercent={block.desktopHeightPercent}
+          columnCount={1}
         />
       )}
       <ResponsiveBlockCaption desktop={block.caption} mobile={block.captionMobile} />
@@ -854,14 +909,24 @@ function BlockImage({
   width,
   height,
   desktopHeightPercent,
+  columnCount,
 }: {
   src: string
   alt: string
   width?: number | null
   height?: number | null
   desktopHeightPercent?: number | null
+  columnCount: number
 }) {
   const normalizedDesktopHeight = normalizeOptionalImageHeightPercent(desktopHeightPercent)
+  const sizes =
+    columnCount === 1
+      ? "(max-width: 1280px) 100vw, 1280px"
+      : columnCount === 2
+        ? "(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 640px"
+        : columnCount === 3
+          ? "(max-width: 768px) 100vw, 33vw"
+          : "(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
   const image =
     width && height ? (
       <Image
@@ -870,7 +935,7 @@ function BlockImage({
         width={width}
         height={height}
         className="w-full h-auto"
-        sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 640px"
+        sizes={sizes}
         referrerPolicy="no-referrer"
       />
     ) : (
