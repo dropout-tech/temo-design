@@ -778,7 +778,7 @@ export function AboutPageClient({
                     transform: visible ? "translateY(0)" : "translateY(20px)",
                   }}
                 >
-                  <div className="space-y-5 text-[#3a3a37] text-[15px] md:text-base leading-[1.85] max-w-md lg:max-w-none">
+                  <div className="space-y-5 text-[#3a3a37] text-[15px] md:text-base leading-[1.85] max-w-md lg:max-w-none text-pretty">
                     <p>
                       提摩不為短暫的流行而設計，而是專注於創造能夠長久存在的價值。每一個品牌，都是在時間中被塑造；每一個細節，都是精準思考後的結果。
                     </p>
@@ -786,7 +786,8 @@ export function AboutPageClient({
                       我們相信，真正有力量的設計，不只是被看見，而是能夠被記住、被信任，最終成為品牌的一部分。
                     </p>
                     <p>
-                      不是瞬間的亮點，而是能夠沉澱、承載，並持續發生影響的存在。
+                      不是瞬間的亮點，而是能夠沉澱、承載，並持續發生
+                      <span className="whitespace-nowrap">影響的存在。</span>
                     </p>
                   </div>
 
