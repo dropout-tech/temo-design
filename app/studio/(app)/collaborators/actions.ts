@@ -22,6 +22,7 @@ type WorkCollaboratorRow = {
   guest_designer_names: unknown
   guest_designer_credits: unknown
   collaborator_names: unknown
+  collaborator_credits: unknown
 }
 
 type UpdatedWork = {
@@ -40,6 +41,7 @@ export async function renameCollaborator(
     return { error: "找不到要整理的名稱類型" }
   }
   const column = kind === "guest-designer" ? "guest_designer_names" : "collaborator_names"
+  const creditColumn = kind === "guest-designer" ? "guest_designer_credits" : "collaborator_credits"
   const label = kind === "guest-designer" ? "臨時設計師" : "合作夥伴"
   const sourceKey = collaboratorNameKey(sourceName)
   const nextName = normalizeCollaboratorName(nextNameInput)
@@ -59,27 +61,30 @@ export async function renameCollaborator(
 
   let creditsAvailable = false
   const creditsByWork = new Map<string, unknown>()
-  if (kind === "guest-designer") {
-    const { data: creditRows, error: creditError } = await supabase
-      .from("works")
-      .select("id, guest_designer_credits")
-    if (!creditError && Array.isArray(creditRows)) {
-      creditsAvailable = true
-      for (const row of creditRows) {
-        creditsByWork.set(row.id, row.guest_designer_credits)
-      }
+  const { data: creditRows, error: creditError } = await supabase
+    .from("works")
+    .select(`id, ${creditColumn}`)
+  if (creditError && creditError.code !== "42703" && creditError.code !== "PGRST204") {
+    return { error: `無法讀取${label}職稱，尚未變更任何名稱：${creditError.message}` }
+  }
+  if (!creditError && Array.isArray(creditRows)) {
+    creditsAvailable = true
+    for (const row of creditRows as unknown as Record<string, unknown>[]) {
+      creditsByWork.set(String(row.id), row[creditColumn])
     }
   }
 
   const affected = ((data ?? []) as unknown as WorkCollaboratorRow[])
     .map((work) => {
-      const before = normalizeCollaboratorNames(work[column])
+      const before = creditsAvailable
+        ? mergeGuestDesignerCredits(creditsByWork.get(work.id), work[column]).map((credit) => credit.name)
+        : normalizeCollaboratorNames(work[column])
       if (!before.some((name) => collaboratorNameKey(name) === sourceKey)) return null
 
       const after = replaceCollaboratorName(before, sourceName, nextName)
       return {
         ...work,
-        guest_designer_credits: creditsByWork.get(work.id),
+        [creditColumn]: creditsByWork.get(work.id),
         before,
         after,
       }
@@ -93,14 +98,14 @@ export async function renameCollaborator(
   const completed: UpdatedWork[] = []
   for (const work of affected) {
     const beforeCredits =
-      kind === "guest-designer" && creditsAvailable
-        ? mergeGuestDesignerCredits(work.guest_designer_credits, work.before)
+      creditsAvailable
+        ? mergeGuestDesignerCredits(work[creditColumn], work.before)
         : undefined
     const update =
-      kind === "guest-designer" && creditsAvailable
+      creditsAvailable
         ? {
             [column]: work.after,
-            guest_designer_credits: renameGuestDesignerCredits(
+            [creditColumn]: renameGuestDesignerCredits(
               beforeCredits,
               sourceName,
               nextName
@@ -118,10 +123,10 @@ export async function renameCollaborator(
           supabase
             .from("works")
             .update(
-              kind === "guest-designer" && creditsAvailable
+              creditsAvailable
                 ? {
                     [column]: saved.before,
-                    guest_designer_credits: saved.beforeCredits ?? [],
+                    [creditColumn]: saved.beforeCredits ?? [],
                   }
                 : { [column]: saved.before }
             )

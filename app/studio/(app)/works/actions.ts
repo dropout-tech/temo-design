@@ -27,6 +27,7 @@ import { normalizeCategoryGroupValues } from "@/lib/work-category-groups"
 import {
   WORK_CREDIT_TITLE_MAX,
   normalizeGuestDesignerCredits,
+  normalizeCollaboratorCredits,
   normalizeWorkCreditTitle,
 } from "@/lib/work-team-credits"
 
@@ -66,8 +67,8 @@ export type WorkInput = {
   designerCredits: { designerId: string; creditTitle: string }[]
   /** 作品專屬的外部／單次合作設計師與署名 Title。 */
   guestDesignerCredits: { name: string; creditTitle: string }[]
-  /** 作品專屬的攝影師、顧問或外部合作團隊顯示名稱 */
-  collaboratorNames: string[]
+  /** 作品專屬的攝影師、顧問或外部合作團隊名稱與職稱。 */
+  collaboratorCredits: { name: string; creditTitle: string }[]
   blocks: {
     type: "image" | "video" | "text" | "divider" | "button"
     /** 僅供儲存時驗證／裁切欄位；DB 由 src2～src4 是否有值反推。 */
@@ -164,6 +165,7 @@ function toRow(input: WorkInput, categoryGroupValues: string[]) {
   })
 
   const guestDesignerCredits = normalizeGuestDesignerCredits(input.guestDesignerCredits)
+  const collaboratorCredits = normalizeCollaboratorCredits(input.collaboratorCredits)
 
   return {
     slug: normalizeWorkSlug(input.slug),
@@ -197,7 +199,8 @@ function toRow(input: WorkInput, categoryGroupValues: string[]) {
     // 既有姓名陣列持續雙寫，確保舊版前台與「合作夥伴」彙整頁可以安全回退。
     guest_designer_names: guestDesignerCredits.map((credit) => credit.name),
     guest_designer_credits: guestDesignerCredits,
-    collaborator_names: normalizeCustomNames(input.collaboratorNames),
+    collaborator_names: collaboratorCredits.map((credit) => credit.name),
+    collaborator_credits: collaboratorCredits,
     published: input.published,
   }
 }
@@ -234,12 +237,15 @@ export async function saveWork(
   if (guestDesignerCredits.some((credit) => credit.creditTitle.length > WORK_CREDIT_TITLE_MAX)) {
     return { error: `其他合作設計師的 Title 請控制在 ${WORK_CREDIT_TITLE_MAX} 個字內` }
   }
-  const collaboratorNames = normalizeCustomNames(input.collaboratorNames)
-  if (collaboratorNames.length > CUSTOM_NAME_LIMIT) {
+  const collaboratorCredits = normalizeCollaboratorCredits(input.collaboratorCredits)
+  if (collaboratorCredits.length > CUSTOM_NAME_LIMIT) {
     return { error: `每件作品最多可新增 ${CUSTOM_NAME_LIMIT} 個合作夥伴` }
   }
-  if (collaboratorNames.some((name) => name.length > CUSTOM_NAME_MAX)) {
+  if (collaboratorCredits.some((credit) => credit.name.length > CUSTOM_NAME_MAX)) {
     return { error: `合作夥伴名稱請控制在 ${CUSTOM_NAME_MAX} 個字內` }
+  }
+  if (collaboratorCredits.some((credit) => credit.creditTitle.length > WORK_CREDIT_TITLE_MAX)) {
+    return { error: `合作夥伴的 Title 請控制在 ${WORK_CREDIT_TITLE_MAX} 個字內` }
   }
 
   const categoryGroupValues = normalizeCategoryGroupValues(input.categoryGroupValues)

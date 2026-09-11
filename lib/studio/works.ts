@@ -3,7 +3,7 @@ import type { WorkFormInitial } from "@/components/studio/work-form"
 import { normalizeCoverCrop } from "@/lib/cover-crop"
 import { normalizeCollaboratorNames } from "@/lib/collaborator-names"
 import { normalizeCategoryGroupValues } from "@/lib/work-category-groups"
-import { mergeGuestDesignerCredits } from "@/lib/work-team-credits"
+import { mergeGuestDesignerCredits, mergeCollaboratorCredits } from "@/lib/work-team-credits"
 
 // work_blocks 的原始 DB 欄位形狀（後台表單之後直接讀寫這個形狀即可，不做欄位改名）。
 export type WorkBlockRow = {
@@ -102,6 +102,7 @@ type WorkEditRow = {
   guest_designer_names: string[] | null
   guest_designer_credits?: unknown
   collaborator_names: string[] | null
+  collaborator_credits?: unknown
   work_industries: WorkIndustryRelationRow[] | null
   work_designers: WorkDesignerRelationRow[] | null
   work_gallery: WorkGalleryRow[] | null
@@ -261,11 +262,7 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
       w.guest_designer_credits,
       w.guest_designer_names
     ),
-    collaboratorNames: Array.isArray(w.collaborator_names)
-      ? w.collaborator_names
-          .map((name: unknown) => String(name).trim())
-          .filter(Boolean)
-      : [],
+    collaboratorCredits: mergeCollaboratorCredits(w.collaborator_credits, w.collaborator_names),
     gallery: (w.work_gallery ?? [])
       .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
       .map((g) => ({ src: g.src, alt: g.alt ?? undefined, caption: g.caption ?? undefined })),

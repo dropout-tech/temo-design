@@ -30,6 +30,7 @@ import {
 } from "@/lib/work-block-config"
 import { buildWorksLandingHref } from "@/lib/portfolio-navigation"
 import { getEnglishTeamCategoryLabel, groupTeamMembersByCategory } from "@/lib/team-members"
+import { mergeCollaboratorCredits, type CollaboratorCredit } from "@/lib/work-team-credits"
 
 export type DetailDesigner = {
   slug: string
@@ -124,6 +125,7 @@ export type DetailProject = {
   designers: DetailDesigner[]
   /** 作品內直接輸入的外部合作名稱，不建立個人頁或公開連結。 */
   collaborators?: string[]
+  collaboratorCredits?: CollaboratorCredit[]
   related: DetailRelated[]
   /** 內頁首圖，未提供時退回 cover（本地 demo fallback 資料無此欄位） */
   hero?: string
@@ -175,11 +177,12 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
   }
 
   const hasNarrative = Boolean(project.challenge || project.approach || project.result)
+  const collaborators = mergeCollaboratorCredits(project.collaboratorCredits, project.collaborators)
   const hasMeta =
     project.services?.length ||
     project.deliverables?.length ||
     project.designers.length ||
-    project.collaborators?.length ||
+    collaborators.length ||
     project.clientName ||
     project.clientLogos?.length
   const teamGroups = groupTeamMembersByCategory(project.designers)
@@ -478,12 +481,12 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                       </MetaItem>
                     ))}
 
-                    {project.collaborators && project.collaborators.length > 0 && (
+                    {collaborators.length > 0 && (
                       <MetaItem label="合作夥伴 Collaborators">
                         <ul className="space-y-1.5">
-                          {project.collaborators.map((name) => (
-                            <li key={name} className="text-sm tracking-wider text-temo-white">
-                              {name}
+                          {collaborators.map((credit) => (
+                            <li key={credit.name} className="text-sm tracking-wider text-temo-white">
+                              <CollaboratorCreditLabel credit={credit} />
                             </li>
                           ))}
                         </ul>
@@ -1108,6 +1111,7 @@ function MobileProjectDetails({
   project: DetailProject
   hasNarrative: boolean
 }) {
+  const collaborators = mergeCollaboratorCredits(project.collaboratorCredits, project.collaborators)
   const hasClientContact = Boolean(
     project.clientAddress || project.clientPhone || project.clientWebsite
   )
@@ -1222,7 +1226,7 @@ function MobileProjectDetails({
         </section>
       )}
 
-      {(mobileScopeItems?.length || project.designers.length > 0 || project.collaborators?.length) && (
+      {(mobileScopeItems?.length || project.designers.length > 0 || collaborators.length > 0) && (
         <section className="space-y-6 border-b border-temo-warm-gray/15 py-6">
           {mobileScopeItems && mobileScopeItems.length > 0 && (
             <MobileEditorialMeta title={mobileScopeTitle} items={mobileScopeItems} />
@@ -1234,8 +1238,8 @@ function MobileProjectDetails({
               members={group.members}
             />
           ))}
-          {project.collaborators && project.collaborators.length > 0 && (
-            <MobileEditorialCollaborators names={project.collaborators} />
+          {collaborators.length > 0 && (
+            <MobileEditorialCollaborators credits={collaborators} />
           )}
         </section>
       )}
@@ -1388,14 +1392,27 @@ function MobileEditorialPeople({
   )
 }
 
-function MobileEditorialCollaborators({ names }: { names: string[] }) {
+function CollaboratorCreditLabel({ credit }: { credit: CollaboratorCredit }) {
+  return (
+    <>
+      {credit.name}
+      {credit.creditTitle && (
+        <span className="mt-1 block break-words text-xs leading-relaxed tracking-wide text-temo-warm-gray/60">
+          {credit.creditTitle}
+        </span>
+      )}
+    </>
+  )
+}
+
+function MobileEditorialCollaborators({ credits }: { credits: CollaboratorCredit[] }) {
   return (
     <div>
       <MobileSectionHeading align="center">合作夥伴</MobileSectionHeading>
       <ul className="mx-auto mt-5 max-w-sm space-y-3">
-        {names.map((name) => (
-          <li key={name} className="text-center text-sm tracking-wide text-temo-white">
-            {name}
+        {credits.map((credit) => (
+          <li key={credit.name} className="text-center text-sm tracking-wide text-temo-white">
+            <CollaboratorCreditLabel credit={credit} />
           </li>
         ))}
       </ul>
@@ -1475,6 +1492,7 @@ function toWebsiteHref(website?: string): string | undefined {
 }
 
 function RelatedNav({ project }: { project: DetailProject }) {
+  const collaborators = mergeCollaboratorCredits(project.collaboratorCredits, project.collaborators)
   const categoryGroups =
     project.categoryGroups?.length
       ? project.categoryGroups
@@ -1486,7 +1504,7 @@ function RelatedNav({ project }: { project: DetailProject }) {
     (project.industries && project.industries.length > 0) ||
     project.clientSlug ||
     project.designers.length > 0 ||
-    Boolean(project.collaborators?.length)
+    collaborators.length > 0
   const teamGroups = groupTeamMembersByCategory(project.designers)
 
   if (!hasAny) return null
@@ -1588,14 +1606,14 @@ function RelatedNav({ project }: { project: DetailProject }) {
           </NavGroup>
         ))}
 
-        {project.collaborators && project.collaborators.length > 0 && (
+        {collaborators.length > 0 && (
           <NavGroup label="合作夥伴">
-            {project.collaborators.map((name) => (
+            {collaborators.map((credit) => (
               <span
-                key={name}
-                className="inline-flex items-center rounded-full border border-temo-warm-gray/20 px-3.5 py-2.5 text-xs text-temo-warm-gray/80 md:px-3 md:py-1.5"
+                key={credit.name}
+                className="inline-block max-w-full break-words rounded-full border border-temo-warm-gray/20 px-3.5 py-2.5 text-xs text-temo-warm-gray/80 md:px-3 md:py-1.5"
               >
-                {name}
+                <CollaboratorCreditLabel credit={credit} />
               </span>
             ))}
           </NavGroup>

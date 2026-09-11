@@ -58,6 +58,7 @@ export type CollaboratorUsage = {
   slug: string
   title: string
   published: boolean
+  creditTitle?: string
 }
 
 export type CollaboratorDirectoryEntry = {

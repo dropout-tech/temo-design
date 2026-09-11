@@ -47,7 +47,8 @@ export function CollaboratorManager({
         entry.name.toLocaleLowerCase().includes(keyword) ||
         KIND_LABELS[entry.kind].includes(keyword) ||
         entry.usages.some((usage) =>
-          usage.title.toLocaleLowerCase().includes(keyword)
+          usage.title.toLocaleLowerCase().includes(keyword) ||
+          usage.creditTitle?.toLocaleLowerCase().includes(keyword)
         )
     )
   }, [initial, query])
@@ -117,7 +118,7 @@ export function CollaboratorManager({
       </div>
 
       <div className="mb-6 rounded-lg border border-temo-gold/20 bg-temo-gold/[0.04] p-4 text-xs leading-relaxed text-temo-warm-gray/70">
-        改成同類型已存在的名稱時，系統會自動合併同一件作品裡的重複名稱。新增臨時設計師或合作夥伴仍請在作品編輯頁操作。
+        改成同類型已存在的名稱時，系統會自動合併同一件作品裡的重複名稱，並優先保留目標名稱已有的職稱。每件作品可設定不同職稱；新增名稱或編輯職稱請點「編輯作品」。
       </div>
 
       <div className="relative mb-6">
@@ -126,7 +127,7 @@ export function CollaboratorManager({
           className={`${inputCls} pl-10`}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="搜尋名稱、類型或作品名稱"
+          placeholder="搜尋名稱、職稱、類型或作品名稱"
           aria-label="搜尋合作夥伴"
         />
       </div>
@@ -251,7 +252,12 @@ export function CollaboratorManager({
                     >
                       <div className="flex min-w-0 items-center gap-2.5">
                         <FolderKanban className="h-4 w-4 shrink-0 text-temo-gold/70" />
-                        <span className="truncate text-sm text-temo-warm-gray/80">{usage.title}</span>
+                        <div className="min-w-0">
+                          <span className="block truncate text-sm text-temo-warm-gray/80">{usage.title}</span>
+                          {usage.creditTitle && (
+                            <span className="mt-1 block break-words text-xs text-temo-warm-gray/55">本作品職稱：{usage.creditTitle}</span>
+                          )}
+                        </div>
                         <span
                           className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${
                             usage.published

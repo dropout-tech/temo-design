@@ -6,10 +6,13 @@ import {
 
 export const WORK_CREDIT_TITLE_MAX = 100
 
-export type GuestDesignerCredit = {
+export type NamedWorkCredit = {
   name: string
   creditTitle: string
 }
+
+export type GuestDesignerCredit = NamedWorkCredit
+export type CollaboratorCredit = NamedWorkCredit
 
 export function normalizeWorkCreditTitle(value: unknown): string {
   if (typeof value !== "string") return ""
@@ -93,3 +96,8 @@ export function renameGuestDesignerCredits(
     }
   })
 }
+
+// 設計師與合作夥伴共用署名規則，但各自存於獨立欄位。
+export const normalizeCollaboratorCredits = normalizeGuestDesignerCredits
+export const mergeCollaboratorCredits = mergeGuestDesignerCredits
+export const renameCollaboratorCredits = renameGuestDesignerCredits

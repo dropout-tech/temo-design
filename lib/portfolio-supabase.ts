@@ -7,7 +7,7 @@ import type { Work, Designer } from "@/lib/portfolio-data"
 import { normalizeCoverCrop } from "@/lib/cover-crop"
 import { normalizeCategoryGroupValues } from "@/lib/work-category-groups"
 import { DEFAULT_TEAM_CATEGORY } from "@/lib/team-members"
-import { mergeGuestDesignerCredits } from "@/lib/work-team-credits"
+import { mergeGuestDesignerCredits, mergeCollaboratorCredits } from "@/lib/work-team-credits"
 
 // ─── 作品內容區塊（Adobe Portfolio 式：圖片/文字/YouTube 影片，可同列雙圖） ─────
 // 這是後台表單與前台渲染共用的合約型別，欄位形狀不得隨意更動。
@@ -628,6 +628,19 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     collaboratorNames = []
   }
 
+  // 獨立查詢讓尚未套用職稱 migration 的環境仍保有原本合作夥伴名稱。
+  let collaboratorCredits: unknown = []
+  try {
+    const { data: creditRow, error: creditError } = await supa
+      .from("works")
+      .select("collaborator_credits")
+      .eq("slug", slug)
+      .maybeSingle()
+    if (!creditError) collaboratorCredits = creditRow?.collaborator_credits
+  } catch {
+    collaboratorCredits = []
+  }
+
   const gallery = (w.work_gallery ?? [])
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
     .map((g) => ({ src: g.src, alt: g.alt ?? undefined, caption: g.caption ?? undefined }))
@@ -795,6 +808,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     pressMentions,
     designers,
     collaborators: collaboratorNames,
+    collaboratorCredits: mergeCollaboratorCredits(collaboratorCredits, collaboratorNames),
     related,
     blocks,
   }

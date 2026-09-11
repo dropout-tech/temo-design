@@ -56,6 +56,7 @@ import { DEFAULT_TEAM_CATEGORY, groupTeamMembersByCategory } from "@/lib/team-me
 import {
   WORK_CREDIT_TITLE_MAX,
   type GuestDesignerCredit,
+  type CollaboratorCredit,
 } from "@/lib/work-team-credits"
 
 type TeamMemberOption = {
@@ -115,8 +116,8 @@ export type WorkFormInitial = {
   designerCreditTitles: Record<string, string>
   /** 不在正式團隊名冊中的單次合作設計師與作品署名 Title。 */
   guestDesignerCredits: GuestDesignerCredit[]
-  /** 攝影師、顧問或外部團隊等其他合作夥伴，只存作品專屬顯示名稱 */
-  collaboratorNames: string[]
+  /** 攝影師、顧問或外部團隊等其他合作夥伴與本作品職稱。 */
+  collaboratorCredits: CollaboratorCredit[]
   /** 舊資料：僅用於表單初始化時的一次性 fallback，不再被編輯或送出 */
   gallery: { src: string; alt?: string; caption?: string }[]
   /** 內容區塊（新系統），有值時以此為準 */
@@ -129,7 +130,7 @@ const EMPTY: WorkFormInitial = {
   cover_position_y: DEFAULT_COVER_CROP.positionY, hero_url: "", client_logo_urls: [], video_url: "", size: "medium", description: "", services: "",
   deliverables: "", challenge: "", approach: "", result: "", quote_text: "",
   quote_author: "", awards: "", press: "", published: true, industryValues: [], customIndustryNames: [], designerIds: [],
-  designerCreditTitles: {}, guestDesignerCredits: [], collaboratorNames: [],
+  designerCreditTitles: {}, guestDesignerCredits: [], collaboratorCredits: [],
   gallery: [], blocks: [],
 }
 
@@ -955,7 +956,7 @@ export function WorkForm({
         creditTitle: f.designerCreditTitles[designerId] ?? "",
       })),
       guestDesignerCredits: f.guestDesignerCredits,
-      collaboratorNames: f.collaboratorNames,
+      collaboratorCredits: f.collaboratorCredits,
       blocks: blocks.map((b) => ({
         type: b.type,
         image_count: b.imageCount,
@@ -1237,7 +1238,7 @@ export function WorkForm({
                       onToggle={toggleDesigner}
                       onTitleChange={setDesignerCreditTitle}
                       designerExtras={
-                        <GuestDesignerCreditsInput
+                        <NamedWorkCreditsInput
                           values={f.guestDesignerCredits}
                           onChange={(values) => set("guestDesignerCredits", values)}
                           nameLabel="其他合作設計師"
@@ -1269,14 +1270,15 @@ export function WorkForm({
                   </Field>
                   <Field
                     label="其他合作夥伴（臨時名稱）"
-                    hint="只用於不在正式團隊名冊的單次合作姓名或團隊；正式顧問請先到「團隊成員」新增，再從上方選取。"
+                    hint="可填寫合作姓名或團隊，以及這件作品的職稱（Title）；留空只顯示名稱。正式顧問請先到「團隊成員」新增，再從上方選取。"
                   >
                     <div className="flex flex-wrap gap-2">
-                      <CustomNameChips
-                        values={f.collaboratorNames}
-                        onChange={(values) => set("collaboratorNames", values)}
+                      <NamedWorkCreditsInput
+                        values={f.collaboratorCredits}
+                        onChange={(values) => set("collaboratorCredits", values)}
                         nameLabel="合作夥伴"
                         placeholder="姓名或團隊名稱"
+                        titlePlaceholder="例如：攝影師、造型統籌、製作團隊"
                         suggestions={options.collaboratorNames}
                         onError={setError}
                       />
@@ -1572,7 +1574,7 @@ export function WorkForm({
                 <p>媒體：{mediaSummary.length > 0 ? mediaSummary.join("、") : "尚未補媒體"}</p>
                 <p>文字：{storySummary.length > 0 ? storySummary.join("、") : "尚未補案例文字"}</p>
                 <p>
-                  關聯：{f.industryValues.length + f.customIndustryNames.length} 個行業 · {f.designerIds.length + f.guestDesignerCredits.length} 位團隊成員／臨時設計師 · {f.collaboratorNames.length} 個合作夥伴
+                  關聯：{f.industryValues.length + f.customIndustryNames.length} 個行業 · {f.designerIds.length + f.guestDesignerCredits.length} 位團隊成員／臨時設計師 · {f.collaboratorCredits.length} 個合作夥伴
                 </p>
               </div>
             </div>
@@ -2616,11 +2618,12 @@ function TeamMemberSelector({
   )
 }
 
-function GuestDesignerCreditsInput({
+function NamedWorkCreditsInput({
   values,
   onChange,
   nameLabel,
   placeholder,
+  titlePlaceholder = "例如：設計總監、統籌",
   suggestions = [],
   onError,
 }: {
@@ -2628,6 +2631,7 @@ function GuestDesignerCreditsInput({
   onChange: (values: GuestDesignerCredit[]) => void
   nameLabel: string
   placeholder: string
+  titlePlaceholder?: string
   suggestions?: string[]
   onError: (message: string) => void
 }) {
@@ -2698,7 +2702,7 @@ function GuestDesignerCreditsInput({
                 )
               }
               maxLength={WORK_CREDIT_TITLE_MAX}
-              placeholder="例如：設計總監、統籌"
+              placeholder={titlePlaceholder}
               aria-label={`${designer.name} 的本作品 Title`}
             />
           </label>
@@ -2769,7 +2773,7 @@ function GuestDesignerCreditsInput({
                   if (event.key === "Escape") close()
                 }}
                 maxLength={WORK_CREDIT_TITLE_MAX}
-                placeholder="例如：設計總監、統籌"
+                placeholder={titlePlaceholder}
                 aria-label={`${nameLabel}的本作品 Title`}
               />
             </label>
@@ -2794,7 +2798,7 @@ function GuestDesignerCreditsInput({
                 disabled={!nameDraft.trim() || values.length >= CUSTOM_NAME_LIMIT}
                 className="min-h-10 rounded-sm bg-temo-gold px-4 text-xs font-medium text-temo-black transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-35"
               >
-                新增設計師
+                新增{nameLabel}
               </button>
             </div>
           </div>
