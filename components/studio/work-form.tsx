@@ -1,5 +1,7 @@
 "use client"
 
+import { getWorkPublicPath } from "@/lib/legacy-work-paths"
+
 import { useEffect, useId, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -1084,7 +1086,7 @@ export function WorkForm({
           </div>
           {f.slug.trim() && (
             <a
-              href={`/portfolio/${f.slug.trim()}`}
+              href={getWorkPublicPath(f.slug.trim())}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center px-4 py-3 border border-white/12 text-temo-warm-gray/75 hover:text-temo-gold hover:border-temo-gold/40 text-xs font-bold tracking-[0.12em] uppercase rounded-sm transition-colors"

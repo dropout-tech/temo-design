@@ -1,5 +1,7 @@
 "use client"
 
+import { getWorkPublicPath } from "@/lib/legacy-work-paths"
+
 import { useState, useEffect, useMemo, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import Image from "next/image"
@@ -707,7 +709,7 @@ export function PortfolioGrid({
                   }}
                 >
                   <Link
-                    href={`/portfolio/${work.slug}`}
+                    href={getWorkPublicPath(work.slug)}
                     className="relative w-full group overflow-hidden block text-left"
                     onMouseEnter={() => setHoveredId(work.id)}
                     onMouseLeave={() => setHoveredId(null)}

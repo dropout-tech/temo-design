@@ -143,6 +143,7 @@ export async function renameCollaborator(
   revalidatePath("/studio/works")
   revalidatePath("/portfolio")
   for (const work of affected) revalidatePath(`/portfolio/${work.slug}`)
+  revalidatePath("/[legacySlug]", "page")
 
   return { updatedWorks: affected.length }
 }

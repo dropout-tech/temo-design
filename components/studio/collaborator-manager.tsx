@@ -1,5 +1,7 @@
 "use client"
 
+import { getWorkPublicPath } from "@/lib/legacy-work-paths"
+
 import { useMemo, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -277,7 +279,7 @@ export function CollaboratorManager({
                         </Link>
                         {usage.published && (
                           <a
-                            href={`/portfolio/${usage.slug}`}
+                            href={getWorkPublicPath(usage.slug)}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-1 text-xs text-temo-warm-gray/55 transition-colors hover:text-temo-gold"

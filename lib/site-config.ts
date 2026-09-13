@@ -1,9 +1,10 @@
 import { Metadata } from 'next'
+import { SITE_ORIGIN } from './legacy-work-paths'
 
 export const siteConfig = {
   name: 'TEMO DESIGN',
   description: '以人為本的品牌設計工作室。我們相信設計不只是造型，更是一種療癒與解方。服務超過 200+ 品牌。',
-  url: 'https://www.temo.design',
+  url: SITE_ORIGIN,
   email: 'temo.design0531@gmail.com',
   phone: '0913-322-070',
   address: '台中市西區台灣大道二段229號13樓之2',
@@ -15,6 +16,7 @@ export const siteConfig = {
 }
 
 export const defaultMetadata: Metadata = {
+  metadataBase: new URL(SITE_ORIGIN),
   title: {
     default: 'TEMO DESIGN | 提摩設計',
     template: '%s | TEMO DESIGN',

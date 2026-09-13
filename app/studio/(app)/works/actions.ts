@@ -504,6 +504,8 @@ export async function saveWork(
   revalidatePath("/studio/works")
   revalidatePath("/portfolio")
   revalidatePath("/portfolio/[slug]", "page")
+  revalidatePath("/[legacySlug]", "page")
+  revalidatePath("/sitemap.xml")
   return { id: workId! }
 }
 
@@ -531,6 +533,8 @@ export async function setWorkPublished(
   revalidatePath("/studio/works")
   revalidatePath("/portfolio")
   if (data?.slug) revalidatePath(`/portfolio/${data.slug}`)
+  revalidatePath("/[legacySlug]", "page")
+  revalidatePath("/sitemap.xml")
 
   return {}
 }

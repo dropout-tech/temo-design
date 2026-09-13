@@ -1,5 +1,7 @@
 "use client"
 
+import { getWorkPublicPath } from "@/lib/legacy-work-paths"
+
 import { useMemo, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import {
@@ -263,7 +265,7 @@ export function WorksManager({ initialWorks }: { initialWorks: StudioWorkRow[] }
             </div>
 
             <p className="text-[11px] text-temo-warm-gray/30 font-mono truncate mt-1">
-              /portfolio/{work.slug}
+              {getWorkPublicPath(work.slug)}
             </p>
           </div>
         </div>
@@ -314,7 +316,7 @@ export function WorksManager({ initialWorks }: { initialWorks: StudioWorkRow[] }
             {work.published ? "已上架" : "草稿"}
           </button>
           <Link
-            href={`/portfolio/${work.slug}`}
+            href={getWorkPublicPath(work.slug)}
             target="_blank"
             rel="noreferrer"
             className="inline-flex min-h-9 items-center justify-center gap-1.5 px-3 py-2 text-xs text-temo-warm-gray/65 hover:text-temo-gold border border-white/10 hover:border-temo-gold/40 rounded-sm transition-colors sm:justify-start"

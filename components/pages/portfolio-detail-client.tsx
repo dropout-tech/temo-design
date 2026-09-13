@@ -1,5 +1,7 @@
 "use client"
 
+import { getWorkPublicPath } from "@/lib/legacy-work-paths"
+
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
@@ -530,7 +532,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                 {project.related.map((r) => (
                   <Link
                     key={r.slug}
-                    href={`/portfolio/${r.slug}`}
+                    href={getWorkPublicPath(r.slug)}
                     className="group block w-[82vw] max-w-[320px] flex-none snap-start snap-always sm:w-auto sm:max-w-none"
                   >
                     <div className="relative aspect-[4/5] overflow-hidden bg-temo-warm-gray/5 mb-4">

@@ -1,5 +1,7 @@
 "use client"
 
+import { getWorkPublicPath } from "@/lib/legacy-work-paths"
+
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
@@ -186,7 +188,7 @@ export function TeamMemberClient({
                 {works.map((work, i) => (
                   <Link
                     key={work.id}
-                    href={`/portfolio/${work.slug}`}
+                    href={getWorkPublicPath(work.slug)}
                     className="break-inside-avoid block group"
                     style={{
                       transition: `opacity 0.6s ease ${i * 0.05}s, transform 0.6s ease ${i * 0.05}s`,

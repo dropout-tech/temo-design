@@ -1,9 +1,15 @@
 import type { MetadataRoute } from 'next'
+import { SITE_ORIGIN, getWorkPublicPath } from '@/lib/legacy-work-paths'
+import { getPublishedWorkSlugs } from '@/lib/portfolio-supabase'
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://www.temo.design'
+export const revalidate = 60
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const baseUrl = SITE_ORIGIN
+  const slugs = await getPublishedWorkSlugs()
   
   return [
+    ...slugs.map((slug) => ({ url: `${baseUrl}${getWorkPublicPath(slug)}` })),
     {
       url: baseUrl,
       lastModified: new Date(),
