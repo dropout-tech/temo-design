@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { usePathname } from "next/navigation"
 import { useInView } from "@/hooks/use-in-view"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
@@ -11,6 +12,12 @@ import { cn } from "@/lib/utils"
 import type { QuoteCategory, QuoteComponent } from "@/lib/content-supabase"
 
 type Tab = "contact" | "quote" | "brief"
+
+const tabPaths: Record<Tab, string> = {
+  contact: "/contact",
+  quote: "/contact-price",
+  brief: "/contact-sheet",
+}
 
 type ContactInfo = {
   email: string
@@ -42,7 +49,8 @@ export function ContactPageClient({
     lineQrUrl: "",
   }
   const [visible, setVisible] = useState(false)
-  const [activeTab, setActiveTab] = useState<Tab>("contact")
+  const pathname = usePathname()
+  const activeTab: Tab = pathname === tabPaths.quote ? "quote" : pathname === tabPaths.brief ? "brief" : "contact"
   const { ref: contentRef, isInView } = useInView<HTMLDivElement>({ once: true, amount: 0.1 })
 
   const [formData, setFormData] = useState({
@@ -65,6 +73,11 @@ export function ContactPageClient({
     return () => clearTimeout(t)
   }, [])
 
+  useEffect(() => {
+    const title = activeTab === "quote" ? "方案報價" : activeTab === "brief" ? "問卷表單" : "聯絡我們"
+    document.title = `${title} | TEMO DESIGN`
+  }, [activeTab])
+
   // Prefill form from URL params (sent from QuoteBriefModal)
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -82,7 +95,6 @@ export function ContactPageClient({
     if (hasAny) {
       const frame = requestAnimationFrame(() => {
         setFormData((prev) => ({ ...prev, ...next }))
-        setActiveTab("contact")
         setPrefilled(true)
         document
           .getElementById("contact-form-anchor")
@@ -173,14 +185,21 @@ export function ContactPageClient({
             <div className="flex gap-2 sm:gap-3 py-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {([
                 { id: "contact", icon: MessageSquare, label: "傳送訊息" },
-                { id: "quote", icon: Calculator, label: "即時報價試算" },
-                { id: "brief", icon: FileText, label: "設計需求單" },
+                { id: "quote", icon: Calculator, label: "方案報價" },
+                { id: "brief", icon: FileText, label: "問卷表單" },
               ] as { id: Tab; icon: typeof MessageSquare; label: string }[]).map(({ id, icon: Icon, label }) => {
                 const active = activeTab === id
                 return (
-                  <button
+                  <a
                     key={id}
-                    onClick={() => setActiveTab(id)}
+                    href={tabPaths[id]}
+                    aria-current={active ? "page" : undefined}
+                    onClick={(event) => {
+                      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+                      event.preventDefault()
+                      // Keep form drafts mounted while syncing the URL and browser history.
+                      if (!active) window.history.pushState(null, "", tabPaths[id])
+                    }}
                     className={cn(
                       "flex flex-1 sm:flex-initial shrink-0 items-center justify-center gap-2.5 px-5 sm:px-8 py-3.5 sm:py-4 text-sm tracking-[0.08em] sm:tracking-[0.14em] font-semibold whitespace-nowrap rounded-full border transition-all duration-300",
                       active
@@ -190,7 +209,7 @@ export function ContactPageClient({
                   >
                     <Icon className={cn("w-5 h-5 shrink-0", active ? "text-temo-black" : "text-temo-gold")} />
                     {label}
-                  </button>
+                  </a>
                 )
               })}
             </div>
@@ -314,7 +333,7 @@ export function ContactPageClient({
 
                   {/* Switch to quote hint */}
                   <button
-                    onClick={() => setActiveTab("quote")}
+                    onClick={() => window.history.pushState(null, "", tabPaths.quote)}
                     className="group flex items-center gap-3 text-xs text-temo-warm-gray hover:text-temo-gold transition-colors"
                   >
                     <Calculator className="w-4 h-4 group-hover:scale-110 transition-transform" />
