@@ -1,5 +1,11 @@
 import { parseSubmissionContent } from "@/lib/submission-content"
 
+const billingFields = [
+  { question: "公司地址", label: "公司地址" },
+  { question: "公司統編", label: "統編／填寫的識別資料" },
+  { question: "是否需要開立發票？", label: "開立發票" },
+]
+
 export function SubmissionContent({ message }: { message: string | null }) {
   const sections = message ? parseSubmissionContent(message) : null
 
@@ -13,9 +19,34 @@ export function SubmissionContent({ message }: { message: string | null }) {
     )
   }
 
+  const billingRows = sections.flatMap((section) => section.rows)
+  const contentSections = sections.map((section) => ({
+    ...section,
+    rows: section.rows.filter((row) => !billingFields.some((field) => field.question === row.question)),
+  })).filter((section) => section.rows.length > 0)
+
   return (
     <div className="space-y-8">
-      {sections.map((section, index) => (
+      <section>
+        <h3 className="mb-3 text-base font-semibold text-temo-white">公司與開票資料</h3>
+        <dl className="grid overflow-hidden rounded-lg border border-temo-gold/20 bg-temo-gold/[0.04] sm:grid-cols-2">
+          {billingFields.map((field, index) => {
+            const answer = billingRows.find((row) => row.question === field.question)?.answer.trim()
+            return (
+              <div key={field.question} className={`min-w-0 p-5 ${index === 0 ? "border-b border-temo-gold/15 sm:col-span-2" : index === 1 ? "border-b border-temo-gold/15 sm:border-b-0 sm:border-r" : ""}`}>
+                <dt className="mb-2 text-sm text-temo-warm-gray">{field.label}</dt>
+                <dd className={`whitespace-pre-wrap text-base leading-7 [overflow-wrap:anywhere] ${answer ? "text-temo-white" : "text-temo-warm-gray"}`}>
+                  {answer || "紀錄未包含此欄位"}
+                </dd>
+              </div>
+            )
+          })}
+        </dl>
+        {billingFields.some((field) => !billingRows.some((row) => row.question === field.question)) && (
+          <p className="mt-3 text-sm leading-6 text-temo-warm-gray">部分資料未包含在這筆送出紀錄中；舊版問卷曾漏傳這些欄位，如需使用請向填表人確認。</p>
+        )}
+      </section>
+      {contentSections.map((section, index) => (
         <section key={index}>
           <h3 className="mb-3 text-base font-semibold leading-7 text-temo-gold [overflow-wrap:anywhere]">
             {section.title}

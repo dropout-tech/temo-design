@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { ArrowLeft, ArrowRight, Check, Send, AlertCircle } from "lucide-react"
+import { buildBriefText } from "@/lib/quote-brief-submission"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import type { BriefSectionDbRow } from "@/lib/brief-supabase-types"
@@ -33,35 +34,6 @@ const CATEGORY_OPTIONS: { id: CategoryId; title: string; titleEn: string; desc: 
 function isAnswered(q: BriefQuestion, value: Answer | undefined) {
   if (q.type === "checkbox") return Array.isArray(value) && value.length > 0
   return typeof value === "string" && value.trim().length > 0
-}
-
-function buildBriefText(
-  selectedCategories: CategoryId[],
-  sections: BriefSection[],
-  answers: Answers
-) {
-  const lines: string[] = []
-  lines.push("【設計需求 Brief】")
-  lines.push(
-    `服務範疇：${selectedCategories
-      .map((id) => CATEGORY_OPTIONS.find((c) => c.id === id)?.title)
-      .filter(Boolean)
-      .join("、")}`
-  )
-  lines.push("")
-  for (const s of sections) {
-    if (s.id === "basic") continue // basic info maps to top-level form fields
-    const filled = s.questions.filter((q) => isAnswered(q, answers[q.id]))
-    if (filled.length === 0) continue
-    lines.push(`— ${s.title} ${s.titleEn} —`)
-    for (const q of filled) {
-      const v = answers[q.id]
-      const text = Array.isArray(v) ? v.join("、") : v
-      lines.push(`${q.label}：${text}`)
-    }
-    lines.push("")
-  }
-  return lines.join("\n")
 }
 
 // ─────────────────────────────────────────────
@@ -317,7 +289,10 @@ export function QuoteBriefForm() {
   }
 
   function handleSubmit() {
-    const briefText = buildBriefText(selectedCategories, sections, answers)
+    const serviceLabels = selectedCategories.map(
+      (id) => CATEGORY_OPTIONS.find((category) => category.id === id)!.title
+    )
+    const briefText = buildBriefText(serviceLabels, sections, answers)
     const params = new URLSearchParams()
     params.set("name", (answers.name as string) || "")
     params.set("email", (answers.email as string) || "")
