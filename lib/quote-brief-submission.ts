@@ -1,3 +1,4 @@
+import { BRIEF_PREFIX, type BriefSnapshot } from "./brief-snapshot"
 import type { BriefSection } from "./quote-brief-questions"
 
 // Only these answers are carried separately by the contact form. All other
@@ -27,4 +28,21 @@ export function buildBriefText(
     lines.push("")
   }
   return lines.join("\n")
+}
+
+// Capture the labels and section ordering at submission time, so later edits
+// to the questionnaire cannot reinterpret a customer's answers.
+export function buildBriefSnapshot(serviceLabels: string[], sections: BriefSection[], answers: Record<string, string | string[]>) {
+  const snapshot: BriefSnapshot = {
+    version: 1,
+    services: serviceLabels,
+    sections: sections.map((section) => ({
+      id: section.id,
+      title: section.id === "basic" ? "公司與開票資料" : `${section.title} ${section.titleEn}`.trim(),
+      rows: section.questions.filter((question) => !(section.id === "basic" && contactFields.has(question.id))).map((question) => ({
+        id: question.id, question: question.label, answer: answers[question.id] ?? "",
+      })),
+    })),
+  }
+  return BRIEF_PREFIX + JSON.stringify(snapshot)
 }

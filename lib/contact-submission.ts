@@ -1,3 +1,5 @@
+import { submissionPlainText, validSubmissionMessage } from "./brief-snapshot"
+import { parseSubmissionContent } from "./submission-content"
 import { z } from "zod"
 
 export const CONTACT_SUBJECT_LABELS = {
@@ -17,7 +19,7 @@ export const contactSubmissionSchema = z.object({
   company: z.string().trim().max(150).optional().default(""),
   phone: z.string().trim().max(50).optional().default(""),
   subject: z.enum(["brand", "graphic", "product", "crafts", "other"]),
-  message: z.string().trim().min(1).max(10_000),
+  message: z.string().trim().min(1).max(60_000).refine(validSubmissionMessage, "內容總長度不可超過 10,000 字"),
   // Hidden honeypot. Legitimate visitors never fill this field.
   website: z.string().max(500).optional().default(""),
 })
@@ -48,7 +50,7 @@ export function buildContactEmail(input: ContactSubmissionInput) {
     `服務項目：${serviceLabel}`,
     "",
     "訊息內容：",
-    input.message,
+    submissionPlainText(input.message),
   ].join("\n")
 
   const rows = [
@@ -64,15 +66,26 @@ export function buildContactEmail(input: ContactSubmissionInput) {
     )
     .join("")
 
+  const sections = parseSubmissionContent(input.message)
+  const contentHtml = sections?.length ? sections.map((section) => `
+    <h2 style="font-size:17px;margin:28px 0 12px;color:#71552e">${escapeHtml(section.title)}</h2>
+    <table style="width:100%;table-layout:fixed;border-collapse:collapse">${section.rows.map((row) => `
+      <tr><th scope="row" style="width:30%;padding:14px;text-align:left;vertical-align:top;background:#f7f5f1;border:1px solid #e4dfd5;font-size:13px;font-weight:500;overflow-wrap:anywhere">${escapeHtml(row.question ?? "補充內容")}</th>
+      <td style="padding:14px;vertical-align:top;border:1px solid #e4dfd5;white-space:pre-wrap;line-height:1.8;overflow-wrap:anywhere">${escapeHtml(row.answer.trim() || "未填寫")}</td></tr>`).join("")}</table>`).join("")
+    : `<div style="padding:16px;background:#f7f5f1;white-space:pre-wrap;line-height:1.7;overflow-wrap:anywhere">${escapeHtml(input.message)}</div>`
+
   const html = `
     <div style="font-family:Arial,'Noto Sans TC',sans-serif;max-width:680px;margin:0 auto;color:#222">
       <h1 style="font-size:22px;margin:0 0 20px">TEMO 官網收到新的聯絡表單</h1>
       <table style="width:100%;border-collapse:collapse;margin-bottom:24px">${rows}</table>
       <h2 style="font-size:16px;margin:0 0 10px">訊息內容</h2>
-      <div style="padding:16px;background:#f7f5f1;border-left:3px solid #cda96d;white-space:pre-wrap;line-height:1.7">${escapeHtml(input.message)}</div>
+      ${contentHtml}
       <p style="margin-top:20px;color:#777;font-size:12px">直接回覆此封信，即可回覆給 ${escapeHtml(input.email)}。</p>
     </div>
   `.trim()
 
-  return { subject, text, html }
+  // Apps Script accepts at most 60,000 HTML characters. Very large/custom
+  // questionnaires still deliver in full using a compact text-safe fallback.
+  const compactHtml = `<div style="font-family:Arial,sans-serif;white-space:pre-wrap;line-height:1.8">${text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</div>`
+  return { subject, text, html: html.length <= 60_000 ? html : compactHtml }
 }

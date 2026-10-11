@@ -1,8 +1,11 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft, ArrowRight, Check, Send, AlertCircle } from "lucide-react"
-import { buildBriefText } from "@/lib/quote-brief-submission"
+import { buildBriefSnapshot } from "@/lib/quote-brief-submission"
+import { briefPlainText, readBriefSnapshot } from "@/lib/brief-snapshot"
+import { briefAnswerError } from "@/lib/brief-validation"
+import { contactSubmissionSchema } from "@/lib/contact-submission"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import type { BriefSectionDbRow } from "@/lib/brief-supabase-types"
@@ -62,7 +65,7 @@ function Field({
 
   return (
     <div>
-      <label className="block mb-2">
+      <label htmlFor={`brief-${q.id}`} className="block mb-2">
         <span className="text-sm text-white">
           {q.label}
           {q.required && <span className="text-temo-gold ml-1">*</span>}
@@ -76,6 +79,9 @@ function Field({
 
       {q.type === "paragraph" ? (
         <textarea
+          id={`brief-${q.id}`}
+          aria-invalid={invalid || undefined}
+          aria-describedby={invalid ? `brief-error-${q.id}` : undefined}
           rows={4}
           value={(value as string) ?? ""}
           onChange={(e) => onChange(e.target.value)}
@@ -176,6 +182,9 @@ function Field({
         </div>
       ) : (
         <input
+          id={`brief-${q.id}`}
+          aria-invalid={invalid || undefined}
+          aria-describedby={invalid ? `brief-error-${q.id}` : undefined}
           type={q.type === "email" ? "email" : q.type === "tel" ? "tel" : "text"}
           value={(value as string) ?? ""}
           onChange={(e) => onChange(e.target.value)}
@@ -196,6 +205,21 @@ export function QuoteBriefForm() {
   const [selectedCategories, setSelectedCategories] = useState<CategoryId[]>([])
   const [answers, setAnswers] = useState<Answers>({})
   const [showErrors, setShowErrors] = useState(false)
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [submitError, setSubmitError] = useState("")
+  const [locked, setLocked] = useState(false)
+  const [website, setWebsite] = useState("")
+  const pendingSubmission = useRef<ReturnType<typeof contactSubmissionSchema.parse> | null>(null)
+  const sending = useRef(false)
+  const successPanel = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (submitted) {
+      successPanel.current?.focus({ preventScroll: true })
+      successPanel.current?.scrollIntoView({ block: "start" })
+    }
+  }, [submitted])
 
   // 問卷區塊/題目改由後台（brief_sections / brief_questions）管理；
   // 掛載時從 Supabase 讀取，讀不到就沿用靜態題庫當 fallback。
@@ -251,6 +275,13 @@ export function QuoteBriefForm() {
   const currentSectionIndex = step - 1
   const currentSection = !isPicker && !isReview ? sections[currentSectionIndex] : null
 
+  const serviceLabels = selectedCategories.map(
+    (id) => CATEGORY_OPTIONS.find((category) => category.id === id)!.title
+  )
+  const snapshotMessage = buildBriefSnapshot(serviceLabels, sections, answers)
+  const snapshot = readBriefSnapshot(snapshotMessage)
+  const contentLength = snapshot ? briefPlainText(snapshot).length : 0
+
   function setAnswer(qid: string, value: Answer) {
     setAnswers((prev) => ({ ...prev, [qid]: value }))
   }
@@ -265,7 +296,7 @@ export function QuoteBriefForm() {
     if (isPicker) return selectedCategories.length > 0
     if (isReview) return true
     return currentSection!.questions.every((q) =>
-      !q.required ? true : isAnswered(q, answers[q.id])
+      !briefAnswerError(q, answers[q.id])
     )
   }
 
@@ -288,27 +319,66 @@ export function QuoteBriefForm() {
     setStep((s) => Math.max(0, s - 1))
   }
 
-  function handleSubmit() {
-    const serviceLabels = selectedCategories.map(
-      (id) => CATEGORY_OPTIONS.find((category) => category.id === id)!.title
-    )
-    const briefText = buildBriefText(serviceLabels, sections, answers)
-    const params = new URLSearchParams()
-    params.set("name", (answers.name as string) || "")
-    params.set("email", (answers.email as string) || "")
-    params.set("company", (answers.company as string) || "")
-    params.set("phone", (answers.phone as string) || "")
-    params.set(
-      "subject",
-      selectedCategories[0] === "product"
-        ? "product"
-        : selectedCategories[0] === "crafts"
-        ? "crafts"
-        : "brand"
-    )
-    params.set("message", briefText)
-    window.location.href = `/contact?${params.toString()}`
+  async function handleSubmit() {
+    if (sending.current) return
+    setSubmitError("")
+    if (!pendingSubmission.current) {
+      const invalidSection = sections.findIndex((section) => section.questions.some((q) => briefAnswerError(q, answers[q.id])))
+      if (invalidSection >= 0) {
+        setStep(invalidSection + 1)
+        setShowErrors(true)
+        return
+      }
+      const result = contactSubmissionSchema.safeParse({
+        requestId: crypto.randomUUID(),
+        name: answers.name, email: answers.email, company: answers.company || "", phone: answers.phone || "",
+        subject: selectedCategories[0] === "product" ? "product" : selectedCategories[0] === "crafts" ? "crafts" : "brand",
+        message: snapshotMessage, website,
+      })
+      if (!result.success) {
+        setSubmitError(contentLength > 10_000 ? "問卷總長度超過 10,000 字，請返回精簡內容。" : "請返回確認聯絡資料與填寫內容是否完整。")
+        return
+      }
+      pendingSubmission.current = result.data
+    }
+    sending.current = true
+    setSubmitting(true)
+    setLocked(true)
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pendingSubmission.current),
+      })
+      const result = await response.json().catch(() => null)
+      if (!response.ok || result?.ok !== true) {
+        if ([400, 413, 429].includes(response.status)) {
+          pendingSubmission.current = null
+          setLocked(false)
+        }
+        throw new Error(result?.error || "暫時無法確認送出結果，請重試。")
+      }
+      setSubmitted(true)
+      setAnswers({})
+      pendingSubmission.current = null
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "連線中斷，請重試送出。")
+    } finally {
+      sending.current = false
+      setSubmitting(false)
+    }
   }
+
+  if (submitted) return (
+    <div ref={successPanel} tabIndex={-1} className="max-w-3xl scroll-mt-40 rounded-lg border border-temo-gold/25 bg-temo-gold/5 px-6 py-12 outline-none sm:px-10" role="status">
+      <Check className="mb-5 h-8 w-8 text-temo-gold" aria-hidden="true" />
+      <h2 className="text-2xl font-semibold text-temo-white">需求單已送出</h2>
+      <p className="mt-3 text-base leading-8 text-temo-warm-gray">我們已收到您的完整問卷與聯絡資料，團隊會依您留下的聯絡方式與您聯繫。</p>
+      <button type="button" className="mt-6 rounded border border-temo-gold/40 px-5 py-3 text-sm text-temo-gold focus-visible:outline-2 focus-visible:outline-offset-4" onClick={() => {
+        setSubmitted(false); setStep(0); setSelectedCategories([]); setTouched({}); setShowErrors(false); setLocked(false); setWebsite("")
+        requestAnimationFrame(() => document.getElementById("brief-form-top")?.scrollIntoView({ block: "start" }))
+      }}>填寫另一份需求單</button>
+    </div>
+  )
 
   const progress = (step / (totalSteps - 1)) * 100
 
@@ -326,7 +396,7 @@ export function QuoteBriefForm() {
   const stepDesc = isPicker
     ? "請選擇您此次想諮詢的設計範疇 (可複選)"
     : isReview
-    ? "請最後確認您填寫的內容，送出後將自動帶到聯絡表單。"
+    ? "請確認聯絡資料與需求內容，確認後即可直接送出。"
     : currentSection!.description
 
   return (
@@ -411,11 +481,10 @@ export function QuoteBriefForm() {
           />
         ) : (
           currentSection!.questions.map((q) => {
-            const invalid = Boolean(
-              showErrors && q.required && !isAnswered(q, answers[q.id])
-            )
+            const error = briefAnswerError(q, answers[q.id])
+            const invalid = Boolean((showErrors || touched[q.id]) && error)
             return (
-              <div key={q.id}>
+              <div key={q.id} onBlur={() => setTouched((previous) => ({ ...previous, [q.id]: true }))}>
                 <Field
                   q={q}
                   value={answers[q.id]}
@@ -423,8 +492,8 @@ export function QuoteBriefForm() {
                   invalid={invalid}
                 />
                 {invalid && (
-                  <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-red-400/90">
-                    <AlertCircle className="w-3 h-3" /> 此題為必填
+                  <p id={`brief-error-${q.id}`} role="alert" className="mt-1.5 flex items-center gap-1.5 text-[11px] text-red-400/90">
+                    <AlertCircle className="w-3 h-3" /> {error}
                   </p>
                 )}
               </div>
@@ -439,15 +508,24 @@ export function QuoteBriefForm() {
         )}
       </div>
 
+      <div className="sr-only" aria-hidden="true">
+        <label>Website<input tabIndex={-1} autoComplete="off" value={website} onChange={(event) => setWebsite(event.target.value)} /></label>
+      </div>
+      {!isPicker && (
+        <p className={`mb-4 text-sm ${contentLength > 10_000 ? "text-red-300" : "text-temo-warm-gray"}`} aria-live="polite">
+          問卷內容 {contentLength.toLocaleString()} / 10,000 字（含題目）{contentLength > 10_000 ? "，請精簡回答後再送出。" : ""}
+        </p>
+      )}
+      {submitError && <p role="alert" className="mb-4 max-w-3xl rounded border border-red-400/30 bg-red-400/5 p-4 text-sm leading-7 text-red-200">{submitError}{locked ? " 您的內容已保留，請按「重試送出」確認同一筆需求。" : ""}</p>}
       {/* Footer actions */}
       <div className="flex items-center justify-between gap-3 max-w-3xl border-t border-white/8 pt-5">
         <button
           type="button"
           onClick={handlePrev}
-          disabled={isPicker}
+          disabled={isPicker || submitting || locked}
           className={cn(
             "flex items-center gap-1.5 px-4 py-3 text-xs transition-colors",
-            isPicker
+            isPicker || submitting || locked
               ? "text-white/20 cursor-not-allowed"
               : "text-temo-warm-gray hover:text-white"
           )}
@@ -460,7 +538,7 @@ export function QuoteBriefForm() {
           <button
             type="button"
             onClick={handleNext}
-            className="flex items-center gap-2 px-6 sm:px-8 py-3.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.2em] uppercase hover:brightness-110 active:scale-[0.98] transition-all rounded-sm"
+            className="flex items-center gap-2 px-6 sm:px-8 py-3.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.2em] uppercase hover:brightness-110 active:scale-[0.98] transition-all rounded-sm disabled:cursor-wait disabled:opacity-50"
           >
             下一步
             <ArrowRight className="w-3.5 h-3.5" />
@@ -469,9 +547,10 @@ export function QuoteBriefForm() {
           <button
             type="button"
             onClick={handleSubmit}
-            className="flex items-center gap-2 px-6 sm:px-8 py-3.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.2em] uppercase hover:brightness-110 active:scale-[0.98] transition-all rounded-sm"
+            disabled={submitting || contentLength > 10_000}
+            className="flex items-center gap-2 px-6 sm:px-8 py-3.5 bg-temo-gold text-temo-black text-xs font-bold tracking-[0.2em] uppercase hover:brightness-110 active:scale-[0.98] transition-all rounded-sm disabled:cursor-wait disabled:opacity-50"
           >
-            送出需求單
+            {submitting ? "正在送出…" : locked ? "重試送出" : "確認並送出需求單"}
             <Send className="w-3.5 h-3.5" />
           </button>
         )}
@@ -538,7 +617,7 @@ function ReviewPanel({
       </div>
 
       <p className="text-[11px] text-temo-warm-gray/50 leading-relaxed">
-        送出後，您填寫的內容會自動帶到「傳送訊息」頁籤的訊息欄位，您可以再次確認後正式發送。
+        確認並送出後，完整內容會交給提摩團隊；您不需要再填一次聯絡表單。
       </p>
     </div>
   )

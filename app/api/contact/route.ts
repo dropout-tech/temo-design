@@ -62,13 +62,17 @@ function storedInput(row: StoredSubmission, website = "") {
 
 export async function POST(request: NextRequest) {
   const contentLength = Number(request.headers.get("content-length") ?? 0)
-  if (Number.isFinite(contentLength) && contentLength > 25_000) {
+  if (Number.isFinite(contentLength) && contentLength > 200_000) {
     return json({ error: "表單內容過長，請精簡後再試一次。" }, 413)
   }
 
   let rawBody: unknown
   try {
-    rawBody = await request.json()
+    const body = await request.text()
+    if (new TextEncoder().encode(body).length > 200_000) {
+      return json({ error: "表單內容過長，請精簡後再試一次。" }, 413)
+    }
+    rawBody = JSON.parse(body)
   } catch {
     return json({ error: "表單格式不正確，請重新整理後再試一次。" }, 400)
   }

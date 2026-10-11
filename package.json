@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test:contact": "tsx scripts/contact-submission.test.ts && tsx scripts/contact-mailer.test.ts && tsx scripts/google-apps-script-contact-mailer.test.ts",
+    "test:contact": "tsx scripts/contact-submission.test.ts && tsx scripts/contact-mailer.test.ts && tsx scripts/google-apps-script-contact-mailer.test.ts && tsx scripts/quote-brief-submission.test.ts && tsx scripts/submission-content.test.ts && tsx scripts/brief-snapshot.test.ts",
     "test:designer-social-links": "tsx scripts/designer-social-links.test.ts",
     "test:work-blocks": "tsx --test scripts/work-block-config.test.ts scripts/sanitize-rich-text.test.ts",
     "test:work-team-credits": "tsx scripts/work-team-credits.test.ts && tsx scripts/collaborator-credits.test.ts && tsx scripts/collaborator-names.test.ts"

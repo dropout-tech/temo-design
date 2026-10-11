@@ -1,8 +1,9 @@
+import { readBriefSnapshot } from "./brief-snapshot"
 import { briefSections } from "./quote-brief-questions"
 
 export type SubmissionContentSection = {
   title: string
-  rows: { question: string | null; answer: string }[]
+  rows: { id?: string; question: string | null; answer: string }[]
 }
 
 // Legacy submissions store a flat string. Match known question labels, rather
@@ -12,6 +13,15 @@ const questionLabels = briefSections.flatMap((section) =>
 ).sort((a, b) => b.length - a.length)
 
 export function parseSubmissionContent(message: string): SubmissionContentSection[] | null {
+  const snapshot = readBriefSnapshot(message)
+  if (snapshot) return [
+    { title: "需求摘要", rows: [{ question: "服務範疇", answer: snapshot.services.join("、") }] },
+    ...snapshot.sections.map((section) => ({ title: section.title, rows: section.rows.map((row) => ({
+      id: section.id === "basic" ? row.id : `other:${section.id}:${row.id}`,
+      question: row.question,
+      answer: Array.isArray(row.answer) ? row.answer.join("\n") : row.answer,
+    })) })),
+  ]
   const lines = message.replace(/\r\n?/g, "\n").split("\n")
   if (lines[0]?.trim() !== "【設計需求 Brief】") return null
 
