@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { SubmissionContent } from "@/components/studio/submission-content"
 import { ChevronLeft, ChevronRight, Inbox, Mail, Phone } from "lucide-react"
 import { CONTACT_SUBJECT_LABELS, type ContactSubject } from "@/lib/contact-submission"
 import { createClient } from "@/lib/supabase/server"
@@ -174,10 +175,8 @@ export default async function StudioSubmissionsPage({
                   </div>
 
                   <div className="mt-6">
-                    <p className="mb-2 text-[10px] tracking-[0.18em] text-temo-warm-gray/40 uppercase">訊息內容</p>
-                    <div className="whitespace-pre-wrap break-words rounded-md border border-white/[0.07] bg-black/20 p-4 text-sm leading-7 text-temo-warm-gray/85">
-                      {submission.message || "未填寫"}
-                    </div>
+                    <h2 className="mb-5 text-lg font-semibold text-temo-white">表單內容</h2>
+                    <SubmissionContent message={submission.message} />
                   </div>
 
                   {submission.email_status === "failed" && submission.email_error && (
