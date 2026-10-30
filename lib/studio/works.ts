@@ -84,6 +84,9 @@ type WorkEditRow = {
   cover_position_x: number | null
   cover_position_y: number | null
   hero_url: string | null
+  hero_zoom?: number | null
+  hero_position_x?: number | null
+  hero_position_y?: number | null
   client_logo_url: string | null
   video_url: string | null
   size: WorkFormInitial["size"] | null
@@ -162,6 +165,11 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
     positionX: w.cover_position_x ?? undefined,
     positionY: w.cover_position_y ?? undefined,
   })
+  const heroCrop = normalizeCoverCrop({
+    zoom: w.hero_zoom ?? undefined,
+    positionX: w.hero_position_x ?? undefined,
+    positionY: w.hero_position_y ?? undefined,
+  })
 
   // 新關聯未套用時仍可用舊 category_group 開啟表單；套用後依使用者選取順序回填。
   let categoryGroupValues: string[] = []
@@ -217,6 +225,9 @@ export async function getWorkForEdit(id: string): Promise<WorkForEditWithBlocks 
 
   return {
     hero_url: w.hero_url ?? "",
+    hero_zoom: heroCrop.zoom,
+    hero_position_x: heroCrop.positionX,
+    hero_position_y: heroCrop.positionY,
     // 多張 LOGO 換行分隔存於同一欄位，還原成陣列給表單
     client_logo_urls: String(w.client_logo_url ?? "")
       .split("\n")

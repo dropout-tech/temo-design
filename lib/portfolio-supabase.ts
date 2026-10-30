@@ -660,6 +660,21 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
   const cover = w.cover_url ?? "/placeholder.jpg"
   const hero = heroUrl || cover
 
+  // 構圖獨立讀取：舊環境尚未新增欄位時，仍保留原本的首圖 URL 與置中顯示。
+  let heroCrop = normalizeCoverCrop()
+  const { data: heroCropRow, error: heroCropError } = await supa
+    .from("works")
+    .select("hero_zoom, hero_position_x, hero_position_y")
+    .eq("slug", slug)
+    .maybeSingle()
+  if (!heroCropError && heroCropRow) {
+    heroCrop = normalizeCoverCrop({
+      zoom: heroCropRow.hero_zoom ?? undefined,
+      positionX: heroCropRow.hero_position_x ?? undefined,
+      positionY: heroCropRow.hero_position_y ?? undefined,
+    })
+  }
+
   // ── client_logo_url：獨立查詢，欄位不存在（migration 0017 未套用）時安靜回空陣列 ──
   // 多張 LOGO 以換行分隔存於同一 text 欄位（一件作品可能有多位客戶），舊資料單一 URL 即單元素陣列
   let clientLogos: string[] = []
@@ -796,6 +811,7 @@ export async function getWorkDetail(slug: string): Promise<WorkDetailWithBlocks 
     description: w.description ?? "",
     cover,
     hero,
+    heroCrop,
     videoUrl: w.video_url ?? undefined,
     services: w.services ?? [],
     deliverables: w.deliverables ?? [],

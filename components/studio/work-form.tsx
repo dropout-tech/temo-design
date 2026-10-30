@@ -95,6 +95,9 @@ export type WorkFormInitial = {
   cover_position_y: number
   /** 內頁首圖，選填，留空＝沿用封面圖 */
   hero_url?: string
+  hero_zoom?: number
+  hero_position_x?: number
+  hero_position_y?: number
   /** 客戶 LOGO，選填可多張（一件作品可能有多位客戶）；顯示於作品內頁右側資訊欄最頂端 */
   client_logo_urls?: string[]
   video_url: string
@@ -452,17 +455,20 @@ function Field({ label, children, hint }: { label: string; children: React.React
   )
 }
 
-function CoverCropEditor({
+function MediaCropEditor({
   src,
-  size,
+  size = "medium",
+  variant = "cover",
   crop: cropInput,
   onChange,
 }: {
   src: string
-  size: WorkFormInitial["size"]
+  size?: WorkFormInitial["size"]
+  variant?: "cover" | "hero"
   crop: CoverCrop
   onChange: (crop: CoverCrop) => void
 }) {
+  const [heroPreview, setHeroPreview] = useState<"desktop" | "mobile">("desktop")
   const frameRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{
     pointerId: number
@@ -472,7 +478,11 @@ function CoverCropEditor({
     positionY: number
   } | null>(null)
   const crop = normalizeCoverCrop(cropInput)
-  const aspectLabel = size === "large" ? "直式 4:5" : size === "small" ? "橫式 4:3" : "正方形 1:1"
+  const isHero = variant === "hero"
+  const mediaLabel = isHero ? "內頁首圖" : "封面"
+  const aspectLabel = isHero
+    ? heroPreview === "desktop" ? "桌機／平板 21:9" : "手機 16:9"
+    : size === "large" ? "直式 4:5" : size === "small" ? "橫式 4:3" : "正方形 1:1"
 
   function update(patch: Partial<CoverCrop>) {
     onChange(normalizeCoverCrop({ ...crop, ...patch }))
@@ -524,7 +534,7 @@ function CoverCropEditor({
     <div className="space-y-4 rounded-lg border border-white/10 bg-white/[0.025] p-4 md:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-temo-white">調整作品探索的封面構圖</p>
+          <p className="text-sm font-medium text-temo-white">{isHero ? "調整內頁首圖構圖" : "調整作品探索的封面構圖"}</p>
           <p className="mt-1 text-xs leading-relaxed text-temo-warm-gray/55">
             直接拖曳圖片調整位置；下方可精準縮放與移動。
           </p>
@@ -537,11 +547,32 @@ function CoverCropEditor({
         </div>
       </div>
 
+      {isHero && (
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="首圖預覽比例">
+          {(["desktop", "mobile"] as const).map((preview) => (
+            <button
+              key={preview}
+              type="button"
+              aria-pressed={heroPreview === preview}
+              onClick={() => setHeroPreview(preview)}
+              className={cn(
+                "min-h-10 rounded-md border px-3 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-temo-gold",
+                heroPreview === preview
+                  ? "border-temo-gold/50 bg-temo-gold/10 text-temo-gold"
+                  : "border-white/15 text-temo-warm-gray hover:border-temo-gold/40"
+              )}
+            >
+              {preview === "desktop" ? "桌機／平板預覽" : "手機預覽"}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div
         ref={frameRef}
         role="application"
         tabIndex={0}
-        aria-label="封面構圖預覽。可拖曳圖片，或使用方向鍵調整位置。"
+        aria-label={`${mediaLabel}構圖預覽。可拖曳圖片，或使用方向鍵調整位置。`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endPointer}
@@ -549,13 +580,15 @@ function CoverCropEditor({
         onKeyDown={onKeyDown}
         className={cn(
           "relative mx-auto w-full max-w-md cursor-grab touch-none select-none overflow-hidden rounded-lg bg-black outline-none ring-offset-2 ring-offset-temo-black active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-temo-gold/70",
-          size === "large" ? "aspect-[4/5] max-w-sm" : size === "small" ? "aspect-[4/3]" : "aspect-square max-w-sm"
+          isHero
+            ? heroPreview === "desktop" ? "aspect-[21/9] max-w-none" : "aspect-[16/9]"
+            : size === "large" ? "aspect-[4/5] max-w-sm" : size === "small" ? "aspect-[4/3]" : "aspect-square max-w-sm"
         )}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}
-          alt="作品探索封面構圖預覽"
+          alt={isHero ? "內頁首圖構圖預覽" : "作品探索封面構圖預覽"}
           draggable={false}
           className="pointer-events-none absolute inset-0 h-full w-full object-cover"
           style={getCoverCropStyle(crop)}
@@ -603,14 +636,16 @@ function CoverCropEditor({
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] pt-4">
         <p className="text-[11px] leading-relaxed text-temo-warm-gray/45">
-          前台會使用相同的卡片比例、縮放與位置設定。
+          {isHero
+            ? "桌機與手機共用這組縮放與位置；可切換比例檢查裁切。僅影響內頁首圖。"
+            : "前台會使用相同的卡片比例、縮放與位置設定。"}
         </p>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => update({ zoom: Math.max(COVER_ZOOM_MIN, crop.zoom - 0.1) })}
             className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/10 text-temo-warm-gray/70 transition-colors hover:border-temo-gold/40 hover:text-temo-gold"
-            aria-label="縮小封面"
+            aria-label={`縮小${mediaLabel}`}
           >
             <Minus className="h-4 w-4" />
           </button>
@@ -618,7 +653,7 @@ function CoverCropEditor({
             type="button"
             onClick={() => update({ zoom: Math.min(COVER_ZOOM_MAX, crop.zoom + 0.1) })}
             className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/10 text-temo-warm-gray/70 transition-colors hover:border-temo-gold/40 hover:text-temo-gold"
-            aria-label="放大封面"
+            aria-label={`放大${mediaLabel}`}
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -708,6 +743,12 @@ export function WorkForm({
   const router = useRouter()
   const [f, setF] = useState<WorkFormInitial>(initial ?? EMPTY)
   const [heroUrl, setHeroUrl] = useState(initial?.hero_url ?? "")
+  const [heroCrop, setHeroCrop] = useState(() => normalizeCoverCrop({
+    zoom: initial?.hero_zoom,
+    positionX: initial?.hero_position_x,
+    positionY: initial?.hero_position_y,
+  }))
+  const heroSrc = heroUrl || f.cover_url
   const [clientLogos, setClientLogos] = useState<string[]>(initial?.client_logo_urls ?? [])
   const [clientLogoDraft, setClientLogoDraft] = useState("")
   const [blocks, setBlocks] = useState<FormBlock[]>(() => initialBlocksFrom(initial))
@@ -739,7 +780,7 @@ export function WorkForm({
     if (!draftMounted.current) return
     draftRevision.current += 1
     setSaveStatus("dirty")
-  }, [blocks, clientLogoDraft, clientLogos, f, heroUrl])
+  }, [blocks, clientLogoDraft, clientLogos, f, heroUrl, heroCrop])
 
   useEffect(() => {
     draftMounted.current = true
@@ -825,13 +866,18 @@ export function WorkForm({
     setUploading(true)
     setError("")
     const url = await uploadToStorage(file)
-    if (url) setHeroUrl(url)
+    if (url) changeHero(url)
     setUploading(false)
     e.target.value = ""
   }
 
+  function changeHero(url: string) {
+    setHeroUrl(url)
+    setHeroCrop(DEFAULT_COVER_CROP)
+  }
+
   function clearHero() {
-    setHeroUrl("")
+    changeHero("")
   }
 
   async function onClientLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -948,6 +994,7 @@ export function WorkForm({
       categoryGroupValues: f.categoryGroupValues, year: f.year, client_id: f.client_id,
       cover_url: f.cover_url, cover_zoom: f.cover_zoom, cover_position_x: f.cover_position_x,
       cover_position_y: f.cover_position_y, hero_url: heroUrl, client_logo_urls: clientLogos, video_url: f.video_url, size: f.size,
+      hero_zoom: heroCrop.zoom, hero_position_x: heroCrop.positionX, hero_position_y: heroCrop.positionY,
       description: f.description, services: toLines(f.services),
       deliverables: toLines(f.deliverables), challenge: f.challenge,
       approach: f.approach, result: f.result, quote_text: f.quote_text,
@@ -1317,7 +1364,7 @@ export function WorkForm({
                       />
                     </div>
                     {f.cover_url && (
-                      <CoverCropEditor
+                      <MediaCropEditor
                         src={f.cover_url}
                         size={f.size}
                         crop={{
@@ -1338,18 +1385,8 @@ export function WorkForm({
                   </div>
                 </Field>
                 <Field label="內頁首圖（選填，可放影片）" hint="留空＝沿用封面圖；作品內頁最上方顯示的大圖。也可直接上傳影片（會靜音循環播放）：建議 MP4 格式、1080p、20 秒內、50MB 以下，越小網頁越順">
-                  <div className="flex items-start gap-4">
-                    <div className="w-32 h-32 rounded-lg overflow-hidden bg-white/[0.04] border border-white/10 shrink-0">
-                      {heroUrl && (
-                        isUploadedVideoUrl(heroUrl) ? (
-                          <video src={heroUrl} muted loop playsInline autoPlay preload="metadata" className="w-full h-full object-cover" />
-                        ) : (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={heroUrl} alt="內頁首圖預覽" className="w-full h-full object-cover" />
-                        )
-                      )}
-                    </div>
-                    <div className="flex-1 space-y-2">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <label className={cn("inline-flex items-center gap-2 px-4 py-2.5 border border-white/15 text-temo-white text-xs tracking-wider rounded-sm cursor-pointer hover:border-temo-gold/50 transition-colors", uploading && "opacity-60 pointer-events-none")}>
                           {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
@@ -1365,8 +1402,18 @@ export function WorkForm({
                       {isUploadedVideoUrl(heroUrl) && heroUrl.split(/[?#]/)[0].toLowerCase().endsWith(".mov") && (
                         <p className="text-[11px] text-yellow-400/80">.mov 檔（iPhone 直接拍的格式）在部分 Android / Windows 瀏覽器可能無法播放，建議轉成 MP4 再上傳</p>
                       )}
-                      <input className={inputCls} value={heroUrl} onChange={(e) => setHeroUrl(e.target.value)} placeholder="或直接貼圖片／影片網址（留空則沿用封面圖）" />
+                      <input className={inputCls} value={heroUrl} onChange={(e) => changeHero(e.target.value)} placeholder="或直接貼圖片／影片網址（留空則沿用封面圖）" />
                     </div>
+                    {isVideoUrl(f.video_url) ? (
+                      <p className="text-xs leading-relaxed text-temo-warm-gray">目前使用下方的首圖影片連結；清除影片連結後，即可調整圖片構圖。</p>
+                    ) : isUploadedVideoUrl(heroSrc) ? (
+                      <video src={heroSrc} muted loop playsInline autoPlay preload="metadata" className="aspect-[21/9] w-full rounded-lg object-cover" />
+                    ) : heroSrc ? (
+                      <>
+                        {!heroUrl && <p className="text-xs text-temo-warm-gray">目前沿用封面圖片，可在此獨立調整內頁首圖構圖。</p>}
+                        <MediaCropEditor src={heroSrc} variant="hero" crop={heroCrop} onChange={setHeroCrop} />
+                      </>
+                    ) : null}
                   </div>
                 </Field>
                 <Field label="客戶 LOGO（選填，可放多張）" hint="顯示於作品內頁右上角資訊欄頂端；一件作品有多位客戶時可放多張，依加入順序排列。深色底網站，建議上傳白色或淺色版本">

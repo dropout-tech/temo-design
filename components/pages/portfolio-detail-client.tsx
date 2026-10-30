@@ -15,6 +15,7 @@ import { isUploadedVideoUrl } from "@/lib/media-url"
 import { proxyImage } from "@/lib/portfolio-data"
 import type { WorkBlock } from "@/lib/portfolio-supabase"
 import { cn } from "@/lib/utils"
+import { getCoverCropStyle, type CoverCrop } from "@/lib/cover-crop"
 import {
   BUTTON_DEFAULTS,
   DIVIDER_DEFAULTS,
@@ -131,6 +132,8 @@ export type DetailProject = {
   related: DetailRelated[]
   /** 內頁首圖，未提供時退回 cover（本地 demo fallback 資料無此欄位） */
   hero?: string
+  /** 內頁首圖獨立構圖；舊資料維持 100% 縮放、置中。 */
+  heroCrop?: CoverCrop
   /** Adobe Portfolio 式內容區塊，未提供時由 gallery 轉換而來（見元件內 buildBlocksFromGallery） */
   blocks?: WorkBlock[]
 }
@@ -303,6 +306,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                 fill
                 priority
                 className="object-cover"
+                style={getCoverCropStyle(project.heroCrop)}
                 sizes="100vw"
                 referrerPolicy="no-referrer"
               />

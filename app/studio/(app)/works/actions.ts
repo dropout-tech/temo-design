@@ -44,6 +44,9 @@ export type WorkInput = {
   cover_position_y: number
   /** 內頁首圖，選填，留空＝沿用封面圖 */
   hero_url: string
+  hero_zoom?: number
+  hero_position_x?: number
+  hero_position_y?: number
   /** 客戶 LOGO，選填可多張（一件作品可能有多位客戶）；顯示於作品內頁右側資訊欄最頂端 */
   client_logo_urls: string[]
   video_url: string
@@ -163,6 +166,11 @@ function toRow(input: WorkInput, categoryGroupValues: string[]) {
     positionX: input.cover_position_x,
     positionY: input.cover_position_y,
   })
+  const heroCrop = normalizeCoverCrop({
+    zoom: input.hero_zoom,
+    positionX: input.hero_position_x,
+    positionY: input.hero_position_y,
+  })
 
   const guestDesignerCredits = normalizeGuestDesignerCredits(input.guestDesignerCredits)
   const collaboratorCredits = normalizeCollaboratorCredits(input.collaboratorCredits)
@@ -180,6 +188,9 @@ function toRow(input: WorkInput, categoryGroupValues: string[]) {
     cover_position_x: coverCrop.positionX,
     cover_position_y: coverCrop.positionY,
     hero_url: input.hero_url.trim() || null,
+    hero_zoom: heroCrop.zoom,
+    hero_position_x: heroCrop.positionX,
+    hero_position_y: heroCrop.positionY,
     // 多張 LOGO 以換行分隔存進既有 text 欄位（免 migration；讀取端 split("\n") 還原）
     client_logo_url:
       input.client_logo_urls.map((u) => u.trim()).filter(Boolean).join("\n") || null,
