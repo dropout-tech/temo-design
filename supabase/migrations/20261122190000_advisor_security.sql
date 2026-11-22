@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS advisor_backup_20261122.func_acl (fn text PRIMARY KEY
 DO $$
 DECLARE r record;
 BEGIN
-  FOR r IN SELECT p.oid::regprocedure AS fn, format('%I.%I(%s)', n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)) AS fntxt, p.proacl AS acl, p.proconfig
+  FOR r IN SELECT p.oid::regprocedure AS fn, format('%I.%I(%s)', n.nspname, p.proname, (SELECT coalesce(string_agg(format('%I.%I', tn.nspname, t.typname), ',' ORDER BY a.ord), '') FROM unnest(p.proargtypes::oid[]) WITH ORDINALITY a(toid, ord) JOIN pg_type t ON t.oid = a.toid JOIN pg_namespace tn ON tn.oid = t.typnamespace)) AS fntxt, p.proacl AS acl, p.proconfig
              FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
             WHERE n.nspname||'.'||p.proname = ANY(ARRAY['public.temo_set_updated_at']::text[])
               AND NOT EXISTS (SELECT 1 FROM unnest(coalesce(p.proconfig,'{}')) c WHERE c LIKE 'search_path=%')
@@ -25,7 +25,7 @@ END $$;
 DO $$
 DECLARE r record;
 BEGIN
-  FOR r IN SELECT p.oid::regprocedure AS fn, format('%I.%I(%s)', n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)) AS fntxt, p.proacl AS acl, p.proconfig
+  FOR r IN SELECT p.oid::regprocedure AS fn, format('%I.%I(%s)', n.nspname, p.proname, (SELECT coalesce(string_agg(format('%I.%I', tn.nspname, t.typname), ',' ORDER BY a.ord), '') FROM unnest(p.proargtypes::oid[]) WITH ORDINALITY a(toid, ord) JOIN pg_type t ON t.oid = a.toid JOIN pg_namespace tn ON tn.oid = t.typnamespace)) AS fntxt, p.proacl AS acl, p.proconfig
              FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
             WHERE n.nspname||'.'||p.proname = ANY(ARRAY['public.handle_new_user','public.is_admin','public.is_staff']::text[])
               AND p.prosecdef
