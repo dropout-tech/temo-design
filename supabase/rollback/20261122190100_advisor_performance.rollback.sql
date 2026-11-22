@@ -12,7 +12,7 @@ DO $$
 DECLARE r record;
 BEGIN
   FOR r IN SELECT * FROM advisor_backup_20261122.policy_def LOOP
-    IF r.qual IS NOT NULL THEN EXECUTE format('ALTER POLICY %I ON %s USING (%s)', r.pol, r.tbl, r.qual); END IF;
-    IF r.with_check IS NOT NULL THEN EXECUTE format('ALTER POLICY %I ON %s WITH CHECK (%s)', r.pol, r.tbl, r.with_check); END IF;
+    IF r.qual IS NOT NULL THEN EXECUTE format('ALTER POLICY %I ON %s USING (%s)', r.pol, r.tbl::regclass, r.qual); END IF;
+    IF r.with_check IS NOT NULL THEN EXECUTE format('ALTER POLICY %I ON %s WITH CHECK (%s)', r.pol, r.tbl::regclass, r.with_check); END IF;
   END LOOP;
 END $$;

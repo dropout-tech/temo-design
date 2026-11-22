@@ -6,14 +6,14 @@ DECLARE r record;
 BEGIN
   FOR r IN SELECT p.oid::regprocedure AS fn FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
             WHERE n.nspname||'.'||p.proname = ANY(ARRAY['public.temo_set_updated_at']::text[])
-              AND p.oid IN (SELECT fn::oid FROM advisor_backup_20261122.func_acl WHERE proconfig IS NULL OR NOT EXISTS (SELECT 1 FROM unnest(proconfig) c WHERE c LIKE 'search_path=%'))
+              AND p.oid IN (SELECT to_regprocedure(fn)::oid FROM advisor_backup_20261122.func_acl WHERE proconfig IS NULL OR NOT EXISTS (SELECT 1 FROM unnest(proconfig) c WHERE c LIKE 'search_path=%'))
   LOOP EXECUTE format('ALTER FUNCTION %s RESET search_path', r.fn); END LOOP;
 END $$;
 -- restore the exact saved EXECUTE ACL entries for PUBLIC/anon/authenticated
 DO $$
 DECLARE r record; a record;
 BEGIN
-  FOR r IN SELECT fn, proacl FROM advisor_backup_20261122.func_acl WHERE acl_saved LOOP
+  FOR r IN SELECT to_regprocedure(fn) AS fn, proacl FROM advisor_backup_20261122.func_acl WHERE acl_saved AND to_regprocedure(fn) IS NOT NULL LOOP
     IF r.proacl IS NULL THEN
       EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO PUBLIC', r.fn);
     ELSE

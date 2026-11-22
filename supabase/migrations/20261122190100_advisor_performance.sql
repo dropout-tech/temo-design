@@ -4,7 +4,7 @@
 CREATE SCHEMA IF NOT EXISTS advisor_backup_20261122;
 REVOKE ALL ON SCHEMA advisor_backup_20261122 FROM PUBLIC;
 CREATE TABLE IF NOT EXISTS advisor_backup_20261122.index_def (idx text PRIMARY KEY, def text, created_by_fix boolean);
-CREATE TABLE IF NOT EXISTS advisor_backup_20261122.policy_def (tbl regclass, pol name, qual text, with_check text, PRIMARY KEY (tbl,pol));
+CREATE TABLE IF NOT EXISTS advisor_backup_20261122.policy_def (tbl text, pol name, qual text, with_check text, PRIMARY KEY (tbl,pol));
 -- 0001 unindexed_foreign_keys (2): add a btree covering index per FK (IF NOT EXISTS).
 -- Plain CREATE INDEX (not CONCURRENTLY) because it runs inside a DO block; tables are small.
 -- For large tables run the generated statements one by one with CONCURRENTLY instead.
@@ -30,11 +30,11 @@ DO $$
 DECLARE r record; nq text; nw text;
   pat constant text := '(?<!select )((auth\.(uid|jwt|role|email)\(\))|(current_setting\([^()]*\)))';
 BEGIN
-  FOR r IN SELECT pc.oid AS tbl, p.polname, pg_get_expr(p.polqual,p.polrelid) AS qual, pg_get_expr(p.polwithcheck,p.polrelid) AS wc
-             FROM pg_policy p JOIN pg_class pc ON pc.oid=p.polrelid
+  FOR r IN SELECT pc.oid AS tbl, format('%I.%I', ns.nspname, pc.relname) AS tbltxt, p.polname, pg_get_expr(p.polqual,p.polrelid) AS qual, pg_get_expr(p.polwithcheck,p.polrelid) AS wc
+             FROM pg_policy p JOIN pg_class pc ON pc.oid=p.polrelid JOIN pg_namespace ns ON ns.oid=pc.relnamespace
              JOIN (VALUES ('public.profiles','profiles_self_select')) v(t,pol) ON p.polrelid = to_regclass(v.t) AND p.polname = v.pol
   LOOP
-    INSERT INTO advisor_backup_20261122.policy_def VALUES (r.tbl, r.polname, r.qual, r.wc) ON CONFLICT DO NOTHING;
+    INSERT INTO advisor_backup_20261122.policy_def VALUES (r.tbltxt, r.polname, r.qual, r.wc) ON CONFLICT DO NOTHING;
     nq := regexp_replace(r.qual, pat, '(select \1)', 'gi');
     nw := regexp_replace(r.wc,   pat, '(select \1)', 'gi');
     IF r.qual IS NOT NULL AND nq <> r.qual THEN
