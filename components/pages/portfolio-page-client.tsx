@@ -8,6 +8,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
+import { PortfolioProjectLink, useRestoreProjectSource } from "@/components/portfolio-project-link"
 import { cn } from "@/lib/utils"
 import { ArrowUpRight, X, Search } from "lucide-react"
 import {
@@ -23,6 +24,7 @@ import {
   type CategoryGroupValue,
 } from "@/lib/portfolio-data"
 import { getCoverCropStyle } from "@/lib/cover-crop"
+import type { FilterState } from "@/lib/portfolio-navigation"
 import {
   getWorkCategoryGroupValues,
   workHasAnyCategoryGroup,
@@ -34,7 +36,7 @@ import {
   workHasPortfolioDesigner,
 } from "@/lib/portfolio-designers"
 
-export type { Work }
+export type { FilterState, Work }
 
 // 作品分類選項（可由 Supabase 傳入；未傳入時 fallback 到 portfolio-data 的常數）。
 type Facet = { value: string; label: string }
@@ -99,15 +101,6 @@ function deriveYearOptions(works: Work[]): string[] {
 
 
 // ─── Filter Bar ────────────────────────────────────────────────────────────────
-
-export type FilterState = {
-  query: string
-  group: string  // 執行項目（單選）："all" 或分類 value（可為後台新增的動態分類）
-  industries: string[]               // 行業分類（複選，獨立維度）
-  designer: string  // "all" or slug
-  client: string    // "all" or slug
-  year: string      // "all" or year
-}
 
 export const INITIAL_FILTERS: FilterState = {
   query: "",
@@ -551,6 +544,8 @@ export function PortfolioGrid({
   const catLabel = useMemo(() => makeCatLabel(categoryGroups), [categoryGroups])
   const indLabel = useMemo(() => makeIndLabel(industries), [industries])
 
+  useRestoreProjectSource(setFilters)
+
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 100)
     return () => clearTimeout(t)
@@ -708,8 +703,9 @@ export function PortfolioGrid({
                     transform: visible ? "translateY(0)" : "translateY(20px)",
                   }}
                 >
-                  <Link
+                  <PortfolioProjectLink
                     href={getWorkPublicPath(work.slug)}
+                    filters={filters}
                     className="relative w-full group overflow-hidden block text-left"
                     onMouseEnter={() => setHoveredId(work.id)}
                     onMouseLeave={() => setHoveredId(null)}
@@ -768,7 +764,7 @@ export function PortfolioGrid({
                       <p className="text-[11px] text-white/40">{work.subtitle}</p>
                     </div>
                   </div>
-                </Link>
+                  </PortfolioProjectLink>
                 </div>
               </div>
             ))}

@@ -8,6 +8,7 @@ import Link from "next/link"
 import { ArrowLeft, ArrowUpRight, Globe } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
+import { PortfolioProjectLink, useRestoreProjectSource } from "@/components/portfolio-project-link"
 import { SocialIcon } from "@/components/social-icons"
 import { cn } from "@/lib/utils"
 import { getCategoryLabel, type Designer, type Work } from "@/lib/portfolio-data"
@@ -37,6 +38,7 @@ export function TeamMemberClient({
   const catLabel = (v: string) =>
     categoryGroups?.find((g) => g.value === v)?.label ?? getCategoryLabel(v as never)
   const [visible, setVisible] = useState(false)
+  useRestoreProjectSource()
   const socialLinks = [
     { href: toSafeExternalUrl(designer.instagram), label: "Instagram", platform: "instagram" },
     { href: toSafeExternalUrl(designer.threadsUrl), label: "Threads", platform: "threads" },
@@ -186,7 +188,7 @@ export function TeamMemberClient({
             ) : (
               <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
                 {works.map((work, i) => (
-                  <Link
+                  <PortfolioProjectLink
                     key={work.id}
                     href={getWorkPublicPath(work.slug)}
                     className="break-inside-avoid block group"
@@ -235,7 +237,7 @@ export function TeamMemberClient({
                         <p className="text-[11px] text-white/40 mt-0.5">{work.subtitle}</p>
                       </div>
                     </div>
-                  </Link>
+                  </PortfolioProjectLink>
                 ))}
               </div>
             )}

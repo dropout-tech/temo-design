@@ -12,6 +12,15 @@ type WorksFilter = {
   query?: string
 }
 
+export type FilterState = {
+  query: string
+  group: string
+  industries: string[]
+  designer: string
+  client: string
+  year: string
+}
+
 const DEFAULT_LANDING_BY_CATEGORY: Readonly<Record<string, string>> = {
   "brand-planning": "brand-graphic",
   "logo-trademark": "brand-graphic",
@@ -70,4 +79,39 @@ export function buildWorksLandingHref(
 
   const query = search.toString()
   return `/services/${encodeURIComponent(landingSlug)}${query ? `?${query}` : ""}#works`
+}
+
+let pendingProjectPath: string | undefined
+
+type ProjectSource = {
+  href: string
+  scrollY: number
+  filters?: FilterState
+}
+
+/** Called by a project link only for same-tab client navigation. */
+export function rememberProjectNavigation(href: string, filters?: FilterState) {
+  const path = new URL(href, window.location.href).pathname
+  pendingProjectPath = path === window.location.pathname ? undefined : path
+  if (!pendingProjectPath) return
+
+  const source: ProjectSource = { href: window.location.href, scrollY: window.scrollY, filters }
+  window.history.replaceState({ ...window.history.state, temoProjectSource: source }, "")
+}
+
+export function getProjectSource(): ProjectSource | undefined {
+  const source: ProjectSource | undefined = window.history.state?.temoProjectSource
+  return source?.href === window.location.href ? source : undefined
+}
+
+export function recordProjectArrival() {
+  const path = window.location.pathname
+  if (pendingProjectPath !== path) return
+
+  pendingProjectPath = undefined
+  window.history.replaceState({ ...window.history.state, temoProjectBackPath: path }, "")
+}
+
+export function canReturnFromProject(): boolean {
+  return window.history.state?.temoProjectBackPath === window.location.pathname
 }

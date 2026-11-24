@@ -10,6 +10,7 @@ import { useInView } from "@/hooks/use-in-view"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { VideoEmbed } from "@/components/video-embed"
+import { PortfolioProjectLink, useRestoreProjectSource } from "@/components/portfolio-project-link"
 import { isVideoUrl } from "@/lib/video"
 import { isUploadedVideoUrl } from "@/lib/media-url"
 import { proxyImage } from "@/lib/portfolio-data"
@@ -31,7 +32,7 @@ import {
   normalizeOptionalTextLetterSpacing,
   normalizeOptionalTextLineHeight,
 } from "@/lib/work-block-config"
-import { buildWorksLandingHref } from "@/lib/portfolio-navigation"
+import { buildWorksLandingHref, canReturnFromProject, recordProjectArrival } from "@/lib/portfolio-navigation"
 import { getEnglishTeamCategoryLabel, groupTeamMembersByCategory } from "@/lib/team-members"
 import { mergeCollaboratorCredits, type CollaboratorCredit } from "@/lib/work-team-credits"
 
@@ -157,6 +158,24 @@ interface PortfolioDetailClientProps {
   project: DetailProject | null
 }
 
+function ProjectBackLink({ href }: { href: string }) {
+  return (
+    <Link
+      href={href}
+      onNavigate={(event) => {
+        if (!canReturnFromProject()) return
+
+        event.preventDefault()
+        window.history.back()
+      }}
+      className="inline-flex min-h-11 w-fit shrink-0 items-center gap-2 text-sm text-temo-warm-gray transition-colors hover:text-temo-gold focus-visible:text-temo-gold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-temo-gold"
+    >
+      <ChevronLeft aria-hidden="true" className="size-4" />
+      返回上一頁
+    </Link>
+  )
+}
+
 export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
   const [heroVisible, setHeroVisible] = useState(false)
   const { ref: bodyRef, isInView: bodyInView } = useInView<HTMLElement>({
@@ -168,6 +187,9 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
     const t = setTimeout(() => setHeroVisible(true), 60)
     return () => clearTimeout(t)
   }, [])
+
+  useEffect(recordProjectArrival, [project?.slug])
+  useRestoreProjectSource()
 
   if (!project) {
     return (
@@ -191,6 +213,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
     project.clientName ||
     project.clientLogos?.length
   const teamGroups = groupTeamMembersByCategory(project.designers)
+  const backHref = buildWorksLandingHref(project.worksLandingSlug)
 
   // 內頁首圖：優先用後台設定的 hero，沒有就退回封面
   const heroSrc = project.hero || project.cover
@@ -205,18 +228,20 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
     <>
       <Navbar />
       <main className="pt-[68px] bg-temo-black text-temo-white md:pt-20">
-        {/* ─── Breadcrumb ───────────────────────────────────────────── */}
-        <div className="hidden md:block border-b border-temo-warm-gray/10">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-5 flex items-center gap-2 text-xs tracking-wider text-temo-warm-gray/70">
-            <Link href="/" className="hover:text-temo-gold transition-colors">
-              首頁
-            </Link>
-            <span>/</span>
-            <Link href="/explore" className="hover:text-temo-gold transition-colors">
-              作品集
-            </Link>
-            <span>/</span>
-            <span className="text-temo-white/80 truncate">{project.title}</span>
+        <div className="border-b border-temo-warm-gray/10">
+          <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-1 sm:px-6 lg:px-8">
+            <ProjectBackLink href={backHref} />
+            <nav aria-label="麵包屑" className="hidden min-w-0 items-center gap-2 border-l border-temo-warm-gray/20 pl-6 text-xs tracking-wider text-temo-warm-gray/70 md:flex">
+              <Link href="/" className="shrink-0 transition-colors hover:text-temo-gold">
+                首頁
+              </Link>
+              <span aria-hidden="true">/</span>
+              <Link href="/explore" className="shrink-0 transition-colors hover:text-temo-gold">
+                作品集
+              </Link>
+              <span aria-hidden="true">/</span>
+              <span aria-current="page" className="truncate text-temo-white/80">{project.title}</span>
+            </nav>
           </div>
         </div>
 
@@ -534,7 +559,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                 className="-mx-4 flex touch-pan-x snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:px-0 sm:pb-0 md:gap-8 lg:grid-cols-3"
               >
                 {project.related.map((r) => (
-                  <Link
+                  <PortfolioProjectLink
                     key={r.slug}
                     href={getWorkPublicPath(r.slug)}
                     className="group block w-[82vw] max-w-[320px] flex-none snap-start snap-always sm:w-auto sm:max-w-none"
@@ -557,7 +582,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
                       {r.title}
                     </h3>
                     <p className="text-sm text-temo-warm-gray/60 mt-1">{r.subtitle}</p>
-                  </Link>
+                  </PortfolioProjectLink>
                 ))}
               </div>
             </div>
@@ -567,13 +592,7 @@ export function PortfolioDetailClient({ project }: PortfolioDetailClientProps) {
         {/* ─── Footer CTA ──────────────────────────────────────────── */}
         <section className="py-16 md:py-20 border-t border-temo-warm-gray/10 bg-temo-black">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <Link
-              href="/explore"
-              className="inline-flex items-center gap-2 text-temo-warm-gray hover:text-temo-gold transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span>返回作品集</span>
-            </Link>
+            <ProjectBackLink href={backHref} />
             <Link
               href="/quote"
               className="group inline-flex items-center gap-3 border border-temo-gold/60 px-7 py-4 text-temo-gold hover:bg-temo-gold hover:text-temo-black transition-colors"
