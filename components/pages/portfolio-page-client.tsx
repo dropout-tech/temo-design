@@ -537,7 +537,6 @@ export function PortfolioGrid({
   // 分類落地頁用：只顯示這些執行項目的作品（使用者的篩選再疊加其上）；未傳＝不限制
   allowedGroups?: string[]
 }) {
-  const [hoveredId, setHoveredId] = useState<number | null>(null)
   const [visible, setVisible] = useState(false)
   const masonryRef = useRef<HTMLDivElement>(null)
   const [masonryWidth, setMasonryWidth] = useState(0)
@@ -706,64 +705,46 @@ export function PortfolioGrid({
                   <PortfolioProjectLink
                     href={getWorkPublicPath(work.slug)}
                     filters={filters}
-                    className="relative w-full group overflow-hidden block text-left"
-                    onMouseEnter={() => setHoveredId(work.id)}
-                    onMouseLeave={() => setHoveredId(null)}
+                    className="group relative block w-full overflow-hidden text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-temo-gold"
                     aria-label={`查看 ${work.title}`}
                   >
                     <div
                       className={cn(
-                        "relative overflow-hidden",
+                        "pointer-events-none relative overflow-hidden",
                         work.size === "large" ? "aspect-[4/5]" : work.size === "medium" ? "aspect-square" : "aspect-[4/3]"
                       )}
                     >
-                    <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-[1.03]">
-                      <Image
-                        src={proxyImage(work.cover)}
-                        alt={work.title}
-                        fill
-                        className="object-cover"
-                        style={getCoverCropStyle({
-                          zoom: work.coverZoom,
-                          positionX: work.coverPositionX,
-                          positionY: work.coverPositionY,
-                        })}
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        referrerPolicy="no-referrer"
+                      <div className="absolute inset-0 motion-safe:transition-transform motion-safe:duration-700 motion-safe:group-hover:scale-[1.03]">
+                        <Image
+                          src={proxyImage(work.cover)}
+                          alt={work.title}
+                          fill
+                          className="object-cover"
+                          style={getCoverCropStyle({
+                            zoom: work.coverZoom,
+                            positionX: work.coverPositionX,
+                            positionY: work.coverPositionY,
+                          })}
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                      <div
+                        className="absolute inset-0 bg-linear-to-t from-[#0c0b09] via-[#0c0b09]/25 to-transparent opacity-90 transition-opacity duration-400 group-hover:opacity-100 motion-reduce:transition-none"
+                        aria-hidden="true"
                       />
+                      <div className="absolute top-4 right-4 flex size-8 items-center justify-center rounded-full border border-white/30 bg-black/40 text-white transition-opacity duration-300 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none" aria-hidden="true">
+                        <ArrowUpRight className="size-3.5" />
+                      </div>
+                      <div className="absolute inset-x-0 bottom-0 p-5">
+                        <p className="mb-1 flex flex-wrap items-baseline gap-x-2 text-[11px] tracking-wider text-temo-gold uppercase">
+                          <span>{getWorkCategoryGroupValues(work).map(catLabel).join(" · ")}</span>
+                          {work.year && <span className="shrink-0 text-white/75">{work.year}</span>}
+                        </p>
+                        <h3 className="mb-0.5 text-base font-bold leading-tight text-white">{work.title}</h3>
+                        <p className="text-xs text-white/70">{work.subtitle}</p>
+                      </div>
                     </div>
-
-                    <div
-                      className="absolute inset-0 transition-opacity duration-400"
-                      style={{
-                        background: "linear-gradient(to top, rgba(12,11,9,0.92) 0%, rgba(12,11,9,0.2) 50%, transparent 100%)",
-                        opacity: hoveredId === work.id ? 1 : 0.5,
-                      }}
-                    />
-
-                    <div
-                      className="absolute top-4 right-4 w-8 h-8 rounded-full border border-white/30 bg-black/40 flex items-center justify-center transition-all duration-300"
-                      style={{
-                        opacity: hoveredId === work.id ? 1 : 0,
-                        transform: hoveredId === work.id ? "scale(1)" : "scale(0.7)",
-                      }}
-                    >
-                      <ArrowUpRight className="w-3.5 h-3.5 text-white" />
-                    </div>
-
-                    <div
-                      className="absolute bottom-0 left-0 right-0 p-5 transition-transform duration-400"
-                      style={{
-                        transform: hoveredId === work.id ? "translateY(0)" : "translateY(6px)",
-                      }}
-                    >
-                      <p className="text-[10px] tracking-[0.3em] text-temo-gold uppercase mb-1">
-                        {getWorkCategoryGroupValues(work).map(catLabel).join(" · ")}
-                      </p>
-                      <h3 className="text-base font-bold text-white leading-tight mb-0.5">{work.title}</h3>
-                      <p className="text-[11px] text-white/40">{work.subtitle}</p>
-                    </div>
-                  </div>
                   </PortfolioProjectLink>
                 </div>
               </div>

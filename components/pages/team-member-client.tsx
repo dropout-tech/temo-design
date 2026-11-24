@@ -200,7 +200,7 @@ export function TeamMemberClient({
                   >
                     <div
                       className={cn(
-                        "relative overflow-hidden",
+                        "pointer-events-none relative overflow-hidden",
                         work.size === "large"
                           ? "aspect-[4/5]"
                           : work.size === "medium"
@@ -230,8 +230,9 @@ export function TeamMemberClient({
                         }}
                       />
                       <div className="absolute bottom-0 left-0 right-0 p-5">
-                        <p className="text-[10px] tracking-[0.3em] text-temo-gold uppercase mb-1">
-                          {getWorkCategoryGroupValues(work).map(catLabel).join(" · ")}
+                        <p className="mb-1 flex flex-wrap items-baseline gap-x-2 text-[11px] tracking-wider text-temo-gold uppercase">
+                          <span>{getWorkCategoryGroupValues(work).map(catLabel).join(" · ")}</span>
+                          {work.year && <span className="shrink-0 text-white/75">{work.year}</span>}
                         </p>
                         <h3 className="text-base font-bold leading-tight">{work.title}</h3>
                         <p className="text-[11px] text-white/40 mt-0.5">{work.subtitle}</p>

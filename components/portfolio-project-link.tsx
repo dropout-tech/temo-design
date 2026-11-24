@@ -4,17 +4,19 @@ import { useLayoutEffect, type ComponentProps } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { getProjectSource, rememberProjectNavigation, type FilterState } from "@/lib/portfolio-navigation"
+import { cn } from "@/lib/utils"
 
 type PortfolioProjectLinkProps = Omit<ComponentProps<typeof Link>, "href" | "onNavigate"> & {
   href: string
   filters?: FilterState
 }
 
-export function PortfolioProjectLink({ href, filters, ...props }: PortfolioProjectLinkProps) {
+export function PortfolioProjectLink({ href, filters, className, ...props }: PortfolioProjectLinkProps) {
   return (
     <Link
       {...props}
       href={href}
+      className={cn("touch-manipulation", className)}
       onNavigate={() => rememberProjectNavigation(href, filters)}
     />
   )
