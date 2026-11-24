@@ -1,0 +1,12 @@
+{
+  "name": "TEMO DESIGN｜提摩設計",
+  "short_name": "TEMO DESIGN",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a1a1a",
+  "icons": [
+    { "src": "/temo-web-clip-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/temo-web-clip-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

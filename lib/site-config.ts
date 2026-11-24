@@ -15,6 +15,13 @@ export const siteConfig = {
   },
 }
 
+const socialPreview = {
+  url: '/temo-social-preview.png',
+  width: 1200,
+  height: 630,
+  alt: '白底黑色 TEMO DESIGN 標誌',
+}
+
 export const defaultMetadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
   title: {
@@ -35,6 +42,11 @@ export const defaultMetadata: Metadata = {
   ],
   authors: [{ name: 'TEMO DESIGN' }],
   creator: 'TEMO DESIGN',
+  icons: {
+    icon: { url: '/favicon.ico', type: 'image/x-icon' },
+    apple: { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+  },
+  manifest: '/manifest.json',
   openGraph: {
     type: 'website',
     locale: 'zh_TW',
@@ -42,11 +54,13 @@ export const defaultMetadata: Metadata = {
     title: 'TEMO DESIGN | 提摩設計',
     description: siteConfig.description,
     siteName: 'TEMO DESIGN',
+    images: [socialPreview],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'TEMO DESIGN | 提摩設計',
     description: siteConfig.description,
+    images: [socialPreview],
   },
   robots: {
     index: true,
